@@ -9,7 +9,7 @@ export default function Home() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50">
+    <div className="min-h-screen bg-linear-to-br from-amber-50 via-orange-50 to-amber-50">
       <Toaster />
       <header className="border-b border-amber-200 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">

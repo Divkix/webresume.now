@@ -9,12 +9,12 @@ const replicate = new Replicate({
 
 // Zod schemas for runtime validation
 const ContactSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email({ message: 'Invalid email address' }),
   phone: z.string().optional(),
   location: z.string().optional(),
-  linkedin: z.string().url().optional().or(z.literal('')),
-  github: z.string().url().optional().or(z.literal('')),
-  website: z.string().url().optional().or(z.literal('')),
+  linkedin: z.string().url({ message: 'Invalid LinkedIn URL' }).optional().or(z.literal('')),
+  github: z.string().url({ message: 'Invalid GitHub URL' }).optional().or(z.literal('')),
+  website: z.string().url({ message: 'Invalid website URL' }).optional().or(z.literal('')),
 })
 
 const ExperienceItemSchema = z.object({
@@ -44,7 +44,7 @@ const CertificationSchema = z.object({
   name: z.string(),
   issuer: z.string(),
   date: z.string().optional(),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.string().url({ message: 'Invalid certification URL' }).optional().or(z.literal('')),
 })
 
 const ProjectSchema = z.object({
@@ -52,7 +52,7 @@ const ProjectSchema = z.object({
   description: z.string(),
   year: z.string().optional(),
   technologies: z.array(z.string()).optional(),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.string().url({ message: 'Invalid project URL' }).optional().or(z.literal('')),
 })
 
 const ResumeContentSchema = z.object({

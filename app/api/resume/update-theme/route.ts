@@ -2,6 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 const VALID_THEMES = ['bento', 'glass', 'minimalist_editorial', 'neo_brutalist'] as const
+type ValidTheme = (typeof VALID_THEMES)[number]
+
+function isValidTheme(theme: string): theme is ValidTheme {
+  return VALID_THEMES.includes(theme as ValidTheme)
+}
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'theme_id is required' }, { status: 400 })
     }
 
-    if (!VALID_THEMES.includes(theme_id as any)) {
+    if (!isValidTheme(theme_id)) {
       return NextResponse.json(
         {
           error: 'Invalid theme_id',

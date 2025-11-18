@@ -27,7 +27,7 @@ export const contactSchema = z.object({
     .string()
     .trim()
     .min(1, 'Email is required')
-    .email('Invalid email address')
+    .email({ message: 'Invalid email address' })
     .max(255, 'Email is too long')
     .transform(sanitizeEmail),
   phone: z
@@ -48,7 +48,7 @@ export const contactSchema = z.object({
   linkedin: z
     .string()
     .trim()
-    .url('Invalid LinkedIn URL')
+    .url({ message: 'Invalid LinkedIn URL' })
     .max(500, 'LinkedIn URL is too long')
     .transform(sanitizeUrl)
     .optional()
@@ -56,7 +56,7 @@ export const contactSchema = z.object({
   github: z
     .string()
     .trim()
-    .url('Invalid GitHub URL')
+    .url({ message: 'Invalid GitHub URL' })
     .max(500, 'GitHub URL is too long')
     .transform(sanitizeUrl)
     .optional()
@@ -64,7 +64,7 @@ export const contactSchema = z.object({
   website: z
     .string()
     .trim()
-    .url('Invalid website URL')
+    .url({ message: 'Invalid website URL' })
     .max(500, 'Website URL is too long')
     .transform(sanitizeUrl)
     .optional()
@@ -216,7 +216,7 @@ export const certificationSchema = z.object({
   url: z
     .string()
     .trim()
-    .url('Invalid URL')
+    .url({ message: 'Invalid URL' })
     .max(500, 'URL is too long')
     .transform(sanitizeUrl)
     .optional()

@@ -59,13 +59,13 @@ export const profileUpdateSchema = z.object({
   email: z
     .string()
     .trim()
-    .email('Invalid email address')
+    .email({ message: 'Invalid email address' })
     .max(255, 'Email is too long')
     .optional(),
   avatar_url: z
     .string()
     .trim()
-    .url('Invalid URL')
+    .url({ message: 'Invalid URL' })
     .max(2000, 'URL is too long')
     .transform(sanitizeUrl)
     .nullable()

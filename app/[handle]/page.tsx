@@ -1,0 +1,166 @@
+import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
+import type { ResumeContent } from '@/lib/types/database'
+import { MinimalistCreme } from '@/components/templates/MinimalistCreme'
+import { extractCityState } from '@/lib/utils/privacy'
+
+interface PageProps {
+  params: Promise<{
+    handle: string
+  }>
+}
+
+/**
+ * Fetch user profile and resume data by handle
+ * Applies privacy filtering based on user preferences
+ */
+async function getResumeData(handle: string) {
+  const supabase = await createClient()
+
+  // Fetch profile with site_data in a single query
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(
+      `
+      id,
+      handle,
+      email,
+      avatar_url,
+      headline,
+      privacy_settings,
+      site_data (
+        content,
+        theme_id,
+        last_published_at
+      )
+    `
+    )
+    .eq('handle', handle)
+    .single()
+
+  if (error || !data) {
+    return null
+  }
+
+  // Ensure site_data exists
+  if (!data.site_data || data.site_data.length === 0) {
+    return null
+  }
+
+  const siteData = Array.isArray(data.site_data)
+    ? data.site_data[0]
+    : data.site_data
+
+  // Deep clone content to avoid mutation
+  const content: ResumeContent = JSON.parse(JSON.stringify(siteData.content))
+
+  // Apply privacy filtering
+  const privacySettings = data.privacy_settings || {
+    show_phone: false,
+    show_address: false,
+  }
+
+  // Remove phone if privacy setting is false
+  if (!privacySettings.show_phone && content.contact?.phone) {
+    delete content.contact.phone
+  }
+
+  // Filter address to city/state only if privacy setting is false
+  if (!privacySettings.show_address && content.contact?.location) {
+    content.contact.location = extractCityState(content.contact.location)
+  }
+
+  return {
+    profile: {
+      id: data.id,
+      handle: data.handle,
+      email: data.email,
+      avatar_url: data.avatar_url,
+      headline: data.headline,
+    },
+    content,
+    theme_id: siteData.theme_id,
+  }
+}
+
+/**
+ * Generate dynamic metadata for SEO
+ */
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { handle } = await params
+  const data = await getResumeData(handle)
+
+  if (!data) {
+    return {
+      title: 'Resume Not Found',
+      description: 'The requested resume could not be found.',
+    }
+  }
+
+  const { content, profile } = data
+
+  // Truncate summary to 160 characters for meta description
+  const description = content.summary
+    ? content.summary.slice(0, 157) +
+      (content.summary.length > 157 ? '...' : '')
+    : `View ${content.full_name}'s professional resume and experience.`
+
+  return {
+    title: `${content.full_name}'s Resume — webresume.now`,
+    description,
+    openGraph: {
+      title: `${content.full_name} — ${content.headline}`,
+      description,
+      type: 'profile',
+      url: `https://webresume.now/${handle}`,
+      images: profile.avatar_url
+        ? [
+            {
+              url: profile.avatar_url,
+              width: 400,
+              height: 400,
+              alt: content.full_name,
+            },
+          ]
+        : undefined,
+    },
+    twitter: {
+      card: 'summary',
+      title: `${content.full_name} — ${content.headline}`,
+      description,
+      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+    },
+  }
+}
+
+/**
+ * Public resume viewer page
+ * Renders user's resume with privacy filtering applied
+ */
+export default async function HandlePage({ params }: PageProps) {
+  const { handle } = await params
+  const data = await getResumeData(handle)
+
+  // Return 404 if profile or site_data not found
+  if (!data) {
+    notFound()
+  }
+
+  const { content, profile } = data
+
+  // Render template based on theme_id
+  // For now, we only have MinimalistCreme
+  // Future: switch based on data.theme_id
+  return (
+    <MinimalistCreme
+      content={content}
+      profile={{
+        avatar_url: profile.avatar_url,
+        handle: profile.handle || handle,
+      }}
+    />
+  )
+}

@@ -45,3 +45,7 @@ next-env.d.ts
 .open-next/
 .wrangler/
 worker-configuration.d.ts
+
+# Supabase
+supabase/.branches
+supabase/.temp

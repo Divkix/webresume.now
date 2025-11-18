@@ -1,0 +1,58 @@
+-- Seed data for local development
+-- This runs automatically after migrations with `bun run db:reset`
+
+-- Example test user profile
+-- Note: The user_id should match an auth.users entry
+-- For local development, create a user via Supabase Studio first
+
+-- INSERT INTO profiles (id, handle, email, headline, privacy_settings)
+-- VALUES (
+--   'YOUR_AUTH_USER_ID_HERE',
+--   'test-user',
+--   'test@example.com',
+--   'Full Stack Developer',
+--   '{"show_phone": false, "show_address": false}'::jsonb
+-- )
+-- ON CONFLICT (handle) DO NOTHING;
+
+-- Example site data with mock resume content
+-- INSERT INTO site_data (user_id, content, theme_id)
+-- VALUES (
+--   'YOUR_AUTH_USER_ID_HERE',
+--   '{
+--     "full_name": "Test User",
+--     "headline": "Full Stack Developer",
+--     "summary": "Experienced developer with a passion for building great products.",
+--     "contact": {
+--       "email": "test@example.com",
+--       "location": "San Francisco, CA"
+--     },
+--     "experience": [
+--       {
+--         "company": "Example Corp",
+--         "role": "Senior Developer",
+--         "dates": "Jan 2020 - Present",
+--         "description": "Building amazing things"
+--       }
+--     ],
+--     "education": [
+--       {
+--         "school": "University of Example",
+--         "degree": "BS Computer Science",
+--         "year": "2019"
+--       }
+--     ],
+--     "skills": ["JavaScript", "TypeScript", "React", "Node.js", "Next.js"]
+--   }'::jsonb,
+--   'minimalist_creme'
+-- )
+-- ON CONFLICT (user_id) DO NOTHING;
+
+-- To use this seed data:
+-- 1. Start local Supabase: bun run db:start
+-- 2. Open Studio: http://127.0.0.1:54323
+-- 3. Create a test user via Authentication
+-- 4. Copy the user ID
+-- 5. Uncomment the INSERT statements above
+-- 6. Replace 'YOUR_AUTH_USER_ID_HERE' with the actual user ID
+-- 7. Run: bun run db:reset

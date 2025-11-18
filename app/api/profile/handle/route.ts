@@ -1,46 +1,67 @@
 import { createClient } from '@/lib/supabase/server'
 import { handleUpdateSchema } from '@/lib/schemas/profile'
-import { NextResponse } from 'next/server'
+import { enforceRateLimit } from '@/lib/utils/rate-limit'
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  ERROR_CODES,
+} from '@/lib/utils/security-headers'
 
 /**
  * PUT /api/profile/handle
  * Update user's handle and create redirect from old handle
+ * Rate limit: 3 handle changes per 24 hours (prevent abuse)
  */
 export async function PUT(request: Request) {
   try {
     const supabase = await createClient()
 
-    // Authenticate user
+    // 1. Authenticate user
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'You must be logged in to update your handle' },
-        { status: 401 }
+      return createErrorResponse(
+        'You must be logged in to update your handle',
+        ERROR_CODES.UNAUTHORIZED,
+        401
       )
     }
 
-    // Parse and validate request body
-    const body = await request.json()
+    // 2. Check rate limit (3 handle changes per 24 hours)
+    const rateLimitResponse = await enforceRateLimit(user.id, 'handle_change')
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
+    // 3. Parse and validate request body
+    let body
+    try {
+      body = await request.json()
+    } catch {
+      return createErrorResponse(
+        'Invalid JSON in request body',
+        ERROR_CODES.BAD_REQUEST,
+        400
+      )
+    }
+
     const validation = handleUpdateSchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: 'Validation Error',
-          message: 'Invalid handle format',
-          details: validation.error.issues,
-        },
-        { status: 400 }
+      return createErrorResponse(
+        'Invalid handle format',
+        ERROR_CODES.VALIDATION_ERROR,
+        400,
+        validation.error.issues
       )
     }
 
     const { handle: newHandle } = validation.data
 
-    // Fetch current profile to get old handle
+    // 4. Fetch current profile to get old handle
     const { data: currentProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('handle')
@@ -48,29 +69,25 @@ export async function PUT(request: Request) {
       .single()
 
     if (fetchError || !currentProfile) {
-      return NextResponse.json(
-        {
-          error: 'Profile Error',
-          message: 'Failed to fetch current profile',
-        },
-        { status: 500 }
+      return createErrorResponse(
+        'Failed to fetch current profile',
+        ERROR_CODES.DATABASE_ERROR,
+        500
       )
     }
 
     const oldHandle = currentProfile.handle
 
-    // Check if handle is already the same
+    // 5. Check if handle is already the same
     if (oldHandle === newHandle) {
-      return NextResponse.json(
-        {
-          error: 'Validation Error',
-          message: 'Handle is already set to this value',
-        },
-        { status: 400 }
+      return createErrorResponse(
+        'Handle is already set to this value',
+        ERROR_CODES.VALIDATION_ERROR,
+        400
       )
     }
 
-    // Check if new handle is already taken by another user
+    // 6. Check if new handle is already taken by another user
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
       .select('id')
@@ -79,26 +96,22 @@ export async function PUT(request: Request) {
 
     if (checkError) {
       console.error('Handle uniqueness check error:', checkError)
-      return NextResponse.json(
-        {
-          error: 'Database Error',
-          message: 'Failed to check handle availability',
-        },
-        { status: 500 }
+      return createErrorResponse(
+        'Failed to check handle availability',
+        ERROR_CODES.DATABASE_ERROR,
+        500
       )
     }
 
     if (existingProfile && existingProfile.id !== user.id) {
-      return NextResponse.json(
-        {
-          error: 'Validation Error',
-          message: 'This handle is already taken. Please choose a different one.',
-        },
-        { status: 409 }
+      return createErrorResponse(
+        'This handle is already taken. Please choose a different one.',
+        ERROR_CODES.CONFLICT,
+        409
       )
     }
 
-    // Create redirect entry if old handle exists
+    // 7. Create redirect entry if old handle exists
     if (oldHandle) {
       const expiresAt = new Date()
       expiresAt.setDate(expiresAt.getDate() + 30) // 30 days from now
@@ -117,7 +130,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    // Update handle in profiles table
+    // 8. Update handle in profiles table
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -130,16 +143,14 @@ export async function PUT(request: Request) {
 
     if (updateError) {
       console.error('Handle update error:', updateError)
-      return NextResponse.json(
-        {
-          error: 'Database Error',
-          message: 'Failed to update handle',
-        },
-        { status: 500 }
+      return createErrorResponse(
+        'Failed to update handle. Please try again.',
+        ERROR_CODES.DATABASE_ERROR,
+        500
       )
     }
 
-    return NextResponse.json({
+    return createSuccessResponse({
       success: true,
       handle: data.handle,
       old_handle: oldHandle,
@@ -147,12 +158,10 @@ export async function PUT(request: Request) {
     })
   } catch (err) {
     console.error('Unexpected error in handle update:', err)
-    return NextResponse.json(
-      {
-        error: 'Internal Server Error',
-        message: 'An unexpected error occurred',
-      },
-      { status: 500 }
+    return createErrorResponse(
+      'An unexpected error occurred. Please try again.',
+      ERROR_CODES.INTERNAL_ERROR,
+      500
     )
   }
 }

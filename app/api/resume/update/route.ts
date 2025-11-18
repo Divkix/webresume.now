@@ -1,10 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
 import { resumeContentSchema } from '@/lib/schemas/resume'
+import { enforceRateLimit } from '@/lib/utils/rate-limit'
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  ERROR_CODES,
+} from '@/lib/utils/security-headers'
 
 /**
  * PUT /api/resume/update
  * Updates the user's resume content in site_data
+ * Includes rate limiting (10 updates per hour) and comprehensive validation
  *
  * Request body:
  * {
@@ -21,33 +27,51 @@ export async function PUT(request: Request) {
   try {
     const supabase = await createClient()
 
-    // Authenticate user
+    // 1. Authenticate user
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse(
+        'You must be logged in to update your resume',
+        ERROR_CODES.UNAUTHORIZED,
+        401
+      )
     }
 
-    // Parse and validate request body
-    const body = await request.json()
+    // 2. Check rate limit (10 updates per hour)
+    const rateLimitResponse = await enforceRateLimit(user.id, 'resume_update')
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
+    // 3. Parse and validate request body
+    let body
+    try {
+      body = await request.json()
+    } catch {
+      return createErrorResponse(
+        'Invalid JSON in request body',
+        ERROR_CODES.BAD_REQUEST,
+        400
+      )
+    }
 
     const validation = resumeContentSchema.safeParse(body.content)
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: validation.error.issues,
-        },
-        { status: 400 }
+      return createErrorResponse(
+        'Validation failed. Please check your input.',
+        ERROR_CODES.VALIDATION_ERROR,
+        400,
+        validation.error.issues
       )
     }
 
     const content = validation.data
 
-    // Update site_data
+    // 4. Update site_data
     const { data, error } = await supabase
       .from('site_data')
       .update({
@@ -61,14 +85,15 @@ export async function PUT(request: Request) {
 
     if (error) {
       console.error('Database update error:', error)
-      return NextResponse.json(
-        { error: 'Failed to update resume' },
-        { status: 500 }
+      return createErrorResponse(
+        'Failed to update resume. Please try again.',
+        ERROR_CODES.DATABASE_ERROR,
+        500
       )
     }
 
-    // Return success response
-    return NextResponse.json({
+    // 5. Return success response
+    return createSuccessResponse({
       success: true,
       data: {
         id: data.id,
@@ -78,9 +103,10 @@ export async function PUT(request: Request) {
     })
   } catch (error) {
     console.error('Unexpected error in resume update:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+    return createErrorResponse(
+      'An unexpected error occurred. Please try again.',
+      ERROR_CODES.INTERNAL_ERROR,
+      500
     )
   }
 }

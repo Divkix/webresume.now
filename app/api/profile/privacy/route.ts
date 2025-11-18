@@ -1,46 +1,70 @@
 import { createClient } from '@/lib/supabase/server'
 import { privacySettingsSchema } from '@/lib/schemas/profile'
-import { NextResponse } from 'next/server'
+import { enforceRateLimit } from '@/lib/utils/rate-limit'
+import {
+  createErrorResponse,
+  createSuccessResponse,
+  ERROR_CODES,
+} from '@/lib/utils/security-headers'
 
 /**
  * PUT /api/profile/privacy
  * Update user's privacy settings (show_phone, show_address)
+ * Rate limit: 20 updates per hour (more generous for toggle settings)
  */
 export async function PUT(request: Request) {
   try {
     const supabase = await createClient()
 
-    // Authenticate user
+    // 1. Authenticate user
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: 'You must be logged in to update privacy settings' },
-        { status: 401 }
+      return createErrorResponse(
+        'You must be logged in to update privacy settings',
+        ERROR_CODES.UNAUTHORIZED,
+        401
       )
     }
 
-    // Parse and validate request body
-    const body = await request.json()
+    // 2. Check rate limit (20 updates per hour)
+    const rateLimitResponse = await enforceRateLimit(
+      user.id,
+      'privacy_update'
+    )
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
+    // 3. Parse and validate request body
+    let body
+    try {
+      body = await request.json()
+    } catch {
+      return createErrorResponse(
+        'Invalid JSON in request body',
+        ERROR_CODES.BAD_REQUEST,
+        400
+      )
+    }
+
     const validation = privacySettingsSchema.safeParse(body)
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: 'Validation Error',
-          message: 'Invalid privacy settings data',
-          details: validation.error.issues,
-        },
-        { status: 400 }
+      return createErrorResponse(
+        'Invalid privacy settings data',
+        ERROR_CODES.VALIDATION_ERROR,
+        400,
+        validation.error.issues
       )
     }
 
     const { show_phone, show_address } = validation.data
 
-    // Update privacy_settings JSONB column
+    // 4. Update privacy_settings JSONB column
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -56,27 +80,23 @@ export async function PUT(request: Request) {
 
     if (updateError) {
       console.error('Privacy settings update error:', updateError)
-      return NextResponse.json(
-        {
-          error: 'Database Error',
-          message: 'Failed to update privacy settings',
-        },
-        { status: 500 }
+      return createErrorResponse(
+        'Failed to update privacy settings. Please try again.',
+        ERROR_CODES.DATABASE_ERROR,
+        500
       )
     }
 
-    return NextResponse.json({
+    return createSuccessResponse({
       success: true,
       privacy_settings: data.privacy_settings,
     })
   } catch (err) {
     console.error('Unexpected error in privacy update:', err)
-    return NextResponse.json(
-      {
-        error: 'Internal Server Error',
-        message: 'An unexpected error occurred',
-      },
-      { status: 500 }
+    return createErrorResponse(
+      'An unexpected error occurred. Please try again.',
+      ERROR_CODES.INTERNAL_ERROR,
+      500
     )
   }
 }

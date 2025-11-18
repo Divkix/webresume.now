@@ -158,10 +158,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`
-                  border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all
+                  group border-2 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300
                   ${isDragging
-                    ? 'border-amber-500 bg-amber-50'
-                    : 'border-gray-300 hover:border-amber-400 hover:bg-gray-50'
+                    ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-depth-md'
+                    : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 shadow-depth-sm'
                   }
                   ${uploading ? 'pointer-events-none opacity-60' : ''}
                 `}
@@ -176,25 +176,36 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
                 />
 
                 <div className="flex flex-col items-center gap-3">
-                  <svg
-                    className="w-12 h-12 text-amber-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
+                  <div className="relative">
+                    <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20 transition-opacity ${isDragging ? 'opacity-40' : 'group-hover:opacity-30'}`} />
+                    <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-3 rounded-xl">
+                      <svg
+                        className="w-10 h-10"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          stroke="url(#modalGradient)"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                        <defs>
+                          <linearGradient id="modalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#4F46E5" />
+                            <stop offset="100%" stopColor="#3B82F6" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    </div>
+                  </div>
 
                   <div>
-                    <p className="text-sm font-medium text-gray-900 mb-1">
+                    <p className="text-sm font-semibold text-slate-900 mb-1">
                       {file ? file.name : 'Drop your PDF here'}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-slate-500">
                       or click to browse • Max 10MB
                     </p>
                   </div>
@@ -205,7 +216,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
               {uploading && (
                 <div className="space-y-2">
                   <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-center text-gray-500">
+                  <p className="text-xs text-center text-slate-500 font-medium">
                     Uploading... {uploadProgress}%
                   </p>
                 </div>
@@ -213,14 +224,14 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-800">{error}</p>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-depth-sm">
+                  <p className="text-sm text-red-800 font-medium">{error}</p>
                 </div>
               )}
 
               {/* Info Text */}
               {!uploading && !error && (
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-slate-500 text-center font-medium">
                   Your file is uploaded anonymously. Log in to save and publish.
                 </p>
               )}
@@ -229,39 +240,48 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
             <div className="space-y-4 py-4">
               {/* Success State */}
               <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
+                  <div className="relative w-16 h-16 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
+                    <svg
+                      className="w-8 h-8"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        stroke="url(#successGradient)"
+                        d="M5 13l4 4L19 7"
+                      />
+                      <defs>
+                        <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#10B981" />
+                          <stop offset="100%" stopColor="#14B8A6" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
                 </div>
 
                 <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">
                     Upload Complete!
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-slate-600 mb-4">
                     {file?.name} has been uploaded successfully.
                   </p>
                 </div>
 
                 <Button
                   onClick={handleLoginRedirect}
-                  className="w-full bg-amber-600 hover:bg-amber-700"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
                 >
                   Log In to Save
                 </Button>
 
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-slate-500 text-center font-medium">
                   Your upload will be automatically claimed after login
                 </p>
               </div>

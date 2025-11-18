@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TemplateProps } from '@/lib/types/template';
+import type { Project } from '@/lib/types/database';
 import { getInitials, formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Mail, MapPin, Linkedin, Github, Globe, ExternalLink, Sparkles, Command, Briefcase, GraduationCap, Award } from 'lucide-react';
 
@@ -61,7 +62,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                {flattenSkills(content.skills).slice(0, 8).map(skill => (
+                {flattenSkills(content.skills).slice(0, 8).map((skill: string) => (
                   <span key={skill} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-xs text-white/80 cursor-default">
                     {skill}
                   </span>
@@ -141,7 +142,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {content.projects.map((project, i) => (
+              {content.projects.map((project: Project, i: number) => (
                 <div
                   key={i}
                   className="group relative rounded-3xl overflow-hidden bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)]"
@@ -171,7 +172,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                     </p>
                     {project.technologies && project.technologies.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {project.technologies.map(tech => (
+                        {project.technologies.map((tech: string) => (
                           <span key={tech} className="text-[10px] uppercase tracking-widest text-white/50">#{tech}</span>
                         ))}
                       </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TemplateProps } from '@/lib/types/template';
+import type { Project } from '@/lib/types/database';
 import { getInitials, formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Mail, Linkedin, Github, Globe, ArrowUpRight, Star, Briefcase, GraduationCap, Award } from 'lucide-react';
 
@@ -92,12 +93,12 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
         {content.skills && flattenSkills(content.skills).length > 0 && (
           <div className="bg-[#FFDE00] border-4 border-black py-4 overflow-hidden whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 my-12">
             <div className="inline-block animate-[marquee_20s_linear_infinite] font-black text-2xl md:text-4xl uppercase">
-              {flattenSkills(content.skills).map((skill, i) => (
+              {flattenSkills(content.skills).map((skill: string, i: number) => (
                 <span key={i} className="mx-6 inline-flex items-center">
                   {skill} <Star className="w-6 h-6 ml-6 fill-black" />
                 </span>
               ))}
-              {flattenSkills(content.skills).map((skill, i) => (
+              {flattenSkills(content.skills).map((skill: string, i: number) => (
                 <span key={`dup-${i}`} className="mx-6 inline-flex items-center">
                   {skill} <Star className="w-6 h-6 ml-6 fill-black" />
                 </span>
@@ -116,7 +117,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-              {content.experience.map((job, idx) => (
+              {content.experience.map((job, idx: number) => (
                 <div
                   key={idx}
                   className="group bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-200"
@@ -145,7 +146,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
                     )}
                     {job.highlights && job.highlights.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-4">
-                        {job.highlights.slice(0, 3).map((highlight, i) => (
+                        {job.highlights.slice(0, 3).map((highlight: string, i: number) => (
                           <span key={i} className="px-2 py-1 bg-[#22CCEE] border-2 border-black text-xs font-bold uppercase">
                             • {highlight}
                           </span>
@@ -169,7 +170,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {content.projects.map((project, idx) => (
+              {content.projects.map((project: Project, idx: number) => (
                 <div
                   key={idx}
                   className="group bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-200 flex flex-col"
@@ -201,7 +202,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
                     )}
                     {project.technologies && project.technologies.length > 0 && (
                       <div className="mt-auto flex flex-wrap gap-2">
-                        {project.technologies.map((tech, i) => (
+                        {project.technologies.map((tech: string, i: number) => (
                           <span key={i} className="px-2 py-1 bg-[#FF90E8] border-2 border-black text-xs font-bold uppercase">
                             {tech}
                           </span>

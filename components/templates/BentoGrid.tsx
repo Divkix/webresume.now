@@ -71,7 +71,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
                 <span className="text-xs font-bold uppercase tracking-wider">Stack</span>
               </div>
               <div className="flex flex-wrap gap-2 content-start">
-                {skills.map((skill, index) => (
+                {skills.map((skill: string, index: number) => (
                   <span key={index} className="px-2 py-1 bg-neutral-100 rounded-md text-[10px] font-semibold text-neutral-600 border border-neutral-200">
                     {skill}
                   </span>
@@ -129,7 +129,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
                       )}
                       {content.projects[0].technologies && content.projects[0].technologies.length > 0 && (
                         <div className="flex gap-2 mt-3">
-                          {content.projects[0].technologies.slice(0, 3).map((tech, idx) => (
+                          {content.projects[0].technologies.slice(0, 3).map((tech: string, idx: number) => (
                             <span key={idx} className="text-xs bg-white/10 px-2 py-1 rounded">
                               {tech}
                             </span>

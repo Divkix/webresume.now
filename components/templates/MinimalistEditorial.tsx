@@ -137,7 +137,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
                     </p>
                     {project.technologies && project.technologies.length > 0 && (
                       <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                        {project.technologies.slice(0, 2).map((tech, i) => (
+                        {project.technologies.slice(0, 2).map((tech: string, i: number) => (
                           <span key={i} className="text-[10px] uppercase tracking-wider text-neutral-400">
                             {tech}
                           </span>
@@ -200,7 +200,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
                     {skillGroup.category}
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {skillGroup.items.map((skill, i) => (
+                    {skillGroup.items.map((skill: string, i: number) => (
                       <span
                         key={i}
                         className="text-xs uppercase tracking-widest border border-neutral-200 px-3 py-1 rounded-full hover:bg-neutral-100 transition-colors"

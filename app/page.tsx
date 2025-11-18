@@ -1,8 +1,17 @@
+'use client'
+
+import { useState } from 'react'
 import { LoginButton } from '@/components/auth/LoginButton'
+import { FileDropzone } from '@/components/FileDropzone'
+import { Button } from '@/components/ui/button'
+import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50">
+      <Toaster />
       <header className="border-b border-amber-200 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="text-2xl font-bold text-gray-900">
@@ -25,9 +34,12 @@ export default function Home() {
             Drop your PDF. Get a shareable link. It takes less than a minute.
           </p>
 
-          {/* File Drop Zone Placeholder */}
+          {/* Upload Button */}
           <div className="max-w-2xl mx-auto mb-8">
-            <div className="border-2 border-dashed border-amber-300 rounded-2xl bg-white/80 p-12 hover:border-amber-400 transition-all hover:shadow-lg cursor-pointer">
+            <div
+              onClick={() => setUploadModalOpen(true)}
+              className="border-2 border-dashed border-amber-300 rounded-2xl bg-white/80 p-12 hover:border-amber-400 transition-all hover:shadow-lg cursor-pointer"
+            >
               <div className="flex flex-col items-center gap-4">
                 <svg
                   className="w-16 h-16 text-amber-600"
@@ -85,6 +97,9 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* FileDropzone Modal */}
+      <FileDropzone open={uploadModalOpen} onOpenChange={setUploadModalOpen} />
     </div>
   )
 }

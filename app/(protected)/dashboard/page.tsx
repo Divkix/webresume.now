@@ -23,6 +23,7 @@ import {
   InfoIcon
 } from 'lucide-react'
 import { CopyLinkButton } from '@/components/dashboard/CopyLinkButton'
+import { ThemeSelector } from '@/components/dashboard/ThemeSelector'
 import type { ResumeContent } from '@/lib/types/database'
 
 /**
@@ -154,10 +155,10 @@ export default async function DashboardPage() {
     .limit(1)
     .single()
 
-  // Fetch site data if available
+  // Fetch site data if available - include theme_id
   const { data: siteData } = await supabase
     .from('site_data')
-    .select('id, content, last_published_at, created_at')
+    .select('id, content, theme_id, last_published_at, created_at')
     .eq('user_id', user.id)
     .single()
 
@@ -323,6 +324,11 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Theme Selector - Only show if site is published */}
+        {hasPublishedSite && siteData && (
+          <ThemeSelector initialThemeId={siteData.theme_id} />
+        )}
 
         {/* Content Preview Card */}
         {hasPublishedSite && content && (

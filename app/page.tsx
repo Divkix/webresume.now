@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { LoginButton } from '@/components/auth/LoginButton'
 import { FileDropzone } from '@/components/FileDropzone'
-import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {

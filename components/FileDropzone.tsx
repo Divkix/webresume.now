@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent } from 'react'
-import { useRouter } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -14,7 +13,6 @@ interface FileDropzoneProps {
 }
 
 export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
-  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [file, setFile] = useState<File | null>(null)

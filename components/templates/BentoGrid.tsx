@@ -117,10 +117,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
 
           {/* 6. Featured Project (Main) - 2x2 */}
           {content.projects && content.projects.length > 0 && (
-            <div className="col-span-1 sm:col-span-2 row-span-2 bg-white rounded-3xl overflow-hidden border border-neutral-200/60 group relative cursor-pointer">
-              {content.projects[0].image && (
-                <img src={content.projects[0].image} alt={content.projects[0].title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-              )}
+            <div className="col-span-1 sm:col-span-2 row-span-2 bg-gradient-to-br from-purple-900 via-indigo-900 to-blue-900 rounded-3xl overflow-hidden border border-neutral-200/60 group relative cursor-pointer">
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent p-8 flex flex-col justify-end text-white">
                 <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                   <div className="flex justify-between items-end">
@@ -129,6 +126,15 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
                       <h3 className="text-2xl font-bold mb-1">{content.projects[0].title}</h3>
                       {content.projects[0].description && (
                         <p className="text-neutral-300 text-sm line-clamp-2 max-w-md">{content.projects[0].description}</p>
+                      )}
+                      {content.projects[0].technologies && content.projects[0].technologies.length > 0 && (
+                        <div className="flex gap-2 mt-3">
+                          {content.projects[0].technologies.slice(0, 3).map((tech, idx) => (
+                            <span key={idx} className="text-xs bg-white/10 px-2 py-1 rounded">
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                     {content.projects[0].url && (

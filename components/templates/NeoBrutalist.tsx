@@ -189,7 +189,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
 
                   <div className="p-6 flex-1 flex flex-col">
                     <h3 className="text-3xl font-black uppercase mb-2 flex items-start justify-between">
-                      {project.name}
+                      {project.title}
                       {project.url && (
                         <ArrowUpRight className="w-8 h-8 border-2 border-black p-1 bg-white hover:bg-black hover:text-white transition-colors" />
                       )}

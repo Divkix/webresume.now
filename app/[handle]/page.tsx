@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import type { ResumeContent } from '@/lib/types/database'
-import { MinimalistCreme } from '@/components/templates/MinimalistCreme'
+import { getTemplate } from '@/lib/templates/theme-registry'
 import { extractCityState } from '@/lib/utils/privacy'
 
 interface PageProps {
@@ -166,13 +166,13 @@ export default async function HandlePage({ params }: PageProps) {
     notFound()
   }
 
-  const { content, profile } = data
+  const { content, profile, theme_id } = data
 
-  // Render template based on theme_id
-  // For now, we only have MinimalistCreme
-  // Future: switch based on data.theme_id
+  // Dynamically select template based on theme_id
+  const Template = getTemplate(theme_id)
+
   return (
-    <MinimalistCreme
+    <Template
       content={content}
       profile={{
         avatar_url: profile.avatar_url,

@@ -265,7 +265,8 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
   if (data.certifications) {
     data.certifications = data.certifications.map((cert) => {
       if (cert.url === '') {
-        const { url, ...rest } = cert
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { url: _url, ...rest } = cert
         return rest
       }
       return cert

@@ -345,6 +345,182 @@ bun run test
 
 ---
 
+## Design System: Soft Depth Theme
+
+### Overview
+The landing page uses the "Soft Depth" theme—a modern, professional aesthetic inspired by Apple and Stripe's design languages, with enhanced visual richness through layered shadows and gradient accents.
+
+### Core Principles
+1. **Calm Professionalism**: Light, airy backgrounds (slate-50) create a calming workspace
+2. **Layered Depth**: Multi-layer shadows create visual hierarchy without heavy borders
+3. **Gradient Accents**: Indigo→Blue gradients add sophistication without overwhelming
+4. **Smooth Interactions**: 300ms transitions for all hover states and animations
+
+### Color Palette
+
+**Primary Colors:**
+- Background: `slate-50` (#F8FAFC)
+- Text Primary: `slate-900` (#0F172A)
+- Text Secondary: `slate-600` (#475569)
+- Border: `slate-200/60` (with 60% opacity)
+
+**Gradient Accents:**
+- Primary Gradient: `indigo-600` (#4F46E5) → `blue-600` (#3B82F6) → `cyan-500` (#06B6D4)
+- Button Gradient: `indigo-600` → `blue-600`
+- Logo Gradient: `indigo-600` → `blue-600`
+
+**Feature Card Gradients:**
+- Speed: `orange-500` (#F97316) → `amber-600` (#D97706)
+- AI: `indigo-600` → `purple-600` (#9333EA)
+- Free: `emerald-500` (#10B981) → `teal-600` (#0D9488)
+
+### Shadow System
+
+Custom layered shadows for depth perception:
+
+```css
+--shadow-depth-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+--shadow-depth-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.08);
+--shadow-depth-lg: 0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.12);
+--shadow-depth-xl: 0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 96px rgba(0, 0, 0, 0.16);
+```
+
+**Usage:**
+- Header/Footer: `shadow-depth-sm`
+- Upload zone (default): `shadow-depth-md`
+- Upload zone (hover): `shadow-depth-lg`
+- Modal dropzone: `shadow-depth-sm` → `shadow-depth-md` on hover
+
+### Animation System
+
+All animations defined in `app/globals.css`:
+
+**1. Fade In Up** (`animate-fade-in-up`)
+- Duration: 0.6s ease-out
+- Used on: Hero section
+- Transform: translateY(20px) → translateY(0)
+- Opacity: 0 → 1
+
+**2. Float** (`animate-float`)
+- Duration: 6s ease-in-out infinite
+- Used on: (reserved for future use)
+- Transform: translateY(0) → translateY(-10px) → translateY(0)
+
+**3. Gradient Shift** (`animate-gradient-shift`)
+- Duration: 8s ease infinite
+- Used on: Gradient backgrounds
+- Background position: 0% → 100% → 0%
+
+**4. Shimmer** (`animate-shimmer`)
+- Duration: 2s linear infinite
+- Used on: LoginButton hover overlay
+- Background position: -200% → 200%
+
+**Accessibility:**
+- All animations respect `prefers-reduced-motion: reduce`
+- Animations are disabled for users who request reduced motion
+
+### Component Patterns
+
+**1. Elevated Cards**
+- White background (`bg-white`)
+- Border: `border border-slate-200/60`
+- Shadow: `shadow-depth-sm` (default), `shadow-depth-md` (hover)
+- Border radius: `rounded-2xl` (16px)
+- Padding: `p-8` (32px)
+
+**2. Gradient Buttons**
+- Background: `bg-gradient-to-r from-indigo-600 to-blue-600`
+- Text: `text-white font-semibold`
+- Hover: Darker gradient (`from-indigo-700 to-blue-700`)
+- Shadow: `shadow-depth-sm` → `shadow-depth-md` on hover
+- Transition: `transition-all duration-300`
+
+**3. Icon Containers**
+- Background: Gradient (e.g., `from-indigo-100 to-blue-100`)
+- Glow effect: Blurred gradient overlay (`blur-xl opacity-20`)
+- Border radius: `rounded-xl` (12px)
+- Padding: `p-3` or `p-4`
+
+**4. SVG Gradients**
+All icons use gradient strokes/fills defined inline:
+```tsx
+<defs>
+  <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stopColor="#4F46E5" />
+    <stop offset="100%" stopColor="#3B82F6" />
+  </linearGradient>
+</defs>
+```
+
+### Typography
+
+**Headings:**
+- Hero H1: `text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight`
+- Card Headlines: `text-2xl font-bold` or `text-3xl font-bold`
+- Subheadings: `text-lg font-semibold`
+
+**Body Text:**
+- Hero subtitle: `text-xl sm:text-2xl font-light leading-relaxed`
+- Card descriptions: `text-sm font-medium`
+- Helper text: `text-xs font-medium`
+
+**Font Weights:**
+- Light: 300 (hero subtitle)
+- Medium: 500 (body text, labels)
+- Semibold: 600 (buttons, card titles)
+- Bold: 700 (numbers, emphasis)
+- Extrabold: 800 (hero headline)
+
+### Hover Effects
+
+**Standard Lift Pattern:**
+```tsx
+hover:-translate-y-0.5 hover:shadow-depth-md transition-all duration-300
+```
+
+**Upload Zone Special:**
+- Default: `shadow-depth-md`
+- Hover: `shadow-depth-lg` + `-translate-y-1`
+- Gradient overlay fades in: `opacity-0` → `opacity-100`
+- Icon scales: `scale-100` → `scale-110`
+
+### Responsive Breakpoints
+
+Follow Tailwind defaults:
+- `sm:` 640px (tablets)
+- `md:` 768px (small laptops)
+- `lg:` 1024px (desktops)
+
+**Mobile-First Approach:**
+- Base styles for mobile
+- Add `sm:`, `lg:` modifiers for larger screens
+- Grid: `grid-cols-1 sm:grid-cols-3` for feature cards
+
+### Performance Considerations
+
+1. **CSS-Only Animations**: All animations use CSS keyframes, no JavaScript
+2. **GPU Acceleration**: Transforms use `will-change` hints where needed
+3. **Reduced Motion**: All animations disabled via `prefers-reduced-motion`
+4. **Shadow Optimization**: Shadows use RGBA for better performance than hex
+5. **Gradient Performance**: `background-size: 200%` for smooth gradient shifts
+
+### Design Conflicts to Avoid
+
+**DO NOT** make landing page look like existing templates:
+- ❌ Editorial serif typography (MinimalistEditorial)
+- ❌ Dark backgrounds with noise overlays (GlassMorphic)
+- ❌ Thick black borders with hard shadows (NeoBrutalist)
+- ❌ Bento grid mosaic layouts (BentoGrid)
+
+**Landing page should:**
+- ✅ Use light backgrounds (slate-50, not dark)
+- ✅ Use soft shadows (not hard drops or glassmorphism)
+- ✅ Use indigo/blue gradients (not template-specific colors)
+- ✅ Use standard layouts (not editorial or mosaic grids)
+
+---
+
 ## Contact & Resources
 
 - **Docs**: See `/docs` directory (prd.md, tech-spec.md, roadmap.md)

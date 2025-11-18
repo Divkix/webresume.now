@@ -47,6 +47,14 @@ const CertificationSchema = z.object({
   url: z.string().url().optional().or(z.literal('')),
 })
 
+const ProjectSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  year: z.string().optional(),
+  technologies: z.array(z.string()).optional(),
+  url: z.string().url().optional().or(z.literal('')),
+})
+
 const ResumeContentSchema = z.object({
   full_name: z.string(),
   headline: z.string(),
@@ -56,6 +64,7 @@ const ResumeContentSchema = z.object({
   education: z.array(EducationItemSchema).optional(),
   skills: z.array(SkillCategorySchema).optional(),
   certifications: z.array(CertificationSchema).optional(),
+  projects: z.array(ProjectSchema).optional(),
 })
 
 // JSON schema for Replicate model
@@ -148,6 +157,38 @@ const RESUME_EXTRACTION_SCHEMA = {
           issuer: { type: 'string' },
           date: { type: 'string' },
           url: { type: 'string', format: 'uri' },
+        },
+      },
+    },
+    projects: {
+      type: 'array',
+      description: 'Personal projects, side work, portfolio pieces, or notable work mentioned in the resume',
+      items: {
+        type: 'object',
+        required: ['title', 'description'],
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Project name or title',
+          },
+          description: {
+            type: 'string',
+            maxLength: 200,
+            description: 'Brief description of the project and its impact',
+          },
+          year: {
+            type: 'string',
+            description: 'Year completed or date range',
+          },
+          technologies: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Technologies, frameworks, or tools used',
+          },
+          url: {
+            type: 'string',
+            description: 'Project URL or demo link if available',
+          },
         },
       },
     },
@@ -270,6 +311,17 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
         return rest
       }
       return cert
+    })
+  }
+
+  if (data.projects) {
+    data.projects = data.projects.map((project) => {
+      if (project.url === '') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { url: _url, ...rest } = project
+        return rest
+      }
+      return project
     })
   }
 

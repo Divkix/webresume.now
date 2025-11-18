@@ -147,6 +147,15 @@ export interface Database {
   }
 }
 
+// Project structure extracted from resume (personal projects, side work, portfolio)
+export interface Project {
+  title: string
+  description: string
+  year?: string
+  technologies?: string[]
+  url?: string
+}
+
 // Resume content structure (from AI parsing)
 export interface ResumeContent {
   full_name: string
@@ -186,4 +195,5 @@ export interface ResumeContent {
     date?: string
     url?: string
   }>
+  projects?: Project[]
 }

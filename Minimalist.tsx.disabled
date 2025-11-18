@@ -1,0 +1,105 @@
+
+import React from 'react';
+import { ArrowUpRight } from 'lucide-react';
+import { DUMMY_DATA } from '../../types';
+
+const MinimalistPortfolio: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-[#fdfbf9] text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white overflow-y-auto scroll-smooth">
+      
+      {/* Top Navigation / Brand */}
+      <nav className="fixed top-0 left-0 w-full p-8 flex justify-between items-start pointer-events-none z-20 mix-blend-difference text-neutral-900 dark:text-white md:pl-24 lg:pl-8">
+         <span className="uppercase tracking-widest text-xs font-bold pointer-events-auto cursor-pointer">Folio / 24</span>
+         <a href={`mailto:${DUMMY_DATA.socials.find(s => s.icon === 'mail')?.url}`} className="uppercase tracking-widest text-xs font-bold hover:underline pointer-events-auto cursor-pointer">
+           Get in Touch
+         </a>
+      </nav>
+
+      <div className="max-w-screen-xl mx-auto px-6 md:px-12 pt-32 pb-20">
+        
+        {/* Editorial Header */}
+        <header className="mb-32 md:mb-48 grid grid-cols-1 md:grid-cols-12 gap-y-8">
+          <div className="md:col-span-8">
+            <h1 className="font-serif text-6xl md:text-9xl leading-[0.9] tracking-tighter mb-8">
+              {DUMMY_DATA.name.split(' ')[0]}<br />
+              <span className="italic font-light ml-12 md:ml-24">{DUMMY_DATA.name.split(' ')[1]}</span>
+            </h1>
+          </div>
+          <div className="md:col-span-4 flex flex-col justify-end md:pl-12">
+             <p className="text-lg md:text-xl leading-relaxed font-light text-neutral-600">
+               {DUMMY_DATA.bio}
+             </p>
+             <div className="mt-8 flex gap-4">
+               <span className="text-xs uppercase tracking-widest border border-neutral-200 px-3 py-1 rounded-full">{DUMMY_DATA.role}</span>
+               <span className="text-xs uppercase tracking-widest border border-neutral-200 px-3 py-1 rounded-full">{DUMMY_DATA.location}</span>
+             </div>
+          </div>
+        </header>
+
+        {/* Selected Work Index */}
+        <section className="mb-32">
+          <div className="flex items-end justify-between mb-12 border-b border-neutral-200 pb-4">
+            <h2 className="text-xs font-bold uppercase tracking-widest">Selected Works</h2>
+            <span className="text-xs font-bold uppercase tracking-widest">({DUMMY_DATA.projects.length})</span>
+          </div>
+
+          <div className="flex flex-col">
+            {DUMMY_DATA.projects.map((project) => (
+              <a 
+                key={project.id} 
+                href={project.link}
+                className="group border-b border-neutral-200 py-12 flex flex-col md:flex-row md:items-baseline hover:bg-white transition-colors duration-500"
+              >
+                <div className="md:w-1/12 text-xs font-mono text-neutral-400 mb-2 md:mb-0 group-hover:text-neutral-900 transition-colors">
+                  {project.year}
+                </div>
+                <div className="md:w-5/12">
+                  <h3 className="text-3xl md:text-4xl font-serif italic font-light group-hover:not-italic transition-all duration-300">
+                    {project.title}
+                  </h3>
+                </div>
+                <div className="md:w-4/12 mt-2 md:mt-0">
+                  <p className="text-sm text-neutral-500 group-hover:text-neutral-900 max-w-xs transition-colors">
+                    {project.description}
+                  </p>
+                  <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                     {project.tags.slice(0,2).map(t => <span key={t} className="text-[10px] uppercase tracking-wider text-neutral-400">{t}</span>)}
+                  </div>
+                </div>
+                <div className="md:w-2/12 flex justify-end mt-4 md:mt-0">
+                  <div className="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all duration-300 transform group-hover:rotate-45">
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* Footer / Contact */}
+        <footer className="grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-neutral-900 pt-12">
+           <div>
+             <p className="text-3xl font-serif italic">Let's build something<br/>timeless together.</p>
+           </div>
+           <div className="flex flex-col items-start md:items-end justify-between h-full">
+              <div className="flex gap-8">
+                {DUMMY_DATA.socials.map((social) => (
+                  <a 
+                    key={social.platform} 
+                    href={social.url} 
+                    className="text-sm uppercase tracking-widest hover:line-through decoration-1"
+                  >
+                    {social.platform}
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-400 mt-8 md:mt-0">© {new Date().getFullYear()} {DUMMY_DATA.name}</p>
+           </div>
+        </footer>
+
+      </div>
+    </div>
+  );
+};
+
+export default MinimalistPortfolio;

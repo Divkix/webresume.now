@@ -43,6 +43,12 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Soft Depth Theme - Custom Shadows */
+  --shadow-depth-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-depth-md: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-depth-lg: 0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.12);
+  --shadow-depth-xl: 0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 96px rgba(0, 0, 0, 0.16);
 }
 
 :root {
@@ -112,6 +118,90 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Soft Depth Theme - Custom Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Soft Depth Theme - Utility Classes */
+.shadow-depth-sm {
+  box-shadow: var(--shadow-depth-sm);
+}
+
+.shadow-depth-md {
+  box-shadow: var(--shadow-depth-md);
+}
+
+.shadow-depth-lg {
+  box-shadow: var(--shadow-depth-lg);
+}
+
+.shadow-depth-xl {
+  box-shadow: var(--shadow-depth-xl);
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-fade-in-up,
+  .animate-gradient-shift,
+  .animate-shimmer {
+    animation: none;
+  }
 }
 
 @layer base {

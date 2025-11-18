@@ -40,15 +40,17 @@ export default function OnboardingPage() {
           throw new Error(data.error || 'Failed to claim resume')
         }
 
+        const data = await response.json()
+
         setProgress(100)
 
         // Clear localStorage
         localStorage.removeItem('temp_upload_key')
 
-        // Show success and redirect
+        // Redirect to waiting room for parsing
         setTimeout(() => {
-          router.push('/dashboard')
-        }, 1500)
+          router.push(`/waiting?resume_id=${data.resume_id}`)
+        }, 500)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to claim resume')
         setClaiming(false)
@@ -113,15 +115,11 @@ export default function OnboardingPage() {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {claiming && progress < 100
-            ? 'Claiming Your Resume...'
-            : 'Success!'}
+          Claiming Your Resume...
         </h1>
 
         <p className="text-gray-600 mb-6">
-          {claiming && progress < 100
-            ? 'Please wait while we save your resume.'
-            : 'Redirecting to your dashboard...'}
+          Please wait while we save your resume and prepare it for AI analysis.
         </p>
 
         {claiming && (

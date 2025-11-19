@@ -200,12 +200,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <main className="max-w-[1400px] mx-auto px-4 lg:px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {/* Row 1: Hero Stats - Full Width */}
           <div className="col-span-full">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
 
               {/* Resume Status Mini Card */}
               <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
@@ -455,18 +455,21 @@ export default async function DashboardPage() {
                     Edit Content
                   </Link>
                 </Button>
-              </div>
 
-              {/* Right Column - Stack of cards */}
-              <div className="space-y-6">
-                {/* Theme Selector Card */}
+                {/* Separator */}
+                <Separator className="my-6" />
+
+                {/* Theme Selector - moved from right column */}
                 {siteData && (
-                  <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-6 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
+                  <div>
                     <h3 className="text-lg font-semibold text-slate-900 mb-4">Choose Theme</h3>
                     <ThemeSelector initialThemeId={siteData.theme_id} />
                   </div>
                 )}
+              </div>
 
+              {/* Right Column - Account Only */}
+              <div>
                 {/* Account Info Card */}
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-6 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Account</h3>

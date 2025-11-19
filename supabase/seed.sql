@@ -1,12 +1,24 @@
 -- Seed data for local development
 -- This runs automatically after migrations with `bun run db:reset`
 
+-- ============================================================================
+-- SEED DATA DISABLED
+-- ============================================================================
+-- Reason: Using Google OAuth for authentication and testing with real resumes
+-- The demo user and sample data below are commented out but preserved as
+-- reference for the expected data structure.
+--
+-- To re-enable: Uncomment the INSERT statements below
+-- ============================================================================
+
 -- Demo user profile with complete resume data
 -- Note: This inserts into auth.users first, then creates profile
 -- For production testing, use a real Google OAuth account
 
 -- Create demo user in auth.users
 -- Password: demo123 (for local testing)
+-- Note: Using extensions schema prefix for pgcrypto functions
+/*
 INSERT INTO auth.users (
   id,
   email,
@@ -21,7 +33,7 @@ INSERT INTO auth.users (
 ) VALUES (
   'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   'demo@webresume.now',
-  crypt('demo123', gen_salt('bf')),
+  extensions.crypt('demo123', extensions.gen_salt('bf')),
   NOW(),
   '{"provider": "email"}',
   '{"full_name": "Alex Rivera", "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop"}',
@@ -32,6 +44,7 @@ INSERT INTO auth.users (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Create demo profile
+-- Note: Profile may already exist from handle_new_user trigger, so use ON CONFLICT (id)
 INSERT INTO profiles (
   id,
   email,
@@ -46,10 +59,12 @@ INSERT INTO profiles (
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
   'Senior Full-Stack Engineer & Product Architect',
   '{"show_phone": false, "show_address": false}'::jsonb
-) ON CONFLICT (handle) DO UPDATE SET
+) ON CONFLICT (id) DO UPDATE SET
   email = EXCLUDED.email,
+  handle = EXCLUDED.handle,
   avatar_url = EXCLUDED.avatar_url,
-  headline = EXCLUDED.headline;
+  headline = EXCLUDED.headline,
+  privacy_settings = EXCLUDED.privacy_settings;
 
 -- Create demo site data with comprehensive resume content
 INSERT INTO site_data (
@@ -160,9 +175,10 @@ INSERT INTO site_data (
   content = EXCLUDED.content,
   theme_id = EXCLUDED.theme_id,
   last_published_at = EXCLUDED.last_published_at;
+*/
 
--- To use this seed data:
--- 1. Start local Supabase: bun run db:start
+-- To use this seed data (if re-enabled):
+-- 1. Uncomment the INSERT statements above
 -- 2. Reset database with seed: bun run db:reset
 -- 3. Visit: http://localhost:3000/demo
 -- 4. The demo user can log in with: demo@webresume.now / demo123

@@ -1,5 +1,18 @@
 'use client'
 
+/**
+ * Waiting Room - Error Fallback Page
+ *
+ * This page is primarily used as a fallback for error cases and retries.
+ * Normal flow: Upload → Login → Onboarding → Survey → Dashboard
+ * This page is accessed only when:
+ * - Resume parsing fails and user needs to retry
+ * - Manual navigation or old bookmarks
+ * - Error recovery scenarios
+ *
+ * Dashboard already handles live status updates for processing resumes.
+ */
+
 import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'

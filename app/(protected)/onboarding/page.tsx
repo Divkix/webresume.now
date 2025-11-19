@@ -47,9 +47,9 @@ export default function OnboardingPage() {
         // Clear localStorage
         localStorage.removeItem('temp_upload_key')
 
-        // Redirect to waiting room for parsing
+        // Redirect to survey page for profile setup while parsing
         setTimeout(() => {
-          router.push(`/waiting?resume_id=${data.resume_id}`)
+          router.push(`/survey?resume_id=${data.resume_id}`)
         }, 500)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to claim resume')

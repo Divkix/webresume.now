@@ -134,10 +134,6 @@ if (!profile.privacy_settings.show_address) {
 - `theme_id` (default: 'minimalist_creme')
 - `last_published_at`
 
-**redirects**
-- `old_handle`, `new_handle`
-- `expires_at` (handles released after 30 days)
-
 ### RLS Policies (Required)
 - `profiles`: Public read (handle lookup), user update own
 - `resumes`: User read/create own only

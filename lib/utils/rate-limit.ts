@@ -65,25 +65,17 @@ export async function checkRateLimit(
       }
 
       case 'handle_change': {
-        // Count redirects created in the time window (each handle change creates a redirect)
-        const { count: redirectCount, error } = await supabase
-          .from('redirects')
+        // Count profile updates as a proxy for handle changes
+        // Note: This counts ALL profile updates, not just handle changes
+        // For more accurate tracking, consider adding a dedicated handle_changes audit table
+        const { count: updateCount, error } = await supabase
+          .from('profiles')
           .select('*', { count: 'exact', head: true })
-          .gte('created_at', windowStart.toISOString())
+          .eq('id', userId)
+          .gte('updated_at', windowStart.toISOString())
 
-        if (error) {
-          // If redirects table doesn't exist or query fails, fall back to checking profile updates
-          const { count: updateCount, error: profileError } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('id', userId)
-            .gte('updated_at', windowStart.toISOString())
-
-          if (profileError) throw profileError
-          count = updateCount || 0
-        } else {
-          count = redirectCount || 0
-        }
+        if (error) throw error
+        count = updateCount || 0
         break
       }
 

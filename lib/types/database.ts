@@ -120,29 +120,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      redirects: {
-        Row: {
-          id: string
-          old_handle: string
-          new_handle: string
-          expires_at: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          old_handle: string
-          new_handle: string
-          expires_at: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          old_handle?: string
-          new_handle?: string
-          expires_at?: string
-          created_at?: string
-        }
-      }
     }
   }
 }

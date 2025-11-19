@@ -5,12 +5,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { Loader2, Link2, Copy, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Loader2, Link2, Copy, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { handleUpdateSchema, type HandleUpdate } from '@/lib/schemas/profile'
 
 interface HandleFormProps {
@@ -166,19 +165,6 @@ export function HandleForm({ currentHandle }: HandleFormProps) {
               </p>
             </div>
           )}
-
-          {/* Redirect Warning */}
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <p className="font-medium mb-1">Important: Handle Change Policy</p>
-              <p className="text-sm">
-                Your old handle (<span className="font-mono">{currentHandle}</span>) will redirect
-                to your new handle for <span className="font-semibold">30 days</span>. After that,
-                it may become available for others to claim.
-              </p>
-            </AlertDescription>
-          </Alert>
 
           {/* Submit Button */}
           <div className="flex gap-3 pt-2">

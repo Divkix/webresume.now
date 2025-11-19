@@ -9,7 +9,7 @@ import {
 
 /**
  * PUT /api/profile/handle
- * Update user's handle and create redirect from old handle
+ * Update user's handle (old handle becomes immediately available)
  * Rate limit: 3 handle changes per 24 hours (prevent abuse)
  */
 export async function PUT(request: Request) {
@@ -111,26 +111,7 @@ export async function PUT(request: Request) {
       )
     }
 
-    // 7. Create redirect entry if old handle exists
-    if (oldHandle) {
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 30) // 30 days from now
-
-      const { error: redirectError } = await supabase
-        .from('redirects')
-        .insert({
-          old_handle: oldHandle,
-          new_handle: newHandle,
-          expires_at: expiresAt.toISOString(),
-        })
-
-      if (redirectError) {
-        console.error('Redirect creation error:', redirectError)
-        // Continue anyway - redirect is not critical
-      }
-    }
-
-    // 8. Update handle in profiles table
+    // 7. Update handle in profiles table
     const { data, error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -154,7 +135,6 @@ export async function PUT(request: Request) {
       success: true,
       handle: data.handle,
       old_handle: oldHandle,
-      redirect_expires_days: 30,
     })
   } catch (err) {
     console.error('Unexpected error in handle update:', err)

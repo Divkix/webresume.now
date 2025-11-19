@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         id: user.id,
         email: user.email!,
         avatar_url: user.user_metadata?.avatar_url,
-        handle: user.email!.substring(0, 12).replace(/[^a-z0-9]/gi, '').toLowerCase() || user.id.substring(0, 12)
+        handle: user.email!.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase().substring(0, 30) || user.id.substring(0, 12)
       }, { onConflict: 'id' })
 
       if (profileError) {

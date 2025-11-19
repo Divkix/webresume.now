@@ -5,7 +5,7 @@ import Link from 'next/link'
 type ThemeId = 'minimalist_editorial' | 'glassmorphic' | 'neo_brutalist' | 'bento_grid'
 
 interface AttributionWidgetProps {
-  theme: ThemeId
+  theme: string
 }
 
 /**
@@ -14,7 +14,12 @@ interface AttributionWidgetProps {
  */
 export function AttributionWidget({ theme }: AttributionWidgetProps) {
   // Theme-specific styles using data attributes for clean conditional rendering
-  const themeStyles = {
+  const themeStyles: Record<ThemeId, {
+    container: string
+    accent: string
+    shimmer: string
+    shadow: string
+  }> = {
     minimalist_editorial: {
       container: 'bg-amber-50/95 sm:bg-amber-50/80 border border-stone-300/50 text-stone-800 hover:text-stone-900',
       accent: 'text-amber-700',
@@ -41,7 +46,13 @@ export function AttributionWidget({ theme }: AttributionWidgetProps) {
     },
   }
 
-  const currentTheme = themeStyles[theme] || themeStyles.bento_grid
+  // Type guard to check if theme is a valid ThemeId
+  const isValidTheme = (t: string): t is ThemeId => {
+    return t in themeStyles
+  }
+
+  // Use theme if valid, otherwise default to bento_grid
+  const currentTheme = isValidTheme(theme) ? themeStyles[theme] : themeStyles.bento_grid
 
   return (
     <Link

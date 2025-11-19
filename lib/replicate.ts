@@ -10,21 +10,21 @@ const replicate = new Replicate({
 // Zod schemas for runtime validation
 const ContactSchema = z.object({
   email: z.string().email({ message: 'Invalid email address' }),
-  phone: z.string().optional(),
-  location: z.string().optional(),
-  linkedin: z.string().url({ message: 'Invalid LinkedIn URL' }).optional().or(z.literal('')),
-  github: z.string().url({ message: 'Invalid GitHub URL' }).optional().or(z.literal('')),
-  website: z.string().url({ message: 'Invalid website URL' }).optional().or(z.literal('')),
+  phone: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  linkedin: z.union([z.string().url({ message: 'Invalid LinkedIn URL' }), z.literal('')]).optional().nullable(),
+  github: z.union([z.string().url({ message: 'Invalid GitHub URL' }), z.literal('')]).optional().nullable(),
+  website: z.union([z.string().url({ message: 'Invalid website URL' }), z.literal('')]).optional().nullable(),
 })
 
 const ExperienceItemSchema = z.object({
   title: z.string(),
   company: z.string(),
-  location: z.string().optional(),
+  location: z.string().optional().nullable(),
   start_date: z.string(),
-  end_date: z.string().optional(),
-  description: z.string(),
-  highlights: z.array(z.string()).optional(),
+  end_date: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  highlights: z.array(z.string()).optional().nullable(),
 })
 
 const EducationItemSchema = z.object({
@@ -43,28 +43,28 @@ const SkillCategorySchema = z.object({
 const CertificationSchema = z.object({
   name: z.string(),
   issuer: z.string(),
-  date: z.string().optional(),
-  url: z.string().url({ message: 'Invalid certification URL' }).optional().or(z.literal('')),
+  date: z.string().optional().nullable(),
+  url: z.union([z.string().url({ message: 'Invalid certification URL' }), z.literal('')]).optional().nullable(),
 })
 
 const ProjectSchema = z.object({
   title: z.string(),
   description: z.string(),
-  year: z.string().optional(),
-  technologies: z.array(z.string()).optional(),
-  url: z.string().url({ message: 'Invalid project URL' }).optional().or(z.literal('')),
+  year: z.string().optional().nullable(),
+  technologies: z.array(z.string()).optional().nullable(),
+  url: z.union([z.string().url({ message: 'Invalid project URL' }), z.literal('')]).optional().nullable(),
 })
 
 const ResumeContentSchema = z.object({
   full_name: z.string(),
-  headline: z.string(),
-  summary: z.string(),
+  headline: z.string().optional().nullable(),
+  summary: z.string().optional().nullable(),
   contact: ContactSchema,
   experience: z.array(ExperienceItemSchema),
-  education: z.array(EducationItemSchema).optional(),
-  skills: z.array(SkillCategorySchema).optional(),
-  certifications: z.array(CertificationSchema).optional(),
-  projects: z.array(ProjectSchema).optional(),
+  education: z.array(EducationItemSchema).optional().nullable(),
+  skills: z.array(SkillCategorySchema).optional().nullable(),
+  certifications: z.array(CertificationSchema).optional().nullable(),
+  projects: z.array(ProjectSchema).optional().nullable(),
 })
 
 // JSON schema for Replicate model
@@ -219,11 +219,11 @@ export interface ParseStatusResult {
 export async function parseResume(presignedUrl: string): Promise<ParseResumeResult> {
   try {
     const prediction = await replicate.predictions.create({
-      version: 'datalab-to/marker:latest', // Use latest version
+      model: 'datalab-to/marker',
       input: {
         file: presignedUrl,
         use_llm: true,
-        page_schema: RESUME_EXTRACTION_SCHEMA,
+        page_schema: JSON.stringify(RESUME_EXTRACTION_SCHEMA),
       },
     })
 
@@ -288,42 +288,54 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
 
   const data = validationResult.data
 
+  // Apply defaults for nullable fields
+  const normalized: ResumeContent = {
+    full_name: data.full_name,
+    headline: data.headline ?? '',
+    summary: data.summary ?? '',
+    contact: {
+      email: data.contact.email,
+      phone: data.contact.phone ?? undefined,
+      location: data.contact.location ?? undefined,
+      linkedin: data.contact.linkedin === '' || data.contact.linkedin === null ? undefined : data.contact.linkedin,
+      github: data.contact.github === '' || data.contact.github === null ? undefined : data.contact.github,
+      website: data.contact.website === '' || data.contact.website === null ? undefined : data.contact.website,
+    },
+    experience: data.experience.map((exp) => ({
+      title: exp.title,
+      company: exp.company,
+      location: exp.location ?? undefined,
+      start_date: exp.start_date,
+      end_date: exp.end_date ?? undefined,
+      description: exp.description ?? '',
+      highlights: exp.highlights ?? undefined,
+    })),
+    education: data.education ?? undefined,
+    skills: data.skills ?? undefined,
+    certifications: data.certifications?.map((cert) => ({
+      name: cert.name,
+      issuer: cert.issuer,
+      date: cert.date ?? undefined,
+      url: cert.url === '' || cert.url === null ? undefined : cert.url,
+    })) ?? undefined,
+    projects: data.projects?.map((project) => ({
+      title: project.title,
+      description: project.description,
+      year: project.year ?? undefined,
+      technologies: project.technologies ?? undefined,
+      url: project.url === '' || project.url === null ? undefined : project.url,
+    })) ?? undefined,
+  }
+
   // Normalize: Truncate summary to 500 chars
-  if (data.summary.length > 500) {
-    data.summary = data.summary.substring(0, 497) + '...'
+  if (normalized.summary && normalized.summary.length > 500) {
+    normalized.summary = normalized.summary.substring(0, 497) + '...'
   }
 
   // Normalize: Limit experience to top 5 items
-  if (data.experience.length > 5) {
-    data.experience = data.experience.slice(0, 5)
+  if (normalized.experience.length > 5) {
+    normalized.experience = normalized.experience.slice(0, 5)
   }
 
-  // Clean up empty URL strings
-  if (data.contact.linkedin === '') delete data.contact.linkedin
-  if (data.contact.github === '') delete data.contact.github
-  if (data.contact.website === '') delete data.contact.website
-
-  if (data.certifications) {
-    data.certifications = data.certifications.map((cert) => {
-      if (cert.url === '') {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { url: _url, ...rest } = cert
-        return rest
-      }
-      return cert
-    })
-  }
-
-  if (data.projects) {
-    data.projects = data.projects.map((project) => {
-      if (project.url === '') {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { url: _url, ...rest } = project
-        return rest
-      }
-      return project
-    })
-  }
-
-  return data
+  return normalized
 }

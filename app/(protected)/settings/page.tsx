@@ -1,11 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, User } from 'lucide-react'
-import { LogoutButton } from '@/components/auth/LogoutButton'
-import { Button } from '@/components/ui/button'
+import { User } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { PrivacySettingsForm } from '@/components/forms/PrivacySettings'
 import { HandleForm } from '@/components/forms/HandleForm'
 import { isValidPrivacySettings } from '@/lib/utils/privacy'
@@ -39,47 +36,36 @@ export default async function SettingsPage() {
     : { show_phone: false, show_address: false }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-            </Button>
-            <Separator orientation="vertical" className="h-6" />
-            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          </div>
-          <LogoutButton />
+    <div className="min-h-screen py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+          <p className="text-slate-600 mt-2">Manage your account and privacy settings</p>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Profile Overview */}
-        <Card>
+        <Card className="shadow-depth-sm border-slate-200/60 hover:shadow-depth-md transition-all duration-300">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-slate-900">
+              <User className="h-5 w-5 text-indigo-600" />
               Profile Information
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-slate-600">
               Your account details and basic information
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600">Email</p>
-                <p className="text-sm text-gray-900">{profile.email}</p>
+                <p className="text-sm font-medium text-slate-700">Email</p>
+                <p className="text-sm text-slate-900">{profile.email}</p>
               </div>
               {profile.handle && (
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600">Handle</p>
+                  <p className="text-sm font-medium text-slate-700">Handle</p>
                   <Link
                     href={`/${profile.handle}`}
-                    className="text-sm text-blue-600 hover:underline font-mono"
+                    className="text-sm text-indigo-600 hover:text-indigo-700 hover:underline font-mono transition-colors duration-300"
                   >
                     @{profile.handle}
                   </Link>
@@ -89,18 +75,18 @@ export default async function SettingsPage() {
 
             {profile.headline && (
               <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-600">Headline</p>
-                <p className="text-sm text-gray-900">{profile.headline}</p>
+                <p className="text-sm font-medium text-slate-700">Headline</p>
+                <p className="text-sm text-slate-900">{profile.headline}</p>
               </div>
             )}
 
             {profile.avatar_url && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-600">Avatar</p>
+                <p className="text-sm font-medium text-slate-700">Avatar</p>
                 <img
                   src={profile.avatar_url}
                   alt="Profile avatar"
-                  className="w-16 h-16 rounded-full object-cover border border-gray-200"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-slate-200/60"
                 />
               </div>
             )}
@@ -118,8 +104,8 @@ export default async function SettingsPage() {
           userHandle={profile.handle}
         />
 
-        {/* Danger Zone (Optional - placeholder for future features) */}
-        <Card className="border-red-200">
+        {/* Danger Zone */}
+        <Card className="shadow-depth-sm border-red-200 hover:shadow-depth-md transition-all duration-300">
           <CardHeader>
             <CardTitle className="text-red-900">Danger Zone</CardTitle>
             <CardDescription className="text-red-700">
@@ -134,7 +120,7 @@ export default async function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   )
 }

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Link2, Check } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
 interface CopyLinkButtonProps {
   handle: string
@@ -48,10 +48,14 @@ export function CopyLinkButton({ handle }: CopyLinkButtonProps) {
   }
 
   return (
-    <Button
+    <button
       onClick={copyToClipboard}
-      variant="outline"
-      className="flex items-center gap-2"
+      className={cn(
+        'inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-300',
+        copied
+          ? 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-depth-sm'
+          : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+      )}
     >
       {copied ? (
         <>
@@ -64,6 +68,6 @@ export function CopyLinkButton({ handle }: CopyLinkButtonProps) {
           Copy Share Link
         </>
       )}
-    </Button>
+    </button>
   )
 }

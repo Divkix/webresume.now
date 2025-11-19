@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { THEME_METADATA, type ThemeId } from '@/lib/templates/theme-registry'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 interface ThemeSelectorProps {
   initialThemeId: string
@@ -57,15 +58,15 @@ export function ThemeSelector({ initialThemeId }: ThemeSelectorProps) {
   }
 
   return (
-    <Card>
+    <Card className="shadow-depth-sm border-slate-200/60 hover:shadow-depth-md transition-all duration-300">
       <CardHeader>
-        <CardTitle>Choose Your Template</CardTitle>
-        <CardDescription>Select how your resume appears to visitors</CardDescription>
+        <CardTitle className="text-slate-900">Choose Your Template</CardTitle>
+        <CardDescription className="text-slate-600">Select how your resume appears to visitors</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Success/Error Messages */}
         {successMessage && (
-          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-900 text-sm">
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm">
             <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -84,34 +85,34 @@ export function ThemeSelector({ initialThemeId }: ThemeSelectorProps) {
               key={id}
               onClick={() => handleThemeChange(id as ThemeId)}
               disabled={isUpdating}
-              className={`
-                p-6 rounded-xl border-2 text-left transition-all
-                ${
-                  selectedTheme === id
-                    ? 'border-amber-600 bg-amber-50 shadow-lg'
-                    : 'border-neutral-200 hover:border-neutral-300 bg-white'
-                }
-                ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}
-              `}
+              className={cn(
+                'relative cursor-pointer rounded-xl overflow-hidden transition-all duration-300',
+                'border-2 shadow-depth-sm hover:shadow-depth-md hover:-translate-y-0.5',
+                'p-6 text-left bg-white',
+                selectedTheme === id
+                  ? 'border-indigo-600 ring-2 ring-indigo-100'
+                  : 'border-slate-200/60 hover:border-slate-300',
+                isUpdating && 'opacity-50 cursor-not-allowed hover:translate-y-0'
+              )}
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-bold text-lg">{meta.name}</h3>
-                  <span className="text-xs uppercase tracking-wide text-neutral-500 font-medium">
+                  <h3 className="font-bold text-lg text-slate-900">{meta.name}</h3>
+                  <span className="text-xs uppercase tracking-wide text-slate-500 font-medium">
                     {meta.category}
                   </span>
                 </div>
                 {selectedTheme === id && (
                   <div className="flex items-center gap-1">
                     {isUpdating ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                      <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
                     ) : (
-                      <span className="text-amber-600 text-sm font-bold">Active</span>
+                      <span className="text-indigo-600 text-sm font-bold">Active</span>
                     )}
                   </div>
                 )}
               </div>
-              <p className="text-sm text-neutral-600">{meta.description}</p>
+              <p className="text-sm text-slate-600">{meta.description}</p>
             </button>
           ))}
         </div>

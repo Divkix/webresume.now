@@ -26,38 +26,38 @@ const ContactSchema = z.object({
 })
 
 const ExperienceItemSchema = z.object({
-  title: z.string(),
-  company: z.string(),
+  title: z.string().nullable().transform(val => val ?? 'Position Not Specified'),
+  company: z.string().nullable().transform(val => val ?? 'Company Not Specified'),
   location: z.string().optional().nullable(),
-  start_date: z.string(),
+  start_date: z.string().nullable().transform(val => val ?? 'Date Not Specified'),
   end_date: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
+  description: z.string().optional().nullable().transform(val => val ?? ''),
   highlights: z.array(z.string()).optional().nullable(),
 })
 
 const EducationItemSchema = z.object({
-  degree: z.string(),
-  institution: z.string().nullable(),
+  degree: z.string().nullable().transform(val => val ?? 'Degree Not Specified'),
+  institution: z.string().nullable().transform(val => val ?? 'Institution Not Specified'),
   location: z.string().optional().nullable(),
   graduation_date: z.string().optional().nullable(),
   gpa: z.string().optional().nullable(),
 })
 
 const SkillCategorySchema = z.object({
-  category: z.string(),
+  category: z.string().nullable().transform(val => val ?? 'Uncategorized'),
   items: z.array(z.string()),
 })
 
 const CertificationSchema = z.object({
-  name: z.string(),
-  issuer: z.string().nullable(),
+  name: z.string().nullable().transform(val => val ?? 'Certification Not Specified'),
+  issuer: z.string().nullable().transform(val => val ?? 'Issuer Not Specified'),
   date: z.string().optional().nullable(),
   url: z.string().optional().nullable(),
 })
 
 const ProjectSchema = z.object({
-  title: z.string(),
-  description: z.string(),
+  title: z.string().nullable().transform(val => val ?? 'Project Title Not Specified'),
+  description: z.string().nullable().transform(val => val ?? ''),
   year: z.string().optional().nullable(),
   technologies: z.array(z.string()).optional().nullable(),
   url: z.string().optional().nullable(),
@@ -320,6 +320,14 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
 
   const data = validationResult.data
 
+  // Log if AI returned null values that were replaced with defaults
+  const hasDefaults = data.experience.some(
+    exp => exp.title.includes('Not Specified') || exp.company.includes('Not Specified') || exp.start_date.includes('Not Specified')
+  )
+  if (hasDefaults) {
+    console.warn('AI parsing returned null values - defaults applied to experience entries')
+  }
+
   // Apply defaults for nullable fields and sanitize URLs
   const normalized: ResumeContent = {
     full_name: data.full_name,
@@ -339,27 +347,23 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
       location: exp.location ?? undefined,
       start_date: exp.start_date,
       end_date: exp.end_date ?? undefined,
-      description: exp.description ?? '',
+      description: exp.description,
       highlights: exp.highlights ?? undefined,
     })),
-    education: data.education
-      ?.filter(edu => edu.institution) // Filter out entries with no institution
-      .map((edu) => ({
-        degree: edu.degree,
-        institution: edu.institution!,
-        location: edu.location ?? undefined,
-        graduation_date: edu.graduation_date ?? undefined,
-        gpa: edu.gpa ?? undefined,
-      })) ?? undefined,
+    education: data.education?.map((edu) => ({
+      degree: edu.degree,
+      institution: edu.institution,
+      location: edu.location ?? undefined,
+      graduation_date: edu.graduation_date ?? undefined,
+      gpa: edu.gpa ?? undefined,
+    })) ?? undefined,
     skills: data.skills ?? undefined,
-    certifications: data.certifications
-      ?.filter(cert => cert.issuer) // Only keep certs with issuer
-      .map((cert) => ({
-        name: cert.name,
-        issuer: cert.issuer!,
-        date: cert.date ?? undefined,
-        url: sanitizeUrl(cert.url),
-      })) ?? undefined,
+    certifications: data.certifications?.map((cert) => ({
+      name: cert.name,
+      issuer: cert.issuer,
+      date: cert.date ?? undefined,
+      url: sanitizeUrl(cert.url),
+    })) ?? undefined,
     projects: data.projects?.map((project) => ({
       title: project.title,
       description: project.description,

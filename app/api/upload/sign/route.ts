@@ -8,9 +8,16 @@ export async function POST(request: Request) {
   try {
     const { filename } = await request.json()
 
-    if (!filename) {
+    if (!filename || typeof filename !== 'string') {
       return NextResponse.json(
         { error: 'Filename is required' },
+        { status: 400 }
+      )
+    }
+
+    if (filename.length > 255) {
+      return NextResponse.json(
+        { error: 'Filename too long (max 255 characters)' },
         { status: 400 }
       )
     }
@@ -26,9 +33,10 @@ export async function POST(request: Request) {
 
     const uploadUrl = await getSignedUrl(r2Client, command, {
       expiresIn: 3600, // 1 hour
-      // Only sign essential headers to avoid CORS issues
+      // Sign content-type and content-length to enforce validation
       signableHeaders: new Set(['content-type', 'content-length']),
-      unhoistableHeaders: new Set(['content-length-range']),
+      // Prevent hoisting of content-length to enable client-side enforcement
+      unhoistableHeaders: new Set(['content-length']),
     })
 
     return NextResponse.json({ uploadUrl, key })

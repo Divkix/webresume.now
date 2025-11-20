@@ -172,7 +172,7 @@ export async function POST(request: Request) {
       return createErrorResponse(
         'Failed to prepare file for processing',
         ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        150
+        500
       )
     }
 

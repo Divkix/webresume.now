@@ -1,3 +1,9 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
 # webresume.now — AI Development Context
 
 ## Project Identity
@@ -76,6 +82,30 @@ POST /api/resume/claim with { key }
 - Clear `localStorage` after successful claim
 - R2 key format: `temp/{uuid}/{filename}` → `users/{user_id}/{filename}`
 
+### 1b. Onboarding Wizard Flow (Post-Auth)
+After successful authentication, users are guided through a multi-step wizard to complete their profile:
+
+```typescript
+// Middleware checks onboarding_completed flag
+if (user && isProtectedRoute && !profile.onboarding_completed) {
+  redirect('/wizard')
+}
+```
+
+**Wizard Steps** (`/wizard` route):
+1. **Handle Selection**: User picks a unique username (3+ chars, alphanumeric + hyphens)
+2. **Content Review**: Shows parsed resume content (read-only preview)
+3. **Privacy Settings**: Toggle phone/address visibility (default: hidden)
+4. **Theme Selection**: Choose from available templates (default: MinimalistEditorial)
+
+**Onboarding Completion**:
+- Sets `profiles.onboarding_completed = true`
+- Creates `site_data` record with chosen theme
+- Redirects to `/dashboard`
+
+**Exempt Routes** (skip onboarding check):
+- `/wizard`, `/onboarding`, `/survey`, `/auth/callback`
+
 ### 2. Structured AI Extraction
 We use Replicate's `datalab-to/marker` with a **custom JSON schema** to enforce output structure:
 
@@ -98,6 +128,13 @@ We use Replicate's `datalab-to/marker` with a **custom JSON schema** to enforce 
 
 **Normalization Rule**: If `experience` has >5 items, slice to top 5. If `summary` >500 chars, truncate.
 
+**Retry Mechanism**:
+- `resumes.retry_count` tracks parsing attempts (max 2)
+- `resumes.replicate_job_id` stores prediction ID for status polling
+- If parsing fails, user can retry via `/api/resume/retry` endpoint
+- After 2 failed retries, manual intervention required
+- Status transitions: `pending_claim` → `processing` → `completed`/`failed`
+
 ### 3. Privacy Filtering (ALWAYS Enforce)
 Before rendering public pages (`/[handle]`):
 
@@ -118,21 +155,27 @@ if (!profile.privacy_settings.show_address) {
 
 **profiles**
 - `id` (uuid, FK to auth.users)
-- `handle` (text, unique, min 3 chars)
+- `handle` (text, unique, min 3 chars, alphanumeric + hyphens)
 - `email`, `avatar_url`, `headline`
 - `privacy_settings` (jsonb): `{ show_phone: bool, show_address: bool }`
+- `onboarding_completed` (bool): Tracks wizard completion
+- `created_at`, `updated_at`
 
 **resumes**
 - `id`, `user_id` (FK to profiles)
 - `r2_key` (path in bucket)
 - `status`: `pending_claim`, `processing`, `completed`, `failed`
-- `error_message`, `created_at`
+- `error_message` (text): Stores parsing error details
+- `replicate_job_id` (text): Prediction ID for tracking
+- `retry_count` (int, default 0): Max 2 retries allowed
+- `parsed_at` (timestamp): When AI parsing completed
+- `created_at`
 
 **site_data**
-- `id`, `user_id`, `resume_id`
+- `id`, `user_id` (FK to profiles), `resume_id`
 - `content` (jsonb): Render-ready resume JSON
-- `theme_id` (default: 'minimalist_creme')
-- `last_published_at`
+- `theme_id` (text): Template identifier (see Available Templates below)
+- `last_published_at`, `created_at`, `updated_at`
 
 ### RLS Policies (Required)
 - `profiles`: Public read (handle lookup), user update own
@@ -198,17 +241,44 @@ if (!profile.privacy_settings.show_address) {
 ## Critical Implementation Rules
 
 ### Security & Validation
+
+**File Upload Security**:
 ```typescript
 // ALWAYS validate PDF magic number before R2
 const isPDF = buffer[0] === 0x25 && buffer[1] === 0x50; // %PDF
 
-// ALWAYS enforce file size in presigned URL
+// ALWAYS enforce file size in presigned URL (10MB max)
 const presignedUrl = await getSignedUrl(s3Client, putCommand, {
   expiresIn: 3600,
   signableHeaders: new Set(['content-length']),
   unhoistableHeaders: new Set(['content-length-range'])
 });
 ```
+
+**XSS Prevention** (Critical):
+All user input MUST pass through Zod schemas in `lib/schemas/resume.ts`:
+```typescript
+import { sanitizeText, sanitizeUrl, sanitizeEmail, containsXssPattern } from '@/lib/utils/sanitization'
+
+// All text fields use sanitization transforms
+const resumeSchema = z.object({
+  full_name: z.string().transform(sanitizeText),
+  headline: z.string().refine(noXssPattern).transform(sanitizeText),
+  summary: z.string().refine(noXssPattern).transform(sanitizeText),
+  // ... all fields sanitized
+})
+```
+
+**Sanitization Functions** (`lib/utils/sanitization.ts`):
+- `sanitizeText()`: Strips HTML tags, encodes special chars
+- `sanitizeUrl()`: Validates URL format, removes javascript: protocols
+- `sanitizeEmail()`: Validates email format, prevents injection
+- `containsXssPattern()`: Detects common XSS patterns (script tags, event handlers, data URIs)
+
+**Rate Limiting**:
+- Upload: 5 resumes per user per 24 hours (enforced in `/api/resume/claim`)
+- Update: 10 content updates per user per hour (enforced in `/api/resume/update`)
+- Check via SQL: `SELECT count(*) FROM resumes WHERE user_id = $1 AND created_at > now() - interval '1 day'`
 
 ### Image Handling
 ```tsx
@@ -248,30 +318,122 @@ LIMIT 5;
 
 ```
 app/
-├── (auth)/
-│   └── auth/callback/route.ts      # OAuth callback handler
-├── (public)/
-│   └── [handle]/page.tsx           # Public resume viewer
-├── (protected)/
-│   ├── dashboard/page.tsx
-│   └── onboarding/page.tsx         # "Waiting Room" polling UI
-├── api/
-│   ├── upload/sign/route.ts        # Presigned URL generator
+├── (auth)/                          # Route group: Authentication
+│   └── auth/callback/route.ts       # Google OAuth callback handler
+├── (public)/                        # Route group: Public pages (no auth)
+│   ├── [handle]/page.tsx            # Dynamic resume viewer (/username)
+│   └── page.tsx                     # Homepage with file upload
+├── (protected)/                     # Route group: Auth-required pages
+│   ├── dashboard/                   # User dashboard
+│   │   ├── page.tsx                 # Main dashboard view
+│   │   └── Sidebar.tsx              # Navigation sidebar component
+│   ├── edit/page.tsx                # Resume content editor (auto-save)
+│   ├── settings/page.tsx            # Privacy & profile settings
+│   ├── onboarding/page.tsx          # Legacy waiting room (deprecated)
+│   ├── waiting/page.tsx             # AI parsing waiting room with polling
+│   └── wizard/                      # Onboarding wizard (4 steps)
+│       ├── page.tsx                 # Wizard orchestrator
+│       └── [step components...]
+├── api/                             # API routes
+│   ├── upload/
+│   │   └── sign/route.ts            # Generate R2 presigned upload URLs
 │   ├── resume/
-│   │   ├── claim/route.ts          # Claim check handler
-│   │   ├── status/route.ts         # Polling endpoint
-│   │   └── update/route.ts         # Edit JSON
+│   │   ├── claim/route.ts           # Claim anonymous upload, trigger AI parse
+│   │   ├── status/route.ts          # Poll parsing status
+│   │   ├── retry/route.ts           # Retry failed parsing job
+│   │   ├── update/route.ts          # Update site_data content (auto-save)
+│   │   └── update-theme/route.ts    # Change template theme
+│   ├── profile/
+│   │   └── update/route.ts          # Update profile settings
+│   ├── wizard/
+│   │   └── complete/route.ts        # Mark onboarding complete
+│   └── health/route.ts              # Health check endpoint
+├── error.tsx                        # Global error boundary
+├── not-found.tsx                    # 404 page (matches Soft Depth theme)
+├── layout.tsx                       # Root layout with Supabase provider
+└── globals.css                      # Global styles + custom animations
+
 components/
-├── FileDropzone.tsx
-├── templates/
-│   └── MinimalistCreme.tsx
+├── FileDropzone.tsx                 # Drag-and-drop PDF uploader
+├── AttributionWidget.tsx            # Footer attribution link
+├── auth/                            # Auth-related components
+│   ├── LoginButton.tsx              # Google OAuth button
+│   └── UserMenu.tsx                 # User dropdown menu
+├── dashboard/                       # Dashboard-specific components
+│   ├── Sidebar.tsx                  # Navigation sidebar
+│   ├── ContentPreview.tsx           # Resume content preview
+│   └── [other dashboard components...]
+├── forms/                           # Form components with react-hook-form
+│   ├── EditResumeForm.tsx           # Main edit form with auto-save
+│   └── [field components...]
+├── settings/                        # Settings page components
+│   └── PrivacySettings.tsx          # Phone/address toggle controls
+├── templates/                       # Resume templates
+│   ├── MinimalistEditorial.tsx      # Default serif template
+│   ├── NeoBrutalist.tsx             # Bold brutalist design
+│   ├── GlassMorphic.tsx             # Glassmorphism effects
+│   └── BentoGrid.tsx                # Mosaic grid layout
+├── wizard/                          # Wizard step components
+│   ├── HandleStep.tsx               # Step 1: Choose username
+│   ├── ReviewStep.tsx               # Step 2: Review parsed content
+│   ├── PrivacyStep.tsx              # Step 3: Privacy settings
+│   └── ThemeStep.tsx                # Step 4: Template selection
+└── ui/                              # Reusable UI components (shadcn/ui)
+    ├── button.tsx, input.tsx, etc.
+
 lib/
 ├── supabase/
-│   ├── client.ts
-│   └── server.ts
-├── r2.ts                           # S3Client setup
-└── replicate.ts                    # Parsing client
+│   ├── client.ts                    # Browser client (uses cookies)
+│   ├── server.ts                    # Server client (async, for Server Components)
+│   ├── middleware.ts                # updateSession() for middleware
+│   └── types.ts                     # Generated TypeScript types (from CLI)
+├── types/
+│   ├── database.ts                  # Manual types (ResumeContent, ProfileData, etc.)
+│   └── template.ts                  # Template type definitions
+├── schemas/
+│   ├── resume.ts                    # Zod schemas for resume validation
+│   └── profile.ts                   # Zod schemas for profile validation
+├── utils/
+│   ├── sanitization.ts              # XSS prevention utilities
+│   ├── privacy.ts                   # Privacy filtering (phone/address)
+│   └── [other utils...]
+├── onboarding/
+│   └── wizard-state.ts              # Wizard state management
+├── r2.ts                            # AWS S3 client for Cloudflare R2
+├── replicate.ts                     # Replicate API client + parsing logic
+├── env.ts                           # Environment variable validation (Zod)
+└── utils.ts                         # cn() utility (clsx + tailwind-merge)
+
+supabase/
+├── migrations/                      # Database migrations (source of truth)
+│   ├── 20231118000000_initial_schema.sql
+│   ├── 20231119000000_add_retry_count.sql
+│   └── [timestamped migrations...]
+├── config.toml                      # Supabase local config
+└── seed.sql                         # Test data seeding script
+
+middleware.ts                        # Next.js middleware (auth + onboarding check)
+wrangler.toml                        # Cloudflare Workers config
+open-next.config.ts                  # OpenNext Cloudflare adapter config
 ```
+
+### Key Routing Patterns
+
+**Route Groups** (folders with parentheses don't affect URL structure):
+- `(auth)` → `/auth/callback`
+- `(public)` → `/` and `/[handle]`
+- `(protected)` → `/dashboard`, `/edit`, `/settings`, `/wizard`
+
+**Dynamic Routes**:
+- `/[handle]` → Public resume viewer (e.g., `/johnsmith`)
+- Server-side rendered with Supabase data fetch
+- Applies privacy filtering before rendering
+
+**API Routes**:
+- All in `/api` directory
+- Use Next.js Route Handlers (App Router)
+- Return JSON responses with proper error handling
+- Protected endpoints check authentication via Supabase session
 
 ---
 
@@ -302,18 +464,35 @@ NODE_ENV=production
 
 ```bash
 # Development
-bun install
-bun run dev
+bun install                      # Install dependencies
+bun run dev                      # Start Next.js dev server (http://localhost:3000)
+bun run lint                     # Run ESLint
+
+# Building
+bun run build                    # Build Next.js for production
+bun run build:worker             # Build and generate Cloudflare Workers bundle
+bun run preview                  # Preview Cloudflare build locally (using wrangler)
+bun run start                    # Start production server (not for Workers deployment)
 
 # Deployment
-bun run build
-npx wrangler deploy
+bun run deploy                   # Build and deploy to Cloudflare Workers (single command)
+bunx wrangler deploy             # Deploy manually with wrangler
 
-# Database Migrations
-# (Run SQL directly in Supabase Dashboard for MVP)
+# Database (Supabase)
+bun run db:start                 # Start local Supabase instance
+bun run db:stop                  # Stop local Supabase instance
+bun run db:reset                 # Reset local database to initial state
+bun run db:migrate               # Run pending migrations
+bun run db:migration:new         # Create new migration file (use: bun run db:migration:new <name>)
+bun run db:migration:list        # List all migrations (local)
+bun run db:push                  # Push local schema changes to remote
+bun run db:pull                  # Pull remote schema to local
+bun run db:types                 # Generate TypeScript types from linked project
+bun run db:types:local           # Generate TypeScript types from local database
+bun run db:studio                # Open Supabase Studio (database UI)
 
-# Testing
-bun run test
+# Note: Use supabase CLI commands directly for migrations
+# Example: supabase migration new add_column_to_profiles
 ```
 
 ---
@@ -341,7 +520,55 @@ bun run test
 
 ---
 
-## Design System: Soft Depth Theme
+## Available Templates
+
+The application includes multiple professionally designed resume templates, each located in `components/templates/`:
+
+### 1. **MinimalistEditorial** (Default)
+- Clean serif typography with editorial magazine aesthetic
+- Neutral color palette with subtle accents
+- Perfect for traditional industries and professional roles
+- File: `components/templates/MinimalistEditorial.tsx`
+
+### 2. **NeoBrutalist**
+- Bold, high-contrast design with thick borders
+- Black-and-white base with vibrant accent colors
+- Heavy sans-serif typography
+- Best for creative roles and design portfolios
+- File: `components/templates/NeoBrutalist.tsx`
+
+### 3. **GlassMorphic**
+- Modern glassmorphism effects with backdrop blur
+- Translucent cards with soft shadows
+- Dark background with colorful gradients
+- Ideal for tech and startup professionals
+- File: `components/templates/GlassMorphic.tsx`
+
+### 4. **BentoGrid**
+- Mosaic-style layout inspired by Apple's Bento design
+- Asymmetric grid with varying card sizes
+- Visual hierarchy through layout variation
+- Great for showcasing diverse skill sets
+- File: `components/templates/BentoGrid.tsx`
+
+### Template Selection
+- Users choose their template during the wizard onboarding flow (Step 4)
+- Default template is `MinimalistEditorial`
+- Theme can be changed later via `/settings` (updates `site_data.theme_id`)
+- All templates support the same data structure defined in `lib/types/database.ts`
+- Templates are rendered server-side at `/[handle]` route
+
+### Template Development Guidelines
+- Each template receives `content` (ResumeContent) and `profile` (ProfileData) props
+- Must respect privacy settings (check `profile.privacy_settings`)
+- Should handle missing/optional fields gracefully
+- Use consistent spacing: Tailwind's spacing scale (p-4, p-6, p-8, etc.)
+- Avoid Next.js `<Image />` component (use `<img>` with CSS)
+- All templates must be mobile-responsive
+
+---
+
+## Design System: Soft Depth Theme (Landing Page Only)
 
 ### Overview
 The landing page uses the "Soft Depth" theme—a modern, professional aesthetic inspired by Apple and Stripe's design languages, with enhanced visual richness through layered shadows and gradient accents.
@@ -523,7 +750,110 @@ Follow Tailwind defaults:
 - **Architecture Diagrams**: In tech-spec.md
 - **Phase Checklists**: In roadmap.md
 
-**Current Phase**: [Update manually as you progress]
+**Current Phase**: Phase 5 Complete (Production Ready)
+
+---
+
+## Complete User Journey (E2E Flow)
+
+Understanding the full user experience is critical for debugging and feature development:
+
+### 1. Anonymous Upload (Homepage)
+- User visits `/` (homepage)
+- Drags PDF onto `FileDropzone` component OR clicks to browse
+- Client requests presigned URL: `POST /api/upload/sign`
+- File uploaded directly to R2 with temp key: `temp/{uuid}/{filename}`
+- Temp upload key stored in `localStorage` as `temp_upload_id`
+- `LoginButton` appears prompting Google OAuth
+
+### 2. Authentication
+- User clicks "Sign in with Google"
+- Redirects to Google OAuth consent screen
+- On success, callback to `/auth/callback`
+- Supabase creates `auth.users` row and `profiles` row (via database trigger)
+- User redirected based on state:
+  - If `temp_upload_id` exists → `/wizard` (claim upload)
+  - If no upload → `/dashboard`
+
+### 3. Wizard Onboarding (4 Steps)
+Located at `/wizard`, managed by `components/wizard/*`:
+
+**Step 1: Handle** (`HandleStep.tsx`)
+- User enters desired username (3+ chars, alphanumeric + hyphens)
+- Real-time availability check against `profiles.handle`
+- Validation: Must be unique, no special chars
+
+**Step 2: Review** (`ReviewStep.tsx`)
+- Shows AI-parsed resume content (read-only)
+- User can see what will be published
+- Background: Claim API already triggered parsing
+
+**Step 3: Privacy** (`PrivacyStep.tsx`)
+- Toggle: "Show phone number" (default OFF)
+- Toggle: "Show full address" (default OFF)
+- Updates `profiles.privacy_settings` jsonb
+
+**Step 4: Theme** (`ThemeStep.tsx`)
+- User selects from 4 templates (MinimalistEditorial default)
+- Live preview of each template
+- Sets `site_data.theme_id`
+
+On completion:
+- `POST /api/wizard/complete` sets `onboarding_completed = true`
+- User redirected to `/dashboard`
+
+### 4. AI Parsing (Background)
+Triggered by claim API, tracked in `/waiting`:
+
+- Status: `pending_claim` → `processing`
+- Replicate job created with `datalab-to/marker` model
+- Client polls `/api/resume/status` every 3 seconds
+- Parsing takes 30-40 seconds typically
+- On success: `status = completed`, data saved to `site_data.content`
+- On failure: `status = failed`, user can retry (max 2 attempts)
+
+### 5. Dashboard (`/dashboard`)
+Post-onboarding landing page:
+
+- Shows current handle: `webresume.now/{handle}`
+- Preview of public site (iframe or link)
+- Quick actions: Edit content, Change theme, View analytics
+- `Sidebar` component for navigation
+
+### 6. Editing (`/edit`)
+Content editor with auto-save:
+
+- `EditResumeForm` component with react-hook-form
+- 3-second debounce on all fields
+- Auto-saves to `/api/resume/update`
+- Updates `site_data.content` and `updated_at`
+- Success toast notification on save
+
+### 7. Settings (`/settings`)
+Privacy and profile management:
+
+- Update privacy toggles (phone/address visibility)
+- Change theme via `/api/resume/update-theme`
+- Update profile info (avatar, headline)
+- Delete account option (future)
+
+### 8. Public Profile (`/[handle]`)
+The actual published resume:
+
+- Server-side rendered (SSR)
+- Fetches `profiles` + `site_data` by handle
+- Applies privacy filtering before render
+- Renders chosen template with user content
+- SEO metadata: title, description, OG tags
+- Cache-Control headers for edge caching
+
+### Error States
+- **Upload fails**: Show error message, allow retry
+- **Parsing fails**: Redirect to `/waiting` with retry button
+- **Handle taken**: Inline validation error in wizard
+- **Not authenticated**: Middleware redirects to `/`
+- **Onboarding incomplete**: Middleware redirects to `/wizard`
+- **404 handle**: Custom 404 page matching Soft Depth theme
 
 ---
 
@@ -538,4 +868,4 @@ When using context7 MCP, these are the library IDs to fetch docs:
 
 ---
 
-**Last Updated**: 2025-11-18
+**Last Updated**: 2025-11-20 (via /init command)

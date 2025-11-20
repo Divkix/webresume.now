@@ -139,12 +139,18 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
                       </div>
                       <Briefcase className="w-8 h-8 border-2 border-black p-1 bg-white" />
                     </div>
-                    {job.description && (
+                    {job.description && job.description.trim() !== '' ? (
                       <p className="font-medium text-sm mb-4 border-l-2 border-black pl-3">
                         {job.description}
                       </p>
-                    )}
-                    {job.highlights && job.highlights.length > 0 && (
+                    ) : job.highlights && job.highlights.length > 0 ? (
+                      <ul className="font-medium text-sm mb-4 border-l-4 border-black pl-5 space-y-2 list-disc">
+                        {job.highlights.slice(0, 3).map((highlight: string, i: number) => (
+                          <li key={i} className="font-bold">{highlight}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {job.description && job.description.trim() !== '' && job.highlights && job.highlights.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-4">
                         {job.highlights.slice(0, 3).map((highlight: string, i: number) => (
                           <span key={i} className="px-2 py-1 bg-[#22CCEE] border-2 border-black text-xs font-bold uppercase">

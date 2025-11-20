@@ -94,9 +94,15 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
               <div>
                 <h3 className="text-xl font-bold leading-tight mb-2">{job.title}</h3>
                 <p className="text-neutral-600 font-medium mb-1">{job.company}</p>
-                {job.description && (
+                {job.description && job.description.trim() !== '' ? (
                   <p className="text-neutral-500 text-xs line-clamp-3">{job.description}</p>
-                )}
+                ) : job.highlights && job.highlights.length > 0 ? (
+                  <ul className="text-xs text-neutral-500 space-y-1 list-disc pl-4 line-clamp-3">
+                    {job.highlights.map((highlight, i) => (
+                      <li key={i}>{highlight}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </div>
           ))}

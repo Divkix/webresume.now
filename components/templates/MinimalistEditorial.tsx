@@ -87,10 +87,18 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
                     )}
                   </div>
                   <div className="md:w-4/12 mt-2 md:mt-0">
-                    <p className="text-sm text-neutral-500 group-hover:text-neutral-900 max-w-xs transition-colors">
-                      {job.description}
-                    </p>
-                    {job.highlights && job.highlights.length > 0 && (
+                    {job.description && job.description.trim() !== '' ? (
+                      <p className="text-sm text-neutral-500 group-hover:text-neutral-900 max-w-xs transition-colors">
+                        {job.description}
+                      </p>
+                    ) : job.highlights && job.highlights.length > 0 ? (
+                      <ul className="text-xs text-neutral-600 space-y-1 list-disc pl-5 font-serif">
+                        {job.highlights.map((highlight, i) => (
+                          <li key={i} className="text-neutral-500 group-hover:text-neutral-900 transition-colors">{highlight}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {job.description && job.description.trim() !== '' && job.highlights && job.highlights.length > 0 && (
                       <ul className="mt-2 text-xs text-neutral-600 space-y-1">
                         {job.highlights.map((highlight, i) => (
                           <li key={i}>• {highlight}</li>

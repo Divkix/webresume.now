@@ -137,7 +137,7 @@ export default async function DashboardPage() {
     redirect('/')
   }
 
-  // Fetch user profile
+  // Fetch user profile with onboarding status
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
@@ -200,6 +200,26 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="max-w-[1400px] mx-auto px-4 lg:px-6 py-8">
+        {/* Onboarding Incomplete Banner */}
+        {profile && !profile.onboarding_completed && (
+          <Alert className="mb-6 border-amber-200 bg-amber-50">
+            <AlertCircle className="w-4 h-4 text-amber-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-amber-900 font-medium">
+                Your profile is incomplete. Complete the wizard to improve your resume.
+              </span>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 hover:border-amber-400"
+              >
+                <Link href="/wizard">Complete Now</Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {/* Row 1: Hero Stats - Full Width */}

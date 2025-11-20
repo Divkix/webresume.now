@@ -103,7 +103,9 @@ export async function GET(request: Request) {
           throw new Error('Missing extraction_schema_json in Replicate output')
         }
 
-        const normalizedContent = normalizeResumeData(prediction.output.extraction_schema_json)
+        const normalizedContent = normalizeResumeData(
+          prediction.output.extraction_schema_json,
+        )
 
         // Upsert to site_data (ON CONFLICT user_id DO UPDATE)
         // TypeScript workaround: JSON parse/stringify to satisfy Json type
@@ -140,12 +142,13 @@ export async function GET(request: Request) {
           can_retry: false,
         })
       } catch (error) {
-        console.error('Error processing Replicate output:', error)
+        console.error('Resume normalization error:', error)
 
-        // Mark as failed
-        const errorMessage =
-          error instanceof Error ? error.message : 'Failed to process AI output'
+        const errorMessage = error instanceof Error
+          ? `AI parsing validation failed: ${error.message}`
+          : 'Failed to process resume data'
 
+        // Mark resume as failed
         await supabase
           .from('resumes')
           .update({
@@ -154,6 +157,7 @@ export async function GET(request: Request) {
           })
           .eq('id', resumeId)
 
+        // Return failed status (not error - allows UI to show retry)
         return createSuccessResponse({
           status: 'failed',
           progress_pct: 0,

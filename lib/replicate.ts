@@ -37,10 +37,10 @@ const ExperienceItemSchema = z.object({
 
 const EducationItemSchema = z.object({
   degree: z.string(),
-  institution: z.string(),
-  location: z.string().optional(),
-  graduation_date: z.string().optional(),
-  gpa: z.string().optional(),
+  institution: z.string().nullable(),
+  location: z.string().optional().nullable(),
+  graduation_date: z.string().optional().nullable(),
+  gpa: z.string().optional().nullable(),
 })
 
 const SkillCategorySchema = z.object({
@@ -50,7 +50,7 @@ const SkillCategorySchema = z.object({
 
 const CertificationSchema = z.object({
   name: z.string(),
-  issuer: z.string(),
+  issuer: z.string().nullable(),
   date: z.string().optional().nullable(),
   url: z.string().optional().nullable(),
 })
@@ -134,7 +134,7 @@ const RESUME_EXTRACTION_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['degree', 'institution'],
+        required: ['degree'],
         properties: {
           degree: { type: 'string' },
           institution: { type: 'string' },
@@ -159,7 +159,7 @@ const RESUME_EXTRACTION_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['name', 'issuer'],
+        required: ['name'],
         properties: {
           name: { type: 'string' },
           issuer: { type: 'string' },
@@ -342,14 +342,24 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
       description: exp.description ?? '',
       highlights: exp.highlights ?? undefined,
     })),
-    education: data.education ?? undefined,
+    education: data.education
+      ?.filter(edu => edu.institution) // Filter out entries with no institution
+      .map((edu) => ({
+        degree: edu.degree,
+        institution: edu.institution!,
+        location: edu.location ?? undefined,
+        graduation_date: edu.graduation_date ?? undefined,
+        gpa: edu.gpa ?? undefined,
+      })) ?? undefined,
     skills: data.skills ?? undefined,
-    certifications: data.certifications?.map((cert) => ({
-      name: cert.name,
-      issuer: cert.issuer,
-      date: cert.date ?? undefined,
-      url: sanitizeUrl(cert.url),
-    })) ?? undefined,
+    certifications: data.certifications
+      ?.filter(cert => cert.issuer) // Only keep certs with issuer
+      .map((cert) => ({
+        name: cert.name,
+        issuer: cert.issuer!,
+        date: cert.date ?? undefined,
+        url: sanitizeUrl(cert.url),
+      })) ?? undefined,
     projects: data.projects?.map((project) => ({
       title: project.title,
       description: project.description,

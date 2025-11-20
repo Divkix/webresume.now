@@ -2,13 +2,15 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { useResumeStatus } from '@/hooks/useResumeStatus'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import type { ResumeContent } from '@/lib/types/database'
 
 function SurveyContent() {
@@ -24,7 +26,7 @@ function SurveyContent() {
   const [handleError, setHandleError] = useState<string | null>(null)
 
   // Poll resume status in background
-  const { status, progress } = useResumeStatus(resumeId)
+  const { status, progress, error: resumeError, canRetry, refetch } = useResumeStatus(resumeId)
 
   // Redirect to dashboard if no resume_id
   useEffect(() => {
@@ -224,12 +226,16 @@ function SurveyContent() {
             <div className="flex items-center gap-2">
               {status === 'completed' ? (
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              ) : status === 'failed' ? (
+                <div className="w-2 h-2 bg-red-500 rounded-full" />
               ) : (
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
               )}
               <span className="text-sm font-medium text-slate-700">
                 {status === 'completed'
                   ? 'Resume parsed successfully!'
+                  : status === 'failed'
+                  ? 'Parsing failed'
                   : 'Parsing your resume in background...'}
               </span>
             </div>
@@ -368,6 +374,44 @@ function SurveyContent() {
               </Button>
             </div>
           </form>
+
+          {/* Error Alert Box */}
+          {status === 'failed' && (
+            <Alert className="border-red-200 bg-red-50 mt-6">
+              <AlertCircle className="w-4 h-4 text-red-600" />
+              <AlertTitle className="text-red-900">Parsing Failed</AlertTitle>
+              <AlertDescription className="text-red-800">
+                <p className="mb-3">
+                  {resumeError || 'Unable to parse your resume. This might be due to unexpected formatting or missing required fields.'}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/dashboard')}
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    Go to Dashboard
+                  </Button>
+                  {canRetry && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        refetch()
+                        toast('Retrying...', {
+                          description: 'Attempting to parse your resume again',
+                        })
+                      }}
+                      className="border-red-300 text-red-700 hover:bg-red-100"
+                    >
+                      Try Again
+                    </Button>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Helper Text */}
           <p className="text-xs text-center text-slate-500 mt-6">

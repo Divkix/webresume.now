@@ -54,9 +54,9 @@ export default function WizardPage() {
     },
   })
 
-  // Fetch resume data on mount
+  // Fetch resume data on mount + handle upload claiming
   useEffect(() => {
-    const fetchResumeData = async () => {
+    const initializeWizard = async () => {
       try {
         setLoading(true)
         const supabase = createClient()
@@ -71,7 +71,62 @@ export default function WizardPage() {
           return
         }
 
-        // 2. Fetch site_data (contains parsed resume content)
+        // 2. Check for pending upload claim
+        const tempKey = localStorage.getItem('temp_upload_key')
+        if (tempKey) {
+          // Claim the upload
+          setLoading(true)
+          try {
+            const claimResponse = await fetch('/api/resume/claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ key: tempKey }),
+            })
+
+            if (!claimResponse.ok) {
+              const claimData = await claimResponse.json()
+              throw new Error(claimData.error || 'Failed to claim resume')
+            }
+
+            // Clear localStorage after successful claim
+            localStorage.removeItem('temp_upload_key')
+
+            // Poll for parsing completion (max 90 seconds)
+            let attempts = 0
+            const maxAttempts = 30 // 30 attempts * 3 seconds = 90 seconds
+
+            while (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 3000))
+
+              const { data: siteData } = await supabase
+                .from('site_data')
+                .select('content')
+                .eq('user_id', user.id)
+                .maybeSingle()
+
+              if (siteData) {
+                // Parsing complete, proceed to wizard
+                break
+              }
+
+              attempts++
+            }
+
+            if (attempts >= maxAttempts) {
+              setError('Resume parsing is taking longer than expected. Please check your dashboard.')
+              setTimeout(() => router.push('/dashboard'), 3000)
+              return
+            }
+          } catch (claimError) {
+            console.error('Claim error:', claimError)
+            setError(claimError instanceof Error ? claimError.message : 'Failed to claim resume')
+            localStorage.removeItem('temp_upload_key')
+            setTimeout(() => router.push('/dashboard'), 3000)
+            return
+          }
+        }
+
+        // 3. Fetch site_data (contains parsed resume content)
         const { data: siteData, error: fetchError } = await supabase
           .from('site_data')
           .select('content')
@@ -86,7 +141,7 @@ export default function WizardPage() {
 
         const content = siteData.content as unknown as ResumeContent
 
-        // 3. Check if wizard is needed
+        // 4. Check if wizard is needed
         // Skip if all critical fields are complete
         const hasHeadline = content.headline?.trim().length > 0
         const hasSummary = content.summary?.trim().length > 0
@@ -101,7 +156,7 @@ export default function WizardPage() {
           return
         }
 
-        // 4. Load resume data into state
+        // 5. Load resume data into state
         setState((prev) => ({
           ...prev,
           resumeData: content,
@@ -112,14 +167,14 @@ export default function WizardPage() {
           },
         }))
       } catch (err) {
-        console.error('Error fetching resume data:', err)
+        console.error('Error initializing wizard:', err)
         setError('Failed to load resume data. Please try again.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchResumeData()
+    initializeWizard()
   }, [router])
 
   // Handler for role selection (Step 1)
@@ -213,6 +268,7 @@ export default function WizardPage() {
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
           <p className="text-slate-600 font-medium">Loading your resume...</p>
+          <p className="text-slate-500 text-sm mt-2">This may take 30-60 seconds if we&apos;re parsing your PDF</p>
         </div>
       </div>
     )

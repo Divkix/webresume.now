@@ -9,7 +9,6 @@ export async function middleware(request: NextRequest) {
   // Protected routes that require authentication
   const protectedRoutes = [
     '/dashboard',
-    '/onboarding',
     '/edit',
     '/settings',
     '/waiting',
@@ -19,8 +18,6 @@ export async function middleware(request: NextRequest) {
   // Routes that don't require onboarding completion check
   const onboardingExemptRoutes = [
     '/wizard',
-    '/onboarding',
-    '/survey',
     '/auth/callback',
   ]
 

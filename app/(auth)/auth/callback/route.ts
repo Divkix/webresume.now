@@ -90,6 +90,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Check for pending upload in onboarding
-  return NextResponse.redirect(`${origin}/onboarding`)
+  // Redirect to wizard (handles upload claiming if needed)
+  return NextResponse.redirect(`${origin}/wizard`)
 }

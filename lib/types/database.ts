@@ -19,6 +19,8 @@ export interface Database {
           handle: string | null
           avatar_url: string | null
           headline: string | null
+          role: string | null
+          onboarding_completed: boolean
           privacy_settings: {
             show_phone: boolean
             show_address: boolean
@@ -32,6 +34,8 @@ export interface Database {
           handle?: string | null
           avatar_url?: string | null
           headline?: string | null
+          role?: string | null
+          onboarding_completed?: boolean
           privacy_settings?: {
             show_phone: boolean
             show_address: boolean
@@ -45,6 +49,8 @@ export interface Database {
           handle?: string | null
           avatar_url?: string | null
           headline?: string | null
+          role?: string | null
+          onboarding_completed?: boolean
           privacy_settings?: {
             show_phone: boolean
             show_address: boolean

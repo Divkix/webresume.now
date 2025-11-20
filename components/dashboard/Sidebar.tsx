@@ -150,6 +150,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 p-[2px]">
                     <div className="w-full h-full rounded-full bg-white" />
                   </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={user.user_metadata.avatar_url}
                     alt={user.user_metadata?.full_name || 'User avatar'}

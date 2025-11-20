@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ROLE_TEMPLATES, type RoleId } from '@/lib/onboarding/role-templates'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -31,11 +31,6 @@ export function Step3Summary({
   const MIN_RECOMMENDED = 50
   const MAX_LENGTH = 2000
 
-  // Update parent component when value changes
-  useEffect(() => {
-    onChange(value)
-  }, [value, onChange])
-
   // Get template suggestion based on selected role
   const template = role && role in ROLE_TEMPLATES
     ? ROLE_TEMPLATES[role as RoleId]
@@ -44,6 +39,7 @@ export function Step3Summary({
   const handleSuggestionClick = () => {
     if (template?.summaryTemplate) {
       setValue(template.summaryTemplate)
+      onChange(template.summaryTemplate)
     }
   }
 
@@ -51,6 +47,7 @@ export function Step3Summary({
     const newValue = e.target.value
     if (newValue.length <= MAX_LENGTH) {
       setValue(newValue)
+      onChange(newValue)
     }
   }
 

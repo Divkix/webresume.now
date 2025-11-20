@@ -50,6 +50,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
             <div className="bg-[#22CCEE] border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex-1 flex flex-col justify-center items-center text-center hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
               <div className="w-24 h-24 bg-white border-4 border-black rounded-full mb-4 overflow-hidden flex items-center justify-center">
                 {profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-4xl font-black">{getInitials(content.full_name)}</span>

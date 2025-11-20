@@ -98,6 +98,7 @@ export default async function SettingsPage() {
             {profile.avatar_url && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-700">Avatar</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={profile.avatar_url}
                   alt="Profile avatar"

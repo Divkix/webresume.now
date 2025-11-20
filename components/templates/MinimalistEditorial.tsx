@@ -1,7 +1,7 @@
 import React from 'react'
 import type { TemplateProps } from '@/lib/types/template'
-import { getInitials, formatDateRange } from '@/lib/templates/helpers'
-import { Mail, MapPin, Linkedin, Github, Globe, Calendar, GraduationCap, Award, ArrowUpRight } from 'lucide-react'
+import { formatDateRange } from '@/lib/templates/helpers'
+import { Calendar, GraduationCap, Award, ArrowUpRight } from 'lucide-react'
 
 const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
   // Split name into first and last for editorial layout

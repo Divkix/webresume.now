@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ROLE_TEMPLATES, type RoleId } from '@/lib/onboarding/role-templates'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -29,11 +29,6 @@ export function Step2Headline({
   const [value, setValue] = useState(currentValue)
   const MAX_LENGTH = 100
 
-  // Update parent component when value changes
-  useEffect(() => {
-    onChange(value)
-  }, [value, onChange])
-
   // Get template suggestion based on selected role
   const template = role && role in ROLE_TEMPLATES
     ? ROLE_TEMPLATES[role as RoleId]
@@ -42,6 +37,7 @@ export function Step2Headline({
   const handleSuggestionClick = () => {
     if (template?.headlineTemplate) {
       setValue(template.headlineTemplate)
+      onChange(template.headlineTemplate)
     }
   }
 
@@ -49,6 +45,7 @@ export function Step2Headline({
     const newValue = e.target.value
     if (newValue.length <= MAX_LENGTH) {
       setValue(newValue)
+      onChange(newValue)
     }
   }
 

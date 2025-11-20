@@ -1,10 +1,11 @@
 import React from 'react';
 import type { TemplateProps } from '@/lib/types/template';
 import type { Project } from '@/lib/types/database';
-import { getInitials, formatDateRange, flattenSkills } from '@/lib/templates/helpers';
+import { formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Mail, MapPin, Linkedin, Github, Globe, ExternalLink, Command, Briefcase, GraduationCap, Award } from 'lucide-react';
 
-const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const GlassMorphic: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
   return (
     <div className="min-h-screen bg-[#0f172a] text-white font-sans relative overflow-y-auto selection:bg-pink-500/30 scroll-smooth">
 

@@ -7,12 +7,17 @@ import { ENV } from '@/lib/env'
 
 /**
  * Constant-time string comparison to prevent timing attacks
+ * Uses padding to avoid leaking length information
  */
 function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  // Pad shorter string to avoid length leak
+  const maxLen = Math.max(a.length, b.length)
+  const aPadded = a.padEnd(maxLen, '\0')
+  const bPadded = b.padEnd(maxLen, '\0')
+
+  let result = a.length ^ b.length // Include length difference in result
+  for (let i = 0; i < maxLen; i++) {
+    result |= aPadded.charCodeAt(i) ^ bPadded.charCodeAt(i)
   }
   return result === 0
 }
@@ -38,6 +43,10 @@ export async function verifyReplicateWebhook(request: Request): Promise<{ isVali
   // Check timestamp (prevent replay attacks - 1 min tolerance)
   const now = Math.floor(Date.now() / 1000)
   const timestamp = parseInt(webhookTimestamp, 10)
+  if (isNaN(timestamp)) {
+    console.error('Invalid webhook timestamp format')
+    return { isValid: false, body }
+  }
   if (Math.abs(now - timestamp) > 60) {
     console.error('Webhook timestamp too old')
     return { isValid: false, body }

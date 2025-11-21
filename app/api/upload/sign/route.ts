@@ -52,6 +52,14 @@ export async function POST(request: Request) {
       request.headers.get('x-forwarded-for')?.split(',')[0] ||
       'unknown'
 
+    // Reject requests without IP in production (prevent rate limit bypass)
+    if (ip === 'unknown' && process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Unable to determine IP address for rate limiting' },
+        { status: 403 }
+      )
+    }
+
     if (!checkIpRateLimit(ip)) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },

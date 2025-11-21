@@ -59,10 +59,11 @@ export async function POST(request: Request) {
       return new Response('Resume not found', { status: 404 })
     }
 
-    // 5. Skip if already processed (idempotency)
-    if (resume.status === 'completed' || resume.status === 'failed') {
-      console.log('Resume already processed, skipping')
-      return new Response('OK', { status: 200 })
+    // 5. Verify job state is valid for this webhook (prevents replay attacks)
+    if (resume.status !== 'processing') {
+      console.warn(`Webhook received for non-processing resume: ${resume.id}, status: ${resume.status}`)
+      // Still return 200 to prevent Replicate retries, but don't process
+      return new Response('Invalid state transition', { status: 200 })
     }
 
     // 6. Handle success

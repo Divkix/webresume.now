@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       return createErrorResponse(errorMessage, errorCode, statusCode)
     }
 
-    // 7. Validate file size (10MB limit)
+    // 7. Validate file exists and check size (10MB limit)
     try {
       const headCommand = new HeadObjectCommand({
         Bucket: R2_BUCKET,
@@ -164,11 +164,12 @@ export async function POST(request: Request) {
         )
       }
     } catch (error) {
-      console.error('File size validation error:', error)
+      console.error('File validation error:', error)
+      // Generic error message to prevent enumeration of valid temp keys
       return await failResume(
-        'Failed to validate file. The file may have expired.',
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        500
+        'Upload not found or expired. Please try uploading again.',
+        ERROR_CODES.VALIDATION_ERROR,
+        400
       )
     }
 
@@ -193,10 +194,11 @@ export async function POST(request: Request) {
       )
     } catch (error) {
       console.error('R2 copy error:', error)
+      // Generic error message to prevent enumeration of valid temp keys
       return await failResume(
-        'Failed to process upload. The file may have expired.',
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        500
+        'Upload not found or expired. Please try uploading again.',
+        ERROR_CODES.VALIDATION_ERROR,
+        400
       )
     }
 

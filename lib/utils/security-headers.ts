@@ -27,6 +27,33 @@ export const SECURITY_HEADERS = {
 } as const
 
 /**
+ * Validates CSRF protection via Sec-Fetch-Site header
+ * Returns null if valid, or a Response if invalid
+ */
+export function validateCsrf(request: Request): Response | null {
+  // Skip CSRF check for webhooks (they use signature verification)
+  const url = new URL(request.url)
+  if (url.pathname.includes('/webhook/')) {
+    return null
+  }
+
+  const secFetchSite = request.headers.get('sec-fetch-site')
+
+  // Allow same-origin and same-site requests
+  // Also allow 'none' for direct navigation (though POST shouldn't happen this way)
+  const allowedValues = ['same-origin', 'same-site', 'none']
+
+  if (secFetchSite && !allowedValues.includes(secFetchSite)) {
+    return new Response(
+      JSON.stringify({ error: 'CSRF validation failed', code: 'CSRF_ERROR' }),
+      { status: 403, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS } }
+    )
+  }
+
+  return null
+}
+
+/**
  * Creates a standardized error response with security headers
  */
 export function createErrorResponse(
@@ -78,6 +105,7 @@ export const ERROR_CODES = {
   BAD_REQUEST: 'BAD_REQUEST',
   DATABASE_ERROR: 'DATABASE_ERROR',
   EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+  CSRF_ERROR: 'CSRF_ERROR',
 } as const
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES]

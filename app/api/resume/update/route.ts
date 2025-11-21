@@ -6,6 +6,7 @@ import {
   createErrorResponse,
   createSuccessResponse,
   ERROR_CODES,
+  validateCsrf,
 } from '@/lib/utils/security-headers'
 import { revalidatePath } from 'next/cache'
 import { requireAuthWithMessage } from '@/lib/auth/middleware'
@@ -28,6 +29,10 @@ import { requireAuthWithMessage } from '@/lib/auth/middleware'
  */
 export async function PUT(request: Request) {
   try {
+    // 0. CSRF validation
+    const csrfError = validateCsrf(request)
+    if (csrfError) return csrfError
+
     // 1. Validate request size before parsing (prevent DoS)
     const sizeCheck = validateRequestSize(request)
     if (!sizeCheck.valid) {

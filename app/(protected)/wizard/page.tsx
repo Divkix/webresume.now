@@ -83,38 +83,51 @@ export default function WizardPage() {
               body: JSON.stringify({ key: tempKey }),
             })
 
+            const claimData = await claimResponse.json()
+
             if (!claimResponse.ok) {
-              const claimData = await claimResponse.json()
               throw new Error(claimData.error || 'Failed to claim resume')
             }
+
+            // Get resume_id from claim response
+            const resumeId = claimData.resume_id
 
             // Clear localStorage after successful claim
             localStorage.removeItem('temp_upload_key')
 
-            // Poll for parsing completion (max 90 seconds)
+            // Poll status API for parsing completion (max 90 seconds)
             let attempts = 0
             const maxAttempts = 30 // 30 attempts * 3 seconds = 90 seconds
+            let parsingComplete = false
 
             while (attempts < maxAttempts) {
               await new Promise(resolve => setTimeout(resolve, 3000))
 
-              const { data: siteData } = await supabase
-                .from('site_data')
-                .select('content')
-                .eq('user_id', user.id)
-                .maybeSingle()
+              // Call status API (which checks Replicate and creates site_data)
+              const statusResponse = await fetch(`/api/resume/status?resume_id=${resumeId}`)
 
-              if (siteData) {
-                // Parsing complete, proceed to wizard
-                break
+              if (statusResponse.ok) {
+                const statusData = await statusResponse.json()
+
+                if (statusData.status === 'completed') {
+                  // Parsing complete, site_data has been created
+                  parsingComplete = true
+                  break
+                }
+
+                if (statusData.status === 'failed') {
+                  setError(statusData.error || 'Resume parsing failed. Please try again.')
+                  setTimeout(() => router.push('/dashboard'), 3000)
+                  return
+                }
               }
 
               attempts++
             }
 
-            if (attempts >= maxAttempts) {
-              setError('Resume parsing is taking longer than expected. Please check your dashboard.')
-              setTimeout(() => router.push('/dashboard'), 3000)
+            // If polling timed out, redirect to waiting page
+            if (!parsingComplete) {
+              router.push(`/waiting?resume_id=${resumeId}`)
               return
             }
           } catch (claimError) {
@@ -127,15 +140,36 @@ export default function WizardPage() {
         }
 
         // 3. Fetch site_data (contains parsed resume content)
-        const { data: siteData, error: fetchError } = await supabase
+        const { data: siteData } = await supabase
           .from('site_data')
           .select('content')
           .eq('user_id', user.id)
-          .single()
+          .maybeSingle()
 
-        if (fetchError || !siteData) {
-          setError('No resume data found. Please upload a resume first.')
-          setTimeout(() => router.push('/dashboard'), 2000)
+        if (!siteData) {
+          // Resume is still parsing, check status and redirect appropriately
+          const { data: resume } = await supabase
+            .from('resumes')
+            .select('id, status')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (resume) {
+            if (resume.status === 'processing') {
+              // Redirect to waiting page for active parsing
+              router.push(`/waiting?resume_id=${resume.id}`)
+            } else {
+              // Other statuses, go to dashboard
+              setError('No resume data found. Please upload a resume first.')
+              setTimeout(() => router.push('/dashboard'), 2000)
+            }
+          } else {
+            // No resume at all
+            setError('No resume data found. Please upload a resume first.')
+            setTimeout(() => router.push('/dashboard'), 2000)
+          }
           return
         }
 
@@ -150,9 +184,20 @@ export default function WizardPage() {
         )
 
         if (hasHeadline && hasSummary && hasDescriptions) {
-          // Profile is already complete, redirect to dashboard
-          toast.success('Your profile is already complete!')
-          router.push('/dashboard')
+          // Profile is already complete, mark onboarding as done and redirect
+          try {
+            await supabase
+              .from('profiles')
+              .update({ onboarding_completed: true })
+              .eq('id', user.id)
+
+            toast.success('Your profile is already complete!')
+            router.push('/dashboard')
+          } catch (updateError) {
+            console.error('Failed to mark onboarding complete:', updateError)
+            // Continue to wizard anyway, user can complete it manually
+            toast.info('Please complete the wizard to finalize your profile')
+          }
           return
         }
 

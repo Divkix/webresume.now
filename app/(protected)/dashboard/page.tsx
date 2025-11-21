@@ -152,14 +152,14 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   // Fetch site data if available - include theme_id
   const { data: siteData } = await supabase
     .from('site_data')
     .select('id, content, theme_id, last_published_at, created_at')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   // Determine resume state
   const hasResume = !!resume

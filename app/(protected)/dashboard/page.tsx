@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { CopyLinkButton } from '@/components/dashboard/CopyLinkButton'
 import { DashboardUploadSection } from '@/components/dashboard/DashboardUploadSection'
+import { RealtimeStatusListener } from '@/components/dashboard/RealtimeStatusListener'
 import type { ResumeContent } from '@/lib/types/database'
 
 /**
@@ -148,7 +149,7 @@ export default async function DashboardPage() {
   // Fetch most recent resume
   const { data: resume } = await supabase
     .from('resumes')
-    .select('id, status, error_message, created_at')
+    .select('id, status, error_message, created_at, replicate_job_id')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -558,23 +559,11 @@ export default async function DashboardPage() {
             <div className="col-span-full">
               <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-8 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                 {resume.status === 'processing' && (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-600 flex-shrink-0" />
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-slate-900 mb-1">
-                          Your resume is being analyzed...
-                        </h3>
-                        <p className="text-slate-600">
-                          This usually takes 30-40 seconds. You can wait here or check back later.
-                        </p>
-                      </div>
-                    </div>
-                    <Button asChild className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
-                      <Link href={`/waiting?resume_id=${resume.id}`}>
-                        View Progress
-                      </Link>
-                    </Button>
+                  <div>
+                    <RealtimeStatusListener
+                      resumeId={resume.id}
+                      userId={user.id}
+                    />
                   </div>
                 )}
 

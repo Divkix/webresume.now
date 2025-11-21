@@ -39,6 +39,20 @@ export function getOptionalEnv(key: string, defaultValue: string): string {
 }
 
 /**
+ * Gets an optional environment variable, returns undefined if not set
+ */
+function getEnvVar(key: string, required: boolean = true): string | undefined {
+  const value = process.env[key]
+  if (required && (!value || value.trim() === '')) {
+    throw new EnvironmentError(
+      `Missing required environment variable: ${key}\n` +
+        `Please set it in your .env file or deployment environment.`
+    )
+  }
+  return value || undefined
+}
+
+/**
  * Validates all required environment variables
  * Call this at app startup to fail fast
  */
@@ -97,4 +111,5 @@ export const ENV = {
 
   // Replicate
   REPLICATE_API_TOKEN: () => getRequiredEnv('REPLICATE_API_TOKEN'),
+  REPLICATE_WEBHOOK_SECRET: () => getEnvVar('REPLICATE_WEBHOOK_SECRET', false), // optional for local dev
 } as const

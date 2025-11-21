@@ -122,9 +122,12 @@ export async function GET(request: Request) {
           }
         )
 
-        if (upsertError) throw upsertError
+        if (upsertError) {
+          console.error('Failed to save resume data to site_data:', upsertError)
+          throw new Error(`Database save failed: ${upsertError.message}`)
+        }
 
-        // Update resume status
+        // Update resume status to completed
         const { error: updateError } = await supabase
           .from('resumes')
           .update({
@@ -133,7 +136,11 @@ export async function GET(request: Request) {
           })
           .eq('id', resumeId)
 
-        if (updateError) throw updateError
+        if (updateError) {
+          console.error('Failed to update resume status to completed:', updateError)
+          // Don't throw - data is already saved, just log the issue
+          // The next poll will retry the status update
+        }
 
         return createSuccessResponse({
           status: 'completed',

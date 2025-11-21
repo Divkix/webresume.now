@@ -214,12 +214,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // 11. Trigger Replicate parsing
+    // 11. Trigger Replicate parsing with webhook
     let replicateJobId: string | null = null
     let parseError: string | null = null
 
+    // Build webhook URL for Replicate to call when done
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined
+
     try {
-      const prediction = await parseResume(presignedUrl)
+      const prediction = await parseResume(presignedUrl, webhookUrl)
       replicateJobId = prediction.id
     } catch (error) {
       console.error('Failed to trigger Replicate parsing:', error)

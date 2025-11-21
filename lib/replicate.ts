@@ -222,9 +222,13 @@ export interface ParseStatusResult {
 /**
  * Trigger AI parsing of a resume PDF
  * @param presignedUrl - R2 presigned GET URL for the PDF file
+ * @param webhookUrl - Optional webhook URL for completion notifications
  * @returns Prediction object with ID and initial status
  */
-export async function parseResume(presignedUrl: string): Promise<ParseResumeResult> {
+export async function parseResume(
+  presignedUrl: string,
+  webhookUrl?: string
+): Promise<ParseResumeResult> {
   try {
     const replicate = getReplicate()
     const prediction = await replicate.predictions.create({
@@ -234,6 +238,10 @@ export async function parseResume(presignedUrl: string): Promise<ParseResumeResu
         use_llm: true,
         page_schema: JSON.stringify(RESUME_EXTRACTION_SCHEMA),
       },
+      ...(webhookUrl && {
+        webhook: webhookUrl,
+        webhook_events_filter: ['completed'],
+      }),
     })
 
     return {

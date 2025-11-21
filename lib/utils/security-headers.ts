@@ -39,11 +39,17 @@ export function validateCsrf(request: Request): Response | null {
 
   const secFetchSite = request.headers.get('sec-fetch-site')
 
-  // Allow same-origin and same-site requests
-  // Also allow 'none' for direct navigation (though POST shouldn't happen this way)
-  const allowedValues = ['same-origin', 'same-site', 'none']
+  // Log missing header for monitoring but allow request
+  // Older browsers and API clients may not send this header
+  if (!secFetchSite) {
+    console.warn('CSRF: Sec-Fetch-Site header missing, allowing request')
+    return null
+  }
 
-  if (secFetchSite && !allowedValues.includes(secFetchSite)) {
+  // Allow same-origin and same-site requests
+  const allowedValues = ['same-origin', 'same-site']
+
+  if (!allowedValues.includes(secFetchSite)) {
     return new Response(
       JSON.stringify({ error: 'CSRF validation failed', code: 'CSRF_ERROR' }),
       { status: 403, headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS } }

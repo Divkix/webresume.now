@@ -94,39 +94,52 @@ export default function WizardPage() {
             // Clear localStorage after successful claim
             localStorage.removeItem('temp_upload_key')
 
-            // Poll status API for parsing completion (max 90 seconds)
-            let attempts = 0
-            const maxAttempts = 30 // 30 attempts * 3 seconds = 90 seconds
-            let parsingComplete = false
+            // Subscribe to Realtime updates for this resume
+            const parsingComplete = await new Promise<boolean>((resolve) => {
+              const timeoutId: { current: NodeJS.Timeout | null } = { current: null }
 
-            while (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 3000))
+              const channel = supabase
+                .channel(`wizard-resume-${resumeId}`)
+                .on(
+                  'postgres_changes',
+                  {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'resumes',
+                    filter: `id=eq.${resumeId}`,
+                  },
+                  (payload) => {
+                    const newStatus = payload.new?.status
 
-              // Call status API (which checks Replicate and creates site_data)
-              const statusResponse = await fetch(`/api/resume/status?resume_id=${resumeId}`)
+                    if (newStatus === 'completed') {
+                      if (timeoutId.current) clearTimeout(timeoutId.current)
+                      channel.unsubscribe()
+                      supabase.removeChannel(channel)
+                      resolve(true)
+                    }
 
-              if (statusResponse.ok) {
-                const statusData = await statusResponse.json()
+                    if (newStatus === 'failed') {
+                      if (timeoutId.current) clearTimeout(timeoutId.current)
+                      channel.unsubscribe()
+                      supabase.removeChannel(channel)
+                      setError(payload.new?.error_message || 'Resume parsing failed. Please try again.')
+                      setTimeout(() => router.push('/dashboard'), 3000)
+                      resolve(false)
+                    }
+                  }
+                )
+                .subscribe()
 
-                if (statusData.status === 'completed') {
-                  // Parsing complete, site_data has been created
-                  parsingComplete = true
-                  break
-                }
+              // Timeout after 90 seconds
+              timeoutId.current = setTimeout(() => {
+                channel.unsubscribe()
+                supabase.removeChannel(channel)
+                router.push(`/waiting?resume_id=${resumeId}`)
+                resolve(false)
+              }, 90000)
+            })
 
-                if (statusData.status === 'failed') {
-                  setError(statusData.error || 'Resume parsing failed. Please try again.')
-                  setTimeout(() => router.push('/dashboard'), 3000)
-                  return
-                }
-              }
-
-              attempts++
-            }
-
-            // If polling timed out, redirect to waiting page
             if (!parsingComplete) {
-              router.push(`/waiting?resume_id=${resumeId}`)
               return
             }
           } catch (claimError) {

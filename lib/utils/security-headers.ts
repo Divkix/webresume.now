@@ -14,7 +14,7 @@ export const SECURITY_HEADERS = {
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires these
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // TODO: Implement nonce-based CSP for production (issue #TBD)
     "style-src 'self' 'unsafe-inline'", // Tailwind requires inline styles
     "img-src 'self' https: data:image/png data:image/jpeg data:image/gif data:image/webp", // Block SVG data URIs
     "font-src 'self' data:",

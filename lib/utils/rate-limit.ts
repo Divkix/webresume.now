@@ -69,7 +69,8 @@ export async function checkRateLimit(
         // TODO: Both handle_change and privacy_update share the same flawed counter
         // since both update profiles.updated_at. Additionally, the query only returns
         // 0 or 1 since we filter by unique ID. Consider adding audit_log table for
-        // precise tracking of all profile changes. For now, limit is set higher to account for overlap.
+        // precise tracking of all profile changes. Tracked in issue #TBD.
+        // For now, limit is set higher to account for overlap.
         const { count: changeCount, error } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true })

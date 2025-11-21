@@ -5,7 +5,8 @@ import { getR2Client, getR2Bucket } from '@/lib/r2'
 import { generateTempKey } from '@/lib/utils/validation'
 
 // Simple in-memory rate limiter for anonymous uploads
-// Note: Resets on cold starts. For production, use Cloudflare WAF rules.
+// Note: Resets on cold starts. For production-grade rate limiting, use Cloudflare WAF rules.
+// TODO: This in-memory approach is temporary - see issue #TBD for migration plan
 const ipRequestCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 10 // requests per minute
 const RATE_WINDOW = 60 * 1000 // 1 minute

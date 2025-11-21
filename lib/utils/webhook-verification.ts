@@ -7,6 +7,12 @@ import { ENV } from '@/lib/env'
 
 /**
  * Constant-time string comparison to prevent timing attacks
+ *
+ * Note: JavaScript timing guarantees are limited. While this implementation
+ * avoids obvious short-circuits, JIT optimization may introduce timing variations.
+ * For network-based attacks (webhooks), timing differences are masked by network jitter.
+ * Consider crypto.subtle.timingSafeEqual if available in your runtime.
+ *
  * Uses padding to avoid leaking length information
  */
 function constantTimeCompare(a: string, b: string): boolean {

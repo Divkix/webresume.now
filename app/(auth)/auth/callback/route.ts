@@ -27,9 +27,20 @@ export async function GET(request: Request) {
       if (profileError) {
         console.error('Error updating profile avatar:', profileError)
       }
+
+      // Check onboarding status to determine redirect
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.onboarding_completed) {
+        return NextResponse.redirect(`${origin}/dashboard`)
+      }
     }
   }
 
-  // Redirect to wizard (handles upload claiming if needed)
+  // Redirect to wizard for new users or if no user found
   return NextResponse.redirect(`${origin}/wizard`)
 }

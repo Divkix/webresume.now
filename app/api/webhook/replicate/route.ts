@@ -89,12 +89,13 @@ export async function POST(request: Request) {
         const userMessage = makeUserFriendlyError(rawMessage)
 
         console.error('Validation failed:', rawMessage)
+
         await supabase.from('resumes').update({
           status: 'failed',
           error_message: userMessage
         }).eq('id', resume.id)
 
-        return new Response('OK', { status: 200 }) // Stop retries
+        return new Response('OK', { status: 200 })
       }
 
       // Save to site_data

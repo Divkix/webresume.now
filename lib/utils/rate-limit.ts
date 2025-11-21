@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SECURITY_HEADERS } from './security-headers'
+import { featureFlags } from './config'
 
 /**
  * Rate limiting configuration for different actions
@@ -132,6 +133,11 @@ export async function enforceRateLimit(
   userId: string,
   action: RateLimitAction
 ): Promise<Response | null> {
+  // Skip rate limiting in development
+  if (!featureFlags.rateLimiting) {
+    return null
+  }
+
   const result = await checkRateLimit(userId, action)
 
   if (!result.allowed) {

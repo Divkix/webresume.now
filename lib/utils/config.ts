@@ -204,8 +204,8 @@ export const featureFlags = {
   // Enable debug mode in development
   debugMode: isDevelopment(),
 
-  // Enable rate limiting (always on in production)
-  rateLimiting: true,
+  // Enable rate limiting (production only)
+  rateLimiting: isProduction(),
 
   // Enable analytics (production only)
   analytics: isProduction(),

@@ -371,6 +371,42 @@ export default async function DashboardPage() {
           {/* Row 2: Main Content Area */}
           {hasPublishedSite && content ? (
             <>
+              {/* Show RealtimeStatusListener when a new resume is processing */}
+              {(resume.status === 'processing' || resume.status === 'pending_claim') && (
+                <div className="col-span-full">
+                  <RealtimeStatusListener
+                    resumeId={resume.id}
+                    userId={user.id}
+                    currentStatus={resume.status}
+                  />
+                </div>
+              )}
+
+              {/* Show error message when resume processing failed */}
+              {resume.status === 'failed' && (
+                <div className="col-span-full">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-red-900">Processing Failed</h3>
+                        <p className="mt-1 text-sm text-red-700">
+                          {resume.error_message || 'An error occurred while processing your resume.'}
+                        </p>
+                        <div className="mt-3 flex gap-2">
+                          <Button asChild size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                            <Link href={`/waiting?resume_id=${resume.id}`}>Retry</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-100">
+                            <Link href="/">Upload New</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Left Column - Resume Preview (spans 2 on desktop) */}
               <div className="lg:col-span-2 bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-8 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                 {/* Header */}
@@ -558,11 +594,12 @@ export default async function DashboardPage() {
             /* Show processing/failed state in main content area */
             <div className="col-span-full">
               <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-8 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
-                {resume.status === 'processing' && (
+                {(resume.status === 'processing' || resume.status === 'pending_claim') && (
                   <div>
                     <RealtimeStatusListener
                       resumeId={resume.id}
                       userId={user.id}
+                      currentStatus={resume.status}
                     />
                   </div>
                 )}

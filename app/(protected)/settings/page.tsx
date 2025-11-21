@@ -44,7 +44,7 @@ export default async function SettingsPage() {
 
   const { data: latestResume } = await supabase
     .from('resumes')
-    .select('id, status, created_at')
+    .select('id, status, created_at, error_message')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -114,6 +114,8 @@ export default async function SettingsPage() {
           resumeCount={resumeCount || 0}
           latestResumeDate={latestResume?.created_at}
           latestResumeStatus={latestResume?.status}
+          latestResumeError={latestResume?.error_message}
+          latestResumeId={latestResume?.id}
         />
 
         {/* Handle Management */}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
@@ -10,12 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 
-interface FileDropzoneProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
+export function FileDropzone() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -28,17 +22,15 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  // Check authentication status when component mounts or opens
+  // Check authentication status on mount
   useEffect(() => {
-    if (open) {
-      const checkAuth = async () => {
-        const supabase = createClient()
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-        setUser(currentUser)
-      }
-      checkAuth()
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      setUser(currentUser)
     }
-  }, [open])
+    checkAuth()
+  }, [])
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -173,11 +165,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
       // Redirect to dashboard
       router.push('/dashboard')
       router.refresh()
-
-      // Close modal after short delay
-      setTimeout(() => {
-        onOpenChange(false)
-      }, 500)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to claim resume'
       setError(errorMessage)
@@ -195,228 +182,226 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps) {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
-    onOpenChange(false)
   }
 
-  const handleClose = () => {
-    if (!uploading && !claiming) {
-      setFile(null)
-      setUploadComplete(false)
-      setClaiming(false)
-      setError(null)
-      setUploadProgress(0)
-      onOpenChange(false)
-    }
+  const handleReset = () => {
+    setFile(null)
+    setUploadComplete(false)
+    setClaiming(false)
+    setError(null)
+    setUploadProgress(0)
   }
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload Your Resume</DialogTitle>
-            <DialogDescription>
-              Drop your PDF resume here or click to browse. Maximum file size is 10MB.
-            </DialogDescription>
-          </DialogHeader>
+  if (!uploadComplete) {
+    return (
+      <div className="space-y-4">
+        {/* Drop Zone */}
+        <div
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`
+            group relative bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-12 cursor-pointer transition-all duration-300 backdrop-blur-sm overflow-hidden
+            ${isDragging
+              ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-depth-lg -translate-y-1'
+              : 'hover:shadow-depth-lg hover:-translate-y-1'
+            }
+            ${uploading ? 'pointer-events-none opacity-60' : ''}
+          `}
+        >
+          {/* Subtle gradient overlay on hover */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-blue-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-          {!uploadComplete ? (
-            <div className="space-y-4">
-              {/* Drop Zone */}
-              <div
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`
-                  group border-2 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300
-                  ${isDragging
-                    ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-depth-md'
-                    : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 shadow-depth-sm'
-                  }
-                  ${uploading ? 'pointer-events-none opacity-60' : ''}
-                `}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  disabled={uploading}
-                />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={uploading}
+          />
 
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20 transition-opacity ${isDragging ? 'opacity-40' : 'group-hover:opacity-30'}`} />
-                    <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-3 rounded-xl">
-                      <svg
-                        className="w-10 h-10"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          stroke="url(#modalGradient)"
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                        <defs>
-                          <linearGradient id="modalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#4F46E5" />
-                            <stop offset="100%" stopColor="#3B82F6" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 mb-1">
-                      {file ? file.name : 'Drop your PDF here'}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      or click to browse • Max 10MB
-                    </p>
-                  </div>
-                </div>
+          <div className="relative z-10 flex flex-col items-center gap-4">
+            {/* Icon with gradient background */}
+            <div className="relative">
+              <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-2xl blur-xl transition-opacity duration-300 ${isDragging ? 'opacity-40' : 'opacity-20 group-hover:opacity-40'}`} />
+              <div className={`relative bg-gradient-to-r from-indigo-100 to-blue-100 p-4 rounded-2xl transition-transform duration-300 ${isDragging ? 'scale-110' : 'group-hover:scale-110'}`}>
+                <svg
+                  className="w-12 h-12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <defs>
+                    <linearGradient id="uploadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#4F46E5" />
+                      <stop offset="100%" stopColor="#3B82F6" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    stroke="url(#uploadGradient)"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
               </div>
+            </div>
 
-              {/* Progress Bar */}
-              {uploading && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-center text-slate-500 font-medium">
-                    Uploading... {uploadProgress}%
-                  </p>
-                </div>
-              )}
+            <div className="text-center">
+              <p className="text-lg font-semibold text-slate-900 mb-1">
+                {file ? file.name : 'Drop your PDF résumé here'}
+              </p>
+              <p className="text-sm text-slate-500">
+                or click to browse • Max 10MB
+              </p>
+            </div>
+          </div>
+        </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-depth-sm">
-                  <p className="text-sm text-red-800 font-medium">{error}</p>
-                </div>
-              )}
+        {/* Progress Bar */}
+        {uploading && (
+          <div className="space-y-2">
+            <Progress value={uploadProgress} className="h-2" />
+            <p className="text-xs text-center text-slate-500 font-medium">
+              Uploading... {uploadProgress}%
+            </p>
+          </div>
+        )}
 
-              {/* Info Text */}
-              {!uploading && !error && (
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-depth-sm">
+            <p className="text-sm text-red-800 font-medium">{error}</p>
+          </div>
+        )}
+
+        {/* Info Text */}
+        {!uploading && !error && (
+          <p className="text-sm text-slate-500 text-center">
+            Upload anonymously. No account needed until you&apos;re ready to publish.
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  // Upload complete state
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-8">
+        {claiming ? (
+          /* Claiming State - For Authenticated Users */
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+              <div className="relative w-16 h-16 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
+                <svg
+                  className="w-8 h-8 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="url(#spinnerGradient)"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="url(#spinnerGradient)"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                  <defs>
+                    <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#4F46E5" />
+                      <stop offset="100%" stopColor="#3B82F6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                Processing Your Resume...
+              </h3>
+              <p className="text-sm text-slate-600">
+                Claiming your upload and starting AI analysis
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Upload Complete - Show different CTA based on auth status */
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
+              <div className="relative w-16 h-16 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
+                <svg
+                  className="w-8 h-8"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    stroke="url(#successGradient)"
+                    d="M5 13l4 4L19 7"
+                  />
+                  <defs>
+                    <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#10B981" />
+                      <stop offset="100%" stopColor="#14B8A6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                Upload Complete!
+              </h3>
+              <p className="text-sm text-slate-600 mb-4">
+                {file?.name} has been uploaded successfully.
+              </p>
+            </div>
+
+            {user ? (
+              /* Authenticated user - shouldn't reach here as auto-claim happens */
+              <p className="text-xs text-slate-500 text-center font-medium">
+                Redirecting to dashboard...
+              </p>
+            ) : (
+              /* Anonymous user - show login button */
+              <>
+                <Button
+                  onClick={handleLoginRedirect}
+                  className="w-full max-w-xs bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
+                >
+                  Continue with Google
+                </Button>
+
                 <p className="text-xs text-slate-500 text-center font-medium">
-                  Your file is uploaded anonymously. Log in to save and publish.
+                  Your upload will be automatically claimed after login
                 </p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              {/* Success State */}
-              {claiming ? (
-                /* Claiming State - For Authenticated Users */
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
-                    <div className="relative w-16 h-16 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
-                      <svg
-                        className="w-8 h-8 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="url(#spinnerGradient)"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="url(#spinnerGradient)"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                        <defs>
-                          <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#4F46E5" />
-                            <stop offset="100%" stopColor="#3B82F6" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                  </div>
 
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">
-                      Processing Your Resume...
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                      Claiming your upload and starting AI analysis
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                /* Upload Complete - Show different CTA based on auth status */
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
-                    <div className="relative w-16 h-16 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
-                      <svg
-                        className="w-8 h-8"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2.5}
-                          stroke="url(#successGradient)"
-                          d="M5 13l4 4L19 7"
-                        />
-                        <defs>
-                          <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#10B981" />
-                            <stop offset="100%" stopColor="#14B8A6" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">
-                      Upload Complete!
-                    </h3>
-                    <p className="text-sm text-slate-600 mb-4">
-                      {file?.name} has been uploaded successfully.
-                    </p>
-                  </div>
-
-                  {user ? (
-                    /* Authenticated user - shouldn't reach here as auto-claim happens */
-                    <p className="text-xs text-slate-500 text-center font-medium">
-                      Redirecting to dashboard...
-                    </p>
-                  ) : (
-                    /* Anonymous user - show login button */
-                    <>
-                      <Button
-                        onClick={handleLoginRedirect}
-                        className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
-                      >
-                        Log In to Save
-                      </Button>
-
-                      <p className="text-xs text-slate-500 text-center font-medium">
-                        Your upload will be automatically claimed after login
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+                <button
+                  onClick={handleReset}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  Upload a different file
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

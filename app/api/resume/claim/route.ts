@@ -105,15 +105,27 @@ export async function POST(request: Request) {
     // Handle race condition - if duplicate, fetch and return existing
     if (insertError?.code === '23505') {
       // Unique constraint violation - another request already claimed this file
-      const { data: existingResume } = await supabase
+      // Escape SQL wildcards in filename to prevent LIKE injection
+      const escapedFilename = filename.replace(/[%_]/g, '\\$&')
+
+      const { data: existingResume, error: fetchError } = await supabase
         .from('resumes')
         .select('id, status')
         .eq('user_id', user.id)
-        .like('r2_key', `users/${user.id}/%/${filename}`)
+        .like('r2_key', `users/${user.id}/%/${escapedFilename}`)
         .neq('status', 'failed')
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
+
+      if (fetchError) {
+        console.error('Failed to fetch existing resume after conflict:', fetchError)
+        return createErrorResponse(
+          'Upload conflict detected. Please try again.',
+          ERROR_CODES.CONFLICT,
+          409
+        )
+      }
 
       if (existingResume) {
         return createSuccessResponse({

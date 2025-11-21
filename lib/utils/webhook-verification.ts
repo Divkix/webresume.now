@@ -40,14 +40,14 @@ export async function verifyReplicateWebhook(request: Request): Promise<{ isVali
   // Read body
   const body = await request.text()
 
-  // Check timestamp (prevent replay attacks - 1 min tolerance)
+  // Check timestamp (prevent replay attacks - 5 min tolerance)
   const now = Math.floor(Date.now() / 1000)
   const timestamp = parseInt(webhookTimestamp, 10)
   if (isNaN(timestamp)) {
     console.error('Invalid webhook timestamp format')
     return { isValid: false, body }
   }
-  if (Math.abs(now - timestamp) > 60) {
+  if (Math.abs(now - timestamp) > 300) {
     console.error('Webhook timestamp too old')
     return { isValid: false, body }
   }

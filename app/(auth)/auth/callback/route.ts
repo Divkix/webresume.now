@@ -5,6 +5,11 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
+  // Validate required env vars in production
+  if (!process.env.NEXT_PUBLIC_APP_URL && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_APP_URL is required in production')
+  }
+
   // Validate redirect origin to prevent open redirect attacks
   const allowedOrigins = [
     process.env.NEXT_PUBLIC_APP_URL,

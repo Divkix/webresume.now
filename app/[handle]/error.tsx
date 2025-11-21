@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { siteConfig } from '@/lib/config/site'
 
 /**
  * Public Profile Error Boundary
@@ -82,7 +83,7 @@ export default function ProfileError({
               href="/"
               className="text-gray-900 hover:underline font-medium"
             >
-              webresume.now
+              {siteConfig.fullName}
             </Link>
           </p>
         </div>

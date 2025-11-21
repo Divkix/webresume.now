@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { privacySettingsSchema, type PrivacySettings } from '@/lib/schemas/profile'
+import { siteConfig } from '@/lib/config/site'
 
 interface PrivacySettingsFormProps {
   initialSettings: PrivacySettings
@@ -80,7 +81,7 @@ export function PrivacySettingsForm({ initialSettings, userHandle }: PrivacySett
           Control what information is visible on your public resume page
           {userHandle && (
             <span className="block mt-1 text-xs">
-              Preview at: <span className="font-mono">webresume.now/{userHandle}</span>
+              Preview at: <span className="font-mono">{siteConfig.domain}/{userHandle}</span>
             </span>
           )}
         </CardDescription>

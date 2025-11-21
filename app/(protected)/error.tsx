@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { siteConfig } from '@/lib/config/site'
 
 /**
  * Protected Routes Error Boundary
@@ -86,7 +87,7 @@ export default function ProtectedError({
           <p className="text-sm text-gray-500 text-center">
             Need help?{' '}
             <a
-              href="mailto:support@webresume.now"
+              href={`mailto:${siteConfig.supportEmail}`}
               className="text-gray-900 hover:underline"
             >
               Contact Support

@@ -5,6 +5,7 @@ import type { ResumeContent } from '@/lib/types/database'
 import { getTemplate } from '@/lib/templates/theme-registry'
 import { extractCityState } from '@/lib/utils/privacy'
 import { AttributionWidget } from '@/components/AttributionWidget'
+import { siteConfig } from '@/lib/config/site'
 
 // Enable ISR-like caching: revalidate every hour
 // This reduces DB load by ~99% for high-traffic pages
@@ -135,13 +136,13 @@ export async function generateMetadata({
     : `View ${content.full_name}'s professional resume and experience.`
 
   return {
-    title: `${content.full_name}'s Resume — webresume.now`,
+    title: `${content.full_name}'s Resume — ${siteConfig.fullName}`,
     description,
     openGraph: {
       title: `${content.full_name} — ${content.headline}`,
       description,
       type: 'profile',
-      url: `https://webresume.now/${handle}`,
+      url: `${siteConfig.url}/${handle}`,
       images: profile.avatar_url
         ? [
             {

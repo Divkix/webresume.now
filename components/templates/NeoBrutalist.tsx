@@ -3,6 +3,7 @@ import type { TemplateProps } from '@/lib/types/template';
 import type { Project } from '@/lib/types/database';
 import { getInitials, formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Globe, ArrowUpRight, Star, Briefcase, GraduationCap, Award } from 'lucide-react';
+import { siteConfig } from '@/lib/config/site';
 
 const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
   return (
@@ -290,7 +291,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
         {/* Footer */}
         <footer className="mt-16 text-center pb-8">
           <p className="font-bold text-sm">
-            Built with <a href="https://webresume.now" className="underline decoration-4 decoration-[#FFDE00]">webresume.now</a>
+            Built with <a href={siteConfig.url} className="underline decoration-4 decoration-[#FFDE00]">{siteConfig.fullName}</a>
           </p>
         </footer>
       </div>

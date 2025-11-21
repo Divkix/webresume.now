@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ThemeSelector } from '@/components/dashboard/ThemeSelector'
+import { siteConfig } from '@/lib/config/site'
 
 export const metadata = {
-  title: 'Themes | webresume.now',
+  title: `Themes | ${siteConfig.fullName}`,
   description: 'Choose your resume theme',
 }
 

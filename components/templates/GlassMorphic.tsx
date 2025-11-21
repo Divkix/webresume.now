@@ -3,6 +3,7 @@ import type { TemplateProps } from '@/lib/types/template';
 import type { Project } from '@/lib/types/database';
 import { formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Mail, MapPin, Linkedin, Github, Globe, ExternalLink, Command, Briefcase, GraduationCap, Award } from 'lucide-react';
+import { siteConfig } from '@/lib/config/site';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const GlassMorphic: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
@@ -264,7 +265,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile: _profile }) =
 
         <footer id="contact" className="mt-32 border-t border-white/10 pt-12 pb-6 text-center">
           <p className="text-white/40 text-sm">
-            Built with <a href="https://webresume.now" className="hover:underline text-white/60">webresume.now</a>
+            Built with <a href={siteConfig.url} className="hover:underline text-white/60">{siteConfig.fullName}</a>
           </p>
         </footer>
       </div>

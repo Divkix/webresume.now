@@ -2,6 +2,7 @@ import React from 'react'
 import type { TemplateProps } from '@/lib/types/template'
 import { formatDateRange } from '@/lib/templates/helpers'
 import { Calendar, GraduationCap, Award, ArrowUpRight } from 'lucide-react'
+import { siteConfig } from '@/lib/config/site'
 
 const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
   // Split name into first and last for editorial layout
@@ -307,7 +308,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
               )}
             </div>
             <p className="text-xs text-neutral-400 mt-8 md:mt-0">
-              Built with <a href="https://webresume.now" className="hover:underline">webresume.now</a>
+              Built with <a href={siteConfig.url} className="hover:underline">{siteConfig.fullName}</a>
             </p>
           </div>
         </footer>

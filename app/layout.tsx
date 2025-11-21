@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/sonner";
+import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "webresume.now - Turn your résumé into a website",
+  title: `${siteConfig.fullName} - ${siteConfig.tagline}`,
   description: "Drop your PDF résumé and get a shareable website in seconds. Free, fast, and AI-powered.",
 };
 

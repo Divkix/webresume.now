@@ -25,6 +25,7 @@ import { CopyLinkButton } from '@/components/dashboard/CopyLinkButton'
 import { DashboardUploadSection } from '@/components/dashboard/DashboardUploadSection'
 import { RealtimeStatusListener } from '@/components/dashboard/RealtimeStatusListener'
 import type { ResumeContent } from '@/lib/types/database'
+import { siteConfig } from '@/lib/config/site'
 
 /**
  * Calculate profile completeness score based on available data
@@ -552,7 +553,7 @@ export default async function DashboardPage() {
                                 href={`/${profile.handle}`}
                                 className="text-sm text-indigo-600 hover:text-indigo-700 font-medium truncate block"
                               >
-                                webresume.now/{profile.handle}
+                                {siteConfig.domain}/{profile.handle}
                               </Link>
                             </div>
                             <div className="mt-2">

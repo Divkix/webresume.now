@@ -2,6 +2,7 @@
 
 import { LoginButton } from '@/components/auth/LoginButton'
 import { FileDropzone } from '@/components/FileDropzone'
+import { Brand } from '@/components/Brand'
 import { Toaster } from '@/components/ui/sonner'
 
 export default function Home() {
@@ -10,8 +11,8 @@ export default function Home() {
       <Toaster />
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md shadow-depth-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-slate-900">
-            webresume<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600">.now</span>
+          <div className="text-slate-900">
+            <Brand size="lg" />
           </div>
           <LoginButton />
         </div>

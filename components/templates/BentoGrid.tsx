@@ -2,6 +2,7 @@ import React from 'react';
 import type { TemplateProps } from '@/lib/types/template';
 import { getInitials, formatDateRange, flattenSkills } from '@/lib/templates/helpers';
 import { Mail, Linkedin, Github, Globe, Briefcase, GraduationCap, Award, Crown, Code, ArrowUpRight, Layers } from 'lucide-react';
+import { siteConfig } from '@/lib/config/site';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const BentoGrid: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
@@ -229,7 +230,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
       {/* Footer Branding */}
       <div className="max-w-6xl mx-auto mt-12 text-center">
         <p className="text-neutral-600 text-sm">
-          Built with <a href="https://webresume.now" className="hover:underline font-medium">webresume.now</a>
+          Built with <a href={siteConfig.url} className="hover:underline font-medium">{siteConfig.fullName}</a>
         </p>
       </div>
 

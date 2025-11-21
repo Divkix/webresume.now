@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { Check, X, Loader2, User } from 'lucide-react'
+import { siteConfig } from '@/lib/config/site'
 
 interface HandleStepProps {
   initialHandle?: string
@@ -141,7 +142,7 @@ export function HandleStep({ initialHandle = '', onContinue }: HandleStepProps) 
             <p className="text-sm text-slate-500 font-medium">
               Your resume will be at:{' '}
               <span className="text-indigo-600 font-semibold">
-                webresume.now/{handle}
+                {siteConfig.domain}/{handle}
               </span>
             </p>
           )}

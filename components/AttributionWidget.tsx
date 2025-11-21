@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { siteConfig } from '@/lib/config/site'
 
 type ThemeId = 'minimalist_editorial' | 'glassmorphic' | 'neo_brutalist' | 'bento_grid'
 
@@ -67,7 +68,7 @@ export function AttributionWidget({ theme }: AttributionWidgetProps) {
         ${currentTheme.container}
         ${currentTheme.shadow}
       `}
-      aria-label="Visit webresume.now homepage"
+      aria-label={`Visit ${siteConfig.fullName} homepage`}
     >
       {/* Shimmer effect overlay - only visible on hover */}
       <div
@@ -83,7 +84,7 @@ export function AttributionWidget({ theme }: AttributionWidgetProps) {
       <div className="relative z-10 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium">
         <span>Built with</span>
         <span className="font-semibold">
-          webresume<span className={currentTheme.accent}>.now</span>
+          {siteConfig.name}<span className={currentTheme.accent}>{siteConfig.tld}</span>
         </span>
       </div>
     </Link>

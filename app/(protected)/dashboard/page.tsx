@@ -98,7 +98,7 @@ function getProfileSuggestions(content: ResumeContent): string[] {
 }
 
 /**
- * Format relative time (e.g., "2 days ago")
+ * Format relative time (e.g., "2 days ago") - deterministic to avoid hydration mismatch
  */
 function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString)
@@ -113,11 +113,8 @@ function formatRelativeTime(dateString: string): string {
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
   if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
 
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
 }
 
 /**

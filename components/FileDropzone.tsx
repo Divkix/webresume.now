@@ -3,13 +3,25 @@
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { validatePDF } from '@/lib/utils/validation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
 
-export function FileDropzone() {
+interface FileDropzoneProps {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}
+
+export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
+  const isModal = open !== undefined && onOpenChange !== undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -162,6 +174,11 @@ export function FileDropzone() {
 
       toast.success('Resume claimed successfully! Processing...')
 
+      // Close modal if in modal mode
+      if (onOpenChange) {
+        onOpenChange(false)
+      }
+
       // Redirect to dashboard
       router.push('/dashboard')
       router.refresh()
@@ -192,21 +209,22 @@ export function FileDropzone() {
     setUploadProgress(0)
   }
 
-  if (!uploadComplete) {
-    return (
-      <div className="space-y-4">
-        {/* Drop Zone */}
-        <div
+  // Dropzone content (before upload complete)
+  const dropzoneContent = (
+    <div className="space-y-4">
+      {/* Drop Zone */}
+      <div
           onDragEnter={handleDragEnter}
           onDragLeave={handleDragLeave}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
           className={`
-            group relative bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-12 cursor-pointer transition-all duration-300 backdrop-blur-sm overflow-hidden
+            group relative bg-white rounded-2xl border border-slate-200/60 p-12 cursor-pointer transition-all duration-300 backdrop-blur-sm overflow-hidden
+            ${isModal ? '' : 'shadow-depth-md'}
             ${isDragging
               ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-depth-lg -translate-y-1'
-              : 'hover:shadow-depth-lg hover:-translate-y-1'
+              : isModal ? 'hover:border-indigo-300' : 'hover:shadow-depth-lg hover:-translate-y-1'
             }
             ${uploading ? 'pointer-events-none opacity-60' : ''}
           `}
@@ -278,20 +296,19 @@ export function FileDropzone() {
           </div>
         )}
 
-        {/* Info Text */}
-        {!uploading && !error && (
+        {/* Info Text - only show when not in modal mode */}
+        {!uploading && !error && !isModal && (
           <p className="text-sm text-slate-500 text-center">
             Upload anonymously. No account needed until you&apos;re ready to publish.
           </p>
         )}
       </div>
-    )
-  }
+  )
 
-  // Upload complete state
-  return (
+  // Upload complete state content
+  const uploadCompleteContent = (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-8">
+      <div className={`bg-white rounded-2xl border border-slate-200/60 p-8 ${isModal ? '' : 'shadow-depth-md'}`}>
         {claiming ? (
           /* Claiming State - For Authenticated Users */
           <div className="flex flex-col items-center gap-4">
@@ -404,4 +421,23 @@ export function FileDropzone() {
       </div>
     </div>
   )
+
+  // Select content based on upload state
+  const content = uploadComplete ? uploadCompleteContent : dropzoneContent
+
+  // When in modal mode, wrap in Dialog
+  if (isModal) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload New Resume</DialogTitle>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return content
 }

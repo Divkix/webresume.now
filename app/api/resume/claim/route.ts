@@ -85,41 +85,43 @@ export async function POST(request: Request) {
       return rateLimitResponse
     }
 
-    // 5. Generate new key and check for idempotency
+    // 5. Generate new key
     const timestamp = Date.now()
     const filename = key.split('/').pop()
     const newKey = `users/${user.id}/${timestamp}/${filename}`
 
-    // Check if this temp key was already claimed by this user (idempotency)
-    // This prevents race conditions from rapid double-clicks
-    const { data: existingResume } = await supabase
-      .from('resumes')
-      .select('id, status')
-      .eq('user_id', user.id)
-      .like('r2_key', `users/${user.id}/%/${filename}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (existingResume) {
-      // Already claimed - return existing resume
-      return createSuccessResponse({
-        resume_id: existingResume.id,
-        status: existingResume.status,
-      })
-    }
-
-    // 6. Insert DB record FIRST
-    // This ensures we always have a record for tracking, even if R2 operations fail
+    // 6. Insert DB record - unique index prevents duplicates
+    // The partial unique index on (user_id, filename) handles race conditions
     const { data: resume, error: insertError } = await supabase
       .from('resumes')
       .insert({
         user_id: user.id,
-        r2_key: newKey, // Planned key, R2 move will happen next
+        r2_key: newKey,
         status: 'pending_claim',
       })
       .select()
       .single()
+
+    // Handle race condition - if duplicate, fetch and return existing
+    if (insertError?.code === '23505') {
+      // Unique constraint violation - another request already claimed this file
+      const { data: existingResume } = await supabase
+        .from('resumes')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .like('r2_key', `users/${user.id}/%/${filename}`)
+        .neq('status', 'failed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (existingResume) {
+        return createSuccessResponse({
+          resume_id: existingResume.id,
+          status: existingResume.status,
+        })
+      }
+    }
 
     if (insertError) {
       console.error('Database insert error:', insertError)

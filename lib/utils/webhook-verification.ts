@@ -54,7 +54,7 @@ export async function verifyReplicateWebhook(request: Request): Promise<{ isVali
 
   // Get secret and remove 'whsec_' prefix
   const secret = ENV.REPLICATE_WEBHOOK_SECRET()
-  if (!secret) {
+  if (!secret || secret === null) {
     console.error('REPLICATE_WEBHOOK_SECRET not set')
     return { isValid: false, body }
   }

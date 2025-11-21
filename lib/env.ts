@@ -116,6 +116,6 @@ export const ENV = {
     if (!secret && process.env.NODE_ENV === 'production') {
       throw new Error('REPLICATE_WEBHOOK_SECRET is required in production')
     }
-    return secret || ''
+    return secret || null
   },
 } as const

@@ -16,7 +16,7 @@ export const SECURITY_HEADERS = {
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires these
     "style-src 'self' 'unsafe-inline'", // Tailwind requires inline styles
-    "img-src 'self' https: data:", // Allow external images and data URIs for avatars
+    "img-src 'self' https: data:image/png data:image/jpeg data:image/gif data:image/webp", // Block SVG data URIs
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co https://api.replicate.com",
     "frame-ancestors 'none'",

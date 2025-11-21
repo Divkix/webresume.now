@@ -121,10 +121,6 @@ export function containsXssPattern(input: string): boolean {
     return true
   }
 
-  // Check for base64 encoded data URIs with dangerous MIME types only
-  // Don't flag legitimate image data URIs like data:image/png;base64,...
-  if (/data:(?:text\/html|application\/javascript|text\/javascript|image\/svg\+xml)[^,]*;base64/i.test(input)) return true
-
   // Check for SVG tags (can contain event handlers)
   if (/<svg/i.test(input)) return true
 

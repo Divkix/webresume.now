@@ -12,6 +12,18 @@ export const SECURITY_HEADERS = {
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires these
+    "style-src 'self' 'unsafe-inline'", // Tailwind requires inline styles
+    "img-src 'self' https: data:", // Allow external images and data URIs for avatars
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co https://api.replicate.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+  ].join('; '),
 } as const
 
 /**

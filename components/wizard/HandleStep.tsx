@@ -64,7 +64,7 @@ export function HandleStep({ initialHandle = '', onContinue }: HandleStepProps) 
   }, [handle, checkAvailability])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value
+    const value = e.target.value
       .toLowerCase()
       .replace(/[^a-z0-9-]/g, '') // Only allow alphanumeric and hyphens
       .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens

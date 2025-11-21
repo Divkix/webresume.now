@@ -110,16 +110,21 @@ export async function checkRateLimit(
         : `Rate limit exceeded. Maximum ${config.limit} ${action.replace('_', ' ')} per ${config.windowHours} hour(s). Try again later.`,
     }
   } catch (error) {
-    console.error(`Rate limit check failed for ${action}:`, error)
+    console.error(`Rate limit check failed for ${action}:`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      userId,
+      action,
+    })
 
-    // SECURITY: Fail closed - if we can't verify rate limits, deny the action
-    // This prevents abuse during DB outages at the cost of temporary user friction
+    // Fail closed with a longer backoff to reduce DB pressure during outages
+    const backoffResetAt = new Date(Date.now() + 60 * 1000) // 60 second backoff
+
     return {
       allowed: false,
       remaining: 0,
-      resetAt,
+      resetAt: backoffResetAt,
       message:
-        'Rate limiting service temporarily unavailable. Please try again in a few moments.',
+        'Rate limiting service temporarily unavailable. Please try again in 60 seconds.',
     }
   }
 }

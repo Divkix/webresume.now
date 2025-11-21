@@ -29,7 +29,11 @@ export function sanitizeUrl(input: string): string {
 
   // Trim and lowercase the protocol check
   const trimmed = input.trim()
-  const lower = trimmed.toLowerCase()
+
+  // Normalize unicode whitespace before protocol checks
+  const normalized = input
+    .replace(/[\s\u200B-\u200D\uFEFF\u202F\u00A0]/g, '')
+    .toLowerCase()
 
   // Block dangerous protocols
   const dangerousProtocols = [
@@ -41,7 +45,7 @@ export function sanitizeUrl(input: string): string {
   ]
 
   for (const protocol of dangerousProtocols) {
-    if (lower.startsWith(protocol)) {
+    if (normalized.startsWith(protocol)) {
       return ''
     }
   }
@@ -49,7 +53,7 @@ export function sanitizeUrl(input: string): string {
   // Allow only safe protocols
   const safeProtocols = ['http://', 'https://', 'mailto:']
   const hasProtocol = safeProtocols.some((protocol) =>
-    lower.startsWith(protocol)
+    normalized.startsWith(protocol)
   )
 
   if (!hasProtocol) {
@@ -108,12 +112,23 @@ export function containsXssPattern(input: string): boolean {
   // Check for event handlers
   if (/\s*on\w+\s*=/i.test(input)) return true
 
-  // Check for data: protocol (can be used for XSS)
-  if (/data:text\/html/i.test(input)) return true
+  // Check for dangerous data URIs (text/html, javascript, svg+xml)
+  if (
+    /data:(?:text\/html|application\/javascript|text\/javascript|image\/svg\+xml)/i.test(
+      input
+    )
+  ) {
+    return true
+  }
+
+  // Check for base64 encoded data URIs
+  if (/data:.*base64/i.test(input)) return true
+
+  // Check for SVG tags (can contain event handlers)
+  if (/<svg/i.test(input)) return true
 
   // Check for iframe tags
   if (/<iframe/i.test(input)) return true
 
   return false
 }
-

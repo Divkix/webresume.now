@@ -1,9 +1,10 @@
 'use client'
 
-import { LoginButton } from '@/components/auth/LoginButton'
+import Link from 'next/link'
 import { FileDropzone } from '@/components/FileDropzone'
 import { Brand } from '@/components/Brand'
 import { Toaster } from '@/components/ui/sonner'
+import { ArrowRight } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -14,7 +15,16 @@ export default function Home() {
           <div className="text-slate-900">
             <Brand size="lg" />
           </div>
-          <LoginButton />
+          <Link
+            href="/login"
+            className="group relative px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 overflow-hidden"
+          >
+            {/* Shimmer effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+
+            <span className="relative z-10">Get Started Free</span>
+            <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
       </header>
 

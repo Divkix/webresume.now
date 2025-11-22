@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, DragEvent, ChangeEvent } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -14,6 +15,7 @@ import { validatePDF } from '@/lib/utils/validation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import type { User } from '@supabase/supabase-js'
+import { ArrowRight } from 'lucide-react'
 
 interface FileDropzoneProps {
   open?: boolean
@@ -189,16 +191,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     } finally {
       setClaiming(false)
     }
-  }
-
-  const handleLoginRedirect = async () => {
-    const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
   }
 
   const handleReset = () => {
@@ -382,7 +374,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
             <div className="text-center">
               <h3 className="text-lg font-bold text-slate-900 mb-2">
-                Upload Complete!
+                Resume uploaded! Create your account to continue
               </h3>
               <p className="text-sm text-slate-600 mb-4">
                 {file?.name} has been uploaded successfully.
@@ -395,14 +387,18 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                 Redirecting to dashboard...
               </p>
             ) : (
-              /* Anonymous user - show login button */
+              /* Anonymous user - show login link */
               <>
-                <Button
-                  onClick={handleLoginRedirect}
-                  className="w-full max-w-xs bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
+                <Link
+                  href="/login"
+                  className="group relative w-full max-w-xs px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center gap-2 overflow-hidden"
                 >
-                  Continue with Google
-                </Button>
+                  {/* Shimmer effect overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+
+                  <span className="relative z-10">Create Account</span>
+                  <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
 
                 <p className="text-xs text-slate-500 text-center font-medium">
                   Your upload will be automatically claimed after login

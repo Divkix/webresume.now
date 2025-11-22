@@ -1,5 +1,5 @@
 {
-    "main": "./worker.ts",
+    "main": ".open-next/worker.js",
     "name": "webresume-now",
     // Fix __name is not defined error with next-themes and other libraries
     // See: https://opennext.js.org/cloudflare/howtos/keep_names

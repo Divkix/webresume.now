@@ -319,7 +319,11 @@ LIMIT 5;
 ```
 app/
 ├── (auth)/                          # Route group: Authentication
-│   └── auth/callback/route.ts       # Google OAuth callback handler
+│   ├── auth/callback/route.ts       # OAuth + email confirmation callback handler
+│   ├── login/page.tsx               # Login page (email/password, magic link, OAuth)
+│   ├── signup/page.tsx              # Signup page with email verification
+│   ├── forgot-password/page.tsx     # Request password reset link
+│   └── reset-password/page.tsx      # Reset password with token
 ├── (public)/                        # Route group: Public pages (no auth)
 │   ├── [handle]/page.tsx            # Dynamic resume viewer (/username)
 │   └── page.tsx                     # Homepage with file upload
@@ -357,7 +361,11 @@ components/
 ├── FileDropzone.tsx                 # Drag-and-drop PDF uploader
 ├── AttributionWidget.tsx            # Footer attribution link
 ├── auth/                            # Auth-related components
-│   ├── LoginButton.tsx              # Google OAuth button
+│   ├── LoginButton.tsx              # Google OAuth button (reusable)
+│   ├── EmailInput.tsx               # Email input with validation
+│   ├── PasswordInput.tsx            # Password input with show/hide + strength indicator
+│   ├── AuthDivider.tsx              # "OR" divider for auth methods
+│   ├── MagicLinkButton.tsx          # Passwordless magic link button
 │   └── UserMenu.tsx                 # User dropdown menu
 ├── dashboard/                       # Dashboard-specific components
 │   ├── Sidebar.tsx                  # Navigation sidebar
@@ -392,7 +400,8 @@ lib/
 │   └── template.ts                  # Template type definitions
 ├── schemas/
 │   ├── resume.ts                    # Zod schemas for resume validation
-│   └── profile.ts                   # Zod schemas for profile validation
+│   ├── profile.ts                   # Zod schemas for profile validation
+│   └── auth.ts                      # Zod schemas for authentication (login, signup, reset)
 ├── utils/
 │   ├── sanitization.ts              # XSS prevention utilities
 │   ├── privacy.ts                   # Privacy filtering (phone/address)
@@ -767,13 +776,40 @@ Understanding the full user experience is critical for debugging and feature dev
 - `LoginButton` appears prompting Google OAuth
 
 ### 2. Authentication
-- User clicks "Sign in with Google"
+Users have multiple authentication options:
+
+**Option A: Email/Password**
+- User clicks "Create Account" → redirected to `/login` → clicks "Sign up" → `/signup`
+- User enters email, password (8+ chars, uppercase, lowercase, digit, special)
+- System sends confirmation email via Supabase
+- User clicks confirmation link → redirected to `/auth/callback` → `/wizard`
+- Profile created via database trigger during signup
+
+**Option B: Magic Link (Passwordless)**
+- User enters email on `/login` page
+- Clicks "Send Magic Link" button
+- User clicks link in email → redirected to `/auth/callback` → `/wizard` or `/dashboard`
+- No password required
+
+**Option C: Google OAuth**
+- User clicks "Continue with Google" on `/login` page
 - Redirects to Google OAuth consent screen
 - On success, callback to `/auth/callback`
 - Supabase creates `auth.users` row and `profiles` row (via database trigger)
-- User redirected based on state:
-  - If `temp_upload_id` exists → `/wizard` (claim upload)
-  - If no upload → `/dashboard`
+- Avatar updated from Google metadata
+- User redirected to `/wizard` or `/dashboard` based on onboarding status
+
+**Callback Handler** (`/auth/callback`):
+- Handles OAuth code, email confirmation tokens, and magic link tokens
+- Detects auth type via `user.app_metadata.provider` (google/email)
+- Updates avatar only for OAuth providers
+- Checks `onboarding_completed` flag
+- Redirects to `/wizard` if incomplete, `/dashboard` if complete
+
+**Password Reset Flow**:
+- User goes to `/forgot-password` → enters email → receives reset link
+- User clicks link → redirected to `/reset-password` with token
+- User enters new password → updates via Supabase → redirected to `/login`
 
 ### 3. Wizard Onboarding (4 Steps)
 Located at `/wizard`, managed by `components/wizard/*`:

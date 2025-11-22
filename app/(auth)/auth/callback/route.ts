@@ -4,43 +4,142 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const error = requestUrl.searchParams.get('error')
+  const errorDescription = requestUrl.searchParams.get('error_description')
+  const type = requestUrl.searchParams.get('type') // e.g., 'recovery' for password reset
   const origin = requestUrl.origin
 
-  if (code) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+  // Handle OAuth errors (user cancelled, server error, etc.)
+  if (error) {
+    console.error('OAuth error received:', error, errorDescription)
 
-    if (error) {
-      console.error('Error exchanging code for session:', error)
-      return NextResponse.redirect(`${origin}/?error=auth_failed`)
+    // Map error types to user-friendly redirects
+    const errorMap: Record<string, string> = {
+      'access_denied': 'cancelled',
+      'server_error': 'server_error',
+      'invalid_request': 'invalid_request',
     }
 
-    // Update profile avatar (database trigger creates profile with temp handle)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      // Only update avatar_url - wizard will set the real handle
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: user.user_metadata?.avatar_url })
-        .eq('id', user.id)
-
-      if (profileError) {
-        console.error('Error updating profile avatar:', profileError)
-      }
-
-      // Check onboarding status to determine redirect
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('onboarding_completed')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.onboarding_completed) {
-        return NextResponse.redirect(`${origin}/dashboard`)
-      }
-    }
+    const mappedError = errorMap[error] || 'auth_failed'
+    return NextResponse.redirect(`${origin}/login?error=${mappedError}`)
   }
 
-  // Redirect to wizard for new users or if no user found
-  return NextResponse.redirect(`${origin}/wizard`)
+  // Password reset flow - redirect to reset-password page
+  // (Supabase should redirect directly there, but handle gracefully if we see it)
+  if (type === 'recovery') {
+    console.log('Password reset flow detected, redirecting to reset-password page')
+    return NextResponse.redirect(`${origin}/reset-password`)
+  }
+
+  // All auth flows use PKCE code exchange
+  if (!code) {
+    console.error('No code parameter in callback URL')
+    return NextResponse.redirect(`${origin}/login?error=missing_code`)
+  }
+
+  try {
+    const supabase = await createClient()
+
+    // Exchange code for session (works for OAuth, email confirmation, magic links)
+    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (exchangeError) {
+      console.error('Error exchanging code for session:', exchangeError)
+
+      // Handle specific token errors
+      if (exchangeError.message?.includes('expired')) {
+        return NextResponse.redirect(`${origin}/login?error=expired_token`)
+      }
+      if (exchangeError.message?.includes('invalid')) {
+        return NextResponse.redirect(`${origin}/login?error=invalid_token`)
+      }
+
+      return NextResponse.redirect(`${origin}/login?error=auth_failed`)
+    }
+
+    // Get user details
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      console.error('Error fetching user after code exchange:', userError)
+      return NextResponse.redirect(`${origin}/login?error=user_fetch_failed`)
+    }
+
+    // Detect authentication flow type
+    const provider = user.app_metadata?.provider || 'email'
+    const isOAuthFlow = provider === 'google'
+    const isEmailFlow = provider === 'email'
+
+    console.log(`Auth flow detected: ${provider} (user_id: ${user.id})`)
+
+    // Handle avatar update for OAuth flows only
+    if (isOAuthFlow && user.user_metadata?.avatar_url) {
+      const { error: avatarError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: user.user_metadata.avatar_url })
+        .eq('id', user.id)
+
+      if (avatarError) {
+        console.error('Error updating profile avatar:', avatarError)
+        // Non-critical error, continue flow
+      } else {
+        console.log(`Updated avatar for OAuth user ${user.id}`)
+      }
+    }
+
+    // Check email confirmation status for email flows
+    if (isEmailFlow && !user.email_confirmed_at) {
+      console.error('Email not confirmed for user:', user.id)
+      return NextResponse.redirect(`${origin}/login?error=email_not_confirmed`)
+    }
+
+    // Fetch profile to determine onboarding status
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('onboarding_completed, handle')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError)
+
+      // Profile should exist (created by DB trigger on signup)
+      // If missing, create it and redirect to wizard
+      if (profileError.code === 'PGRST116') { // Not found
+        console.log('Profile not found, creating default profile for user:', user.id)
+
+        const { error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            avatar_url: isOAuthFlow ? user.user_metadata?.avatar_url : null,
+            onboarding_completed: false,
+          })
+
+        if (createError) {
+          console.error('Error creating profile:', createError)
+          return NextResponse.redirect(`${origin}/login?error=profile_creation_failed`)
+        }
+
+        return NextResponse.redirect(`${origin}/wizard`)
+      }
+
+      return NextResponse.redirect(`${origin}/login?error=profile_fetch_failed`)
+    }
+
+    // Determine redirect based on onboarding status
+    if (profile?.onboarding_completed) {
+      console.log(`User ${user.id} (${profile.handle}) completed onboarding, redirecting to dashboard`)
+      return NextResponse.redirect(`${origin}/dashboard`)
+    } else {
+      console.log(`User ${user.id} needs onboarding, redirecting to wizard`)
+      return NextResponse.redirect(`${origin}/wizard`)
+    }
+
+  } catch (error) {
+    // Catch unexpected errors (network issues, etc.)
+    console.error('Unexpected error in auth callback:', error)
+    return NextResponse.redirect(`${origin}/login?error=network_error`)
+  }
 }

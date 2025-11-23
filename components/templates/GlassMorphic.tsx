@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { siteConfig } from "@/lib/config/site";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 const GlassMorphic: React.FC<TemplateProps> = ({
   content,
   profile: _profile,

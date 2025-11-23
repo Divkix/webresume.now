@@ -176,8 +176,8 @@ export default async function DashboardPage() {
         <main className="flex items-center justify-center min-h-[80vh] px-4">
           <div className="bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-12 max-w-md w-full text-center hover:shadow-depth-lg transition-all duration-300">
             <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-xl opacity-20" />
-              <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-6 rounded-xl">
+              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-xl opacity-20" />
+              <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-6 rounded-xl">
                 <Upload className="w-12 h-12 text-indigo-600 mx-auto" />
               </div>
             </div>
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
             <p className="text-slate-600 mb-6">
               Upload your first PDF to get started and create your professional web resume in minutes.
             </p>
-            <Button asChild className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
+            <Button asChild className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
               <Link href="/">
                 <Upload className="h-4 w-4 mr-2" />
                 Upload Your Resume
@@ -231,16 +231,16 @@ export default async function DashboardPage() {
                 <div className="flex items-start gap-3">
                   <div className="relative flex-shrink-0">
                     <div className={`absolute inset-0 rounded-xl blur-lg opacity-20 ${
-                      resume.status === 'completed' ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                      resume.status === 'processing' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                      resume.status === 'failed' ? 'bg-gradient-to-r from-red-500 to-orange-500' :
-                      'bg-gradient-to-r from-slate-500 to-gray-500'
+                      resume.status === 'completed' ? 'bg-linear-to-r from-green-500 to-emerald-500' :
+                      resume.status === 'processing' ? 'bg-linear-to-r from-blue-500 to-cyan-500' :
+                      resume.status === 'failed' ? 'bg-linear-to-r from-red-500 to-orange-500' :
+                      'bg-linear-to-r from-slate-500 to-gray-500'
                     }`} />
                     <div className={`relative p-2 rounded-xl ${
-                      resume.status === 'completed' ? 'bg-gradient-to-r from-green-100 to-emerald-100' :
-                      resume.status === 'processing' ? 'bg-gradient-to-r from-blue-100 to-cyan-100' :
-                      resume.status === 'failed' ? 'bg-gradient-to-r from-red-100 to-orange-100' :
-                      'bg-gradient-to-r from-slate-100 to-gray-100'
+                      resume.status === 'completed' ? 'bg-linear-to-r from-green-100 to-emerald-100' :
+                      resume.status === 'processing' ? 'bg-linear-to-r from-blue-100 to-cyan-100' :
+                      resume.status === 'failed' ? 'bg-linear-to-r from-red-100 to-orange-100' :
+                      'bg-linear-to-r from-slate-100 to-gray-100'
                     }`}>
                       {resume.status === 'completed' && <CheckCircle2 className="w-5 h-5 text-green-600" />}
                       {resume.status === 'processing' && <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />}
@@ -271,14 +271,14 @@ export default async function DashboardPage() {
                   <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
                       <div className={`absolute inset-0 rounded-xl blur-lg opacity-20 ${
-                        completeness >= 90 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-                        completeness >= 70 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                        'bg-gradient-to-r from-yellow-500 to-amber-500'
+                        completeness >= 90 ? 'bg-linear-to-r from-green-500 to-emerald-500' :
+                        completeness >= 70 ? 'bg-linear-to-r from-blue-500 to-cyan-500' :
+                        'bg-linear-to-r from-yellow-500 to-amber-500'
                       }`} />
                       <div className={`relative p-2 rounded-xl ${
-                        completeness >= 90 ? 'bg-gradient-to-r from-green-100 to-emerald-100' :
-                        completeness >= 70 ? 'bg-gradient-to-r from-blue-100 to-cyan-100' :
-                        'bg-gradient-to-r from-yellow-100 to-amber-100'
+                        completeness >= 90 ? 'bg-linear-to-r from-green-100 to-emerald-100' :
+                        completeness >= 70 ? 'bg-linear-to-r from-blue-100 to-cyan-100' :
+                        'bg-linear-to-r from-yellow-100 to-amber-100'
                       }`}>
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
                           completeness >= 90 ? 'border-green-600 text-green-600' :
@@ -308,8 +308,8 @@ export default async function DashboardPage() {
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
-                      <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
+                      <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
+                      <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <Clock className="w-5 h-5 text-indigo-600" />
                       </div>
                     </div>
@@ -328,8 +328,8 @@ export default async function DashboardPage() {
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
-                      <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
+                      <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
+                      <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <ExternalLink className="w-5 h-5 text-indigo-600" />
                       </div>
                     </div>
@@ -348,8 +348,8 @@ export default async function DashboardPage() {
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
-                      <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
+                      <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
+                      <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <Briefcase className="w-5 h-5 text-indigo-600" />
                       </div>
                     </div>
@@ -438,8 +438,8 @@ export default async function DashboardPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-                      <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
+                      <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
+                      <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                         <Briefcase className="h-4 w-4 text-indigo-600" />
                       </div>
                     </div>
@@ -455,8 +455,8 @@ export default async function DashboardPage() {
 
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg blur-md opacity-20" />
-                      <div className="relative bg-gradient-to-r from-purple-100 to-pink-100 p-2 rounded-lg">
+                      <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-lg blur-md opacity-20" />
+                      <div className="relative bg-linear-to-r from-purple-100 to-pink-100 p-2 rounded-lg">
                         <GraduationCap className="h-4 w-4 text-purple-600" />
                       </div>
                     </div>
@@ -470,8 +470,8 @@ export default async function DashboardPage() {
 
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg blur-md opacity-20" />
-                      <div className="relative bg-gradient-to-r from-emerald-100 to-teal-100 p-2 rounded-lg">
+                      <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-lg blur-md opacity-20" />
+                      <div className="relative bg-linear-to-r from-emerald-100 to-teal-100 p-2 rounded-lg">
                         <Wrench className="h-4 w-4 text-emerald-600" />
                       </div>
                     </div>
@@ -487,8 +487,8 @@ export default async function DashboardPage() {
 
                   <div className="flex items-center gap-3">
                     <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg blur-md opacity-20" />
-                      <div className="relative bg-gradient-to-r from-orange-100 to-amber-100 p-2 rounded-lg">
+                      <div className="absolute inset-0 bg-linear-to-r from-orange-500 to-amber-500 rounded-lg blur-md opacity-20" />
+                      <div className="relative bg-linear-to-r from-orange-100 to-amber-100 p-2 rounded-lg">
                         <Award className="h-4 w-4 text-orange-600" />
                       </div>
                     </div>
@@ -505,7 +505,7 @@ export default async function DashboardPage() {
 
                 {/* Footer - Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button asChild className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
+                  <Button asChild className="flex-1 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
                     <Link href="/edit">
                       <Edit3 className="h-4 w-4 mr-2" />
                       Edit Content
@@ -524,8 +524,8 @@ export default async function DashboardPage() {
                     {/* Email */}
                     <div className="flex items-start gap-3">
                       <div className="relative flex-shrink-0 mt-0.5">
-                        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-                        <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
+                        <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
+                        <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                           <Mail className="w-4 h-4 text-indigo-600" />
                         </div>
                       </div>
@@ -541,8 +541,8 @@ export default async function DashboardPage() {
                         <Separator />
                         <div className="flex items-start gap-3">
                           <div className="relative flex-shrink-0 mt-0.5">
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-                            <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
+                            <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
+                            <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                               <LinkIcon className="w-4 h-4 text-indigo-600" />
                             </div>
                           </div>
@@ -570,8 +570,8 @@ export default async function DashboardPage() {
                         <Separator />
                         <div className="flex items-start gap-3">
                           <div className="relative flex-shrink-0 mt-0.5">
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-                            <div className="relative bg-gradient-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
+                            <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
+                            <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                               <Calendar className="w-4 h-4 text-indigo-600" />
                             </div>
                           </div>
@@ -616,7 +616,7 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3">
-                      <Button asChild className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
+                      <Button asChild className="flex-1 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md">
                         <Link href={`/waiting?resume_id=${resume.id}`}>
                           Try Again
                         </Link>
@@ -660,7 +660,7 @@ export default async function DashboardPage() {
                     {/* Progress Bar */}
                     <div className="w-full bg-blue-200 rounded-full h-2 mb-4">
                       <div
-                        className="h-2 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 transition-all duration-500"
+                        className="h-2 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 transition-all duration-500"
                         style={{ width: `${completeness}%` }}
                       />
                     </div>
@@ -677,7 +677,7 @@ export default async function DashboardPage() {
                           </li>
                         ))}
                       </ul>
-                      <Button asChild size="sm" className="mt-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold">
+                      <Button asChild size="sm" className="mt-4 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold">
                         <Link href="/edit">
                           <Edit3 className="h-3 w-3 mr-2" />
                           Complete Now

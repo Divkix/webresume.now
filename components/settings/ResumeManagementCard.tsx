@@ -133,7 +133,7 @@ export function ResumeManagementCard({
           {/* Upload New Resume Button */}
           <Button
             onClick={() => setUploadModalOpen(true)}
-            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
+            className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload New Resume

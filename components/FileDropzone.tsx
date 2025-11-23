@@ -235,8 +235,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           <div className="relative z-10 flex flex-col items-center gap-4">
             {/* Icon with gradient background */}
             <div className="relative">
-              <div className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-2xl blur-xl transition-opacity duration-300 ${isDragging ? 'opacity-40' : 'opacity-20 group-hover:opacity-40'}`} />
-              <div className={`relative bg-gradient-to-r from-indigo-100 to-blue-100 p-4 rounded-2xl transition-transform duration-300 ${isDragging ? 'scale-110' : 'group-hover:scale-110'}`}>
+              <div className={`absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-2xl blur-xl transition-opacity duration-300 ${isDragging ? 'opacity-40' : 'opacity-20 group-hover:opacity-40'}`} />
+              <div className={`relative bg-linear-to-r from-indigo-100 to-blue-100 p-4 rounded-2xl transition-transform duration-300 ${isDragging ? 'scale-110' : 'group-hover:scale-110'}`}>
                 <svg
                   className="w-12 h-12"
                   viewBox="0 0 24 24"
@@ -304,8 +304,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           /* Claiming State - For Authenticated Users */
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
-              <div className="relative w-16 h-16 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
+              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+              <div className="relative w-16 h-16 bg-linear-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
                 <svg
                   className="w-8 h-8 animate-spin"
                   viewBox="0 0 24 24"
@@ -347,8 +347,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           /* Upload Complete - Show different CTA based on auth status */
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
-              <div className="relative w-16 h-16 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
+              <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
+              <div className="relative w-16 h-16 bg-linear-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
                 <svg
                   className="w-8 h-8"
                   viewBox="0 0 24 24"
@@ -390,10 +390,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               <>
                 <Link
                   href="/login"
-                  className="group relative w-full max-w-xs px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center gap-2 overflow-hidden"
+                  className="group relative w-full max-w-xs px-6 py-3 bg-linear-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center justify-center gap-2 overflow-hidden"
                 >
                   {/* Shimmer effect overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+                  <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
 
                   <span className="relative z-10">Create Account</span>
                   <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-0.5 transition-transform" />

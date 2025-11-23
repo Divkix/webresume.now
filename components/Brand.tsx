@@ -20,7 +20,7 @@ const sizeClasses: Record<BrandSize, string> = {
   lg: 'text-2xl',
 }
 
-const defaultAccent = 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600'
+const defaultAccent = 'text-transparent bg-clip-text bg-linear-to-r from-indigo-600 to-blue-600'
 
 /**
  * Brand logo component with configurable two-tone styling

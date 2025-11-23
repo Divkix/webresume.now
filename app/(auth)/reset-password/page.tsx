@@ -137,9 +137,9 @@ export default function ResetPasswordPage() {
               <div className="text-center">
                 {/* Icon */}
                 <div className="mx-auto w-16 h-16 mb-6 relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-orange-600 rounded-full opacity-20 blur-xl" />
-                  <div className="relative w-full h-full bg-gradient-to-r from-red-100 to-orange-100 rounded-full flex items-center justify-center">
-                    <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-orange-600 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-0 bg-linear-to-r from-red-600 to-orange-600 rounded-full opacity-20 blur-xl" />
+                  <div className="relative w-full h-full bg-linear-to-r from-red-100 to-orange-100 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-linear-to-r from-red-600 to-orange-600 rounded-full flex items-center justify-center">
                       <AlertCircle className="w-5 h-5 text-white" />
                     </div>
                   </div>
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
 
                 {/* Request new link button */}
                 <Link href="/forgot-password">
-                  <Button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300">
+                  <Button className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300">
                     Request new reset link
                   </Button>
                 </Link>
@@ -177,9 +177,9 @@ export default function ResetPasswordPage() {
               <div className="text-center">
                 {/* Icon */}
                 <div className="mx-auto w-16 h-16 mb-6 relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full opacity-20 blur-xl" />
-                  <div className="relative w-full h-full bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center">
-                    <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-0 bg-linear-to-r from-emerald-600 to-teal-600 rounded-full opacity-20 blur-xl" />
+                  <div className="relative w-full h-full bg-linear-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-linear-to-r from-emerald-600 to-teal-600 rounded-full flex items-center justify-center">
                       <CheckCircle className="w-5 h-5 text-white" />
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export default function ResetPasswordPage() {
 
                 {/* Manual redirect button */}
                 <Link href="/login">
-                  <Button className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300">
+                  <Button className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300">
                     Sign in now
                   </Button>
                 </Link>
@@ -308,7 +308,7 @@ export default function ResetPasswordPage() {
                   <Button
                     type="submit"
                     disabled={formState === 'submitting'}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+                    className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
                   >
                     {formState === 'submitting' ? 'Resetting password...' : 'Reset password'}
                   </Button>

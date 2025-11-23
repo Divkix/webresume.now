@@ -662,7 +662,7 @@ All animations defined in `app/globals.css`:
 - Padding: `p-8` (32px)
 
 **2. Gradient Buttons**
-- Background: `bg-gradient-to-r from-indigo-600 to-blue-600`
+- Background: `bg-linear-to-r from-indigo-600 to-blue-600`
 - Text: `text-white font-semibold`
 - Hover: Darker gradient (`from-indigo-700 to-blue-700`)
 - Shadow: `shadow-depth-sm` → `shadow-depth-md` on hover

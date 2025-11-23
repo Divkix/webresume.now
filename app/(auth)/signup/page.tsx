@@ -166,9 +166,9 @@ export default function SignupPage() {
               <div className="text-center">
                 {/* Icon */}
                 <div className="mx-auto w-16 h-16 mb-6 relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-full opacity-20 blur-xl" />
-                  <div className="relative w-full h-full bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center">
-                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-full flex items-center justify-center">
+                  <div className="absolute inset-0 bg-linear-to-r from-indigo-600 to-blue-600 rounded-full opacity-20 blur-xl" />
+                  <div className="relative w-full h-full bg-linear-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-linear-to-r from-indigo-600 to-blue-600 rounded-full flex items-center justify-center">
                       <Mail className="w-5 h-5 text-white" />
                     </div>
                   </div>
@@ -333,7 +333,7 @@ export default function SignupPage() {
                   <Button
                     type="submit"
                     disabled={isResending}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+                    className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
                   >
                     {formState === 'submitting' ? 'Creating account...' : 'Create account'}
                   </Button>

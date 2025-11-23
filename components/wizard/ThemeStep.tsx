@@ -27,7 +27,7 @@ export function ThemeStep({ initialTheme = 'minimalist_editorial', onContinue }:
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6">
+        <div className="mx-auto w-16 h-16 bg-linear-to-r from-indigo-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6">
           <Palette className="w-8 h-8 text-indigo-600" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3 leading-tight">
@@ -126,7 +126,7 @@ export function ThemeStep({ initialTheme = 'minimalist_editorial', onContinue }:
         <div className="pt-6">
           <Button
             onClick={handleContinue}
-            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+            className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
             size="lg"
           >
             Complete Setup

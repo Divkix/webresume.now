@@ -147,7 +147,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             <div className="flex items-center gap-3">
               {user.user_metadata?.avatar_url ? (
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 p-[2px]">
+                  <div className="absolute inset-0 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 p-[2px]">
                     <div className="w-full h-full rounded-full bg-white" />
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -158,7 +158,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
                   {getInitials()}
                 </div>
               )}
@@ -188,7 +188,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium
                   transition-all duration-300
                   ${active
-                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-depth-sm'
+                    ? 'bg-linear-to-r from-indigo-600 to-blue-600 text-white shadow-depth-sm'
                     : 'text-slate-700 hover:bg-slate-100'
                   }
                 `}

@@ -20,10 +20,10 @@ export function LoginButton() {
   return (
     <button
       onClick={handleLogin}
-      className="group relative px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 overflow-hidden"
+      className="group relative px-6 py-3 bg-linear-to-r from-indigo-600 to-blue-600 text-white rounded-lg font-semibold shadow-depth-sm hover:shadow-depth-md hover:from-indigo-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 overflow-hidden"
     >
       {/* Shimmer effect overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
+      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
 
       <svg className="relative z-10 w-5 h-5" viewBox="0 0 24 24">
         <path

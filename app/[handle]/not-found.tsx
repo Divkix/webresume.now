@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="max-w-md">
         <div className="bg-white rounded-2xl shadow-depth-md border border-slate-200/60 p-8 text-center hover:-translate-y-0.5 transition-all duration-300">
           <div className="mb-8">
-            <div className="text-8xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600">
+            <div className="text-8xl font-extrabold mb-4 text-transparent bg-clip-text bg-linear-to-r from-indigo-600 to-blue-600">
               404
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-2">
@@ -20,7 +20,7 @@ export default function NotFound() {
           <div className="space-y-4">
             <Link
               href="/"
-              className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+              className="inline-block px-6 py-3 bg-linear-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-lg hover:from-indigo-700 hover:to-blue-700 shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
             >
               Go to Homepage
             </Link>
@@ -29,7 +29,7 @@ export default function NotFound() {
               Want to create your own resume?{" "}
               <Link
                 href="/"
-                className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 font-medium transition-all duration-300"
+                className="text-transparent bg-clip-text bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 font-medium transition-all duration-300"
               >
                 Get started
               </Link>

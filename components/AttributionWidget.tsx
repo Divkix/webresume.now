@@ -53,7 +53,7 @@ export function AttributionWidget({ theme }: AttributionWidgetProps) {
       container:
         "bg-white/95 sm:bg-white border border-slate-200/60 text-slate-600 hover:text-slate-900",
       accent:
-        "bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent",
+        "bg-linear-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent",
       shimmer: "from-transparent via-indigo-200/30 to-transparent",
       shadow: "shadow-depth-sm hover:shadow-depth-md",
     },
@@ -87,7 +87,7 @@ export function AttributionWidget({ theme }: AttributionWidgetProps) {
       {/* Shimmer effect overlay - only visible on hover */}
       <div
         className={`
-          absolute inset-0 bg-gradient-to-r
+          absolute inset-0 bg-linear-to-r
           -translate-x-full group-hover:translate-x-full
           transition-transform duration-700 ease-out
           ${currentTheme.shimmer}

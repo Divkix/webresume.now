@@ -228,7 +228,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             ${isModal ? "" : "shadow-depth-md"}
             ${
               isDragging
-                ? "border-indigo-500 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-depth-lg -translate-y-1"
+                ? "border-indigo-500 bg-linear-to-br from-indigo-50 to-blue-50 shadow-depth-lg -translate-y-1"
                 : isModal
                   ? "hover:border-indigo-300"
                   : "hover:shadow-depth-lg hover:-translate-y-1"
@@ -237,7 +237,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           `}
       >
         {/* Subtle gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-transparent to-blue-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-50/50 via-transparent to-blue-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         <input
           ref={fileInputRef}
@@ -252,10 +252,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           {/* Icon with gradient background */}
           <div className="relative">
             <div
-              className={`absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-2xl blur-xl transition-opacity duration-300 ${isDragging ? "opacity-40" : "opacity-20 group-hover:opacity-40"}`}
+              className={`absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-2xl blur-xl transition-opacity duration-300 ${isDragging ? "opacity-40" : "opacity-20 group-hover:opacity-40"}`}
             />
             <div
-              className={`relative bg-gradient-to-r from-indigo-100 to-blue-100 p-4 rounded-2xl transition-transform duration-300 ${isDragging ? "scale-110" : "group-hover:scale-110"}`}
+              className={`relative bg-linear-to-r from-indigo-100 to-blue-100 p-4 rounded-2xl transition-transform duration-300 ${isDragging ? "scale-110" : "group-hover:scale-110"}`}
             >
               <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
                 <defs>
@@ -329,8 +329,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           /* Claiming State - For Authenticated Users */
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
-              <div className="relative w-16 h-16 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
+              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+              <div className="relative w-16 h-16 bg-linear-to-r from-indigo-100 to-blue-100 rounded-full flex items-center justify-center shadow-depth-md">
                 <svg
                   className="w-8 h-8 animate-spin"
                   viewBox="0 0 24 24"
@@ -378,8 +378,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           /* Upload Complete - Show different CTA based on auth status */
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
-              <div className="relative w-16 h-16 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
+              <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-full blur-xl opacity-30" />
+              <div className="relative w-16 h-16 bg-linear-to-r from-emerald-100 to-teal-100 rounded-full flex items-center justify-center shadow-depth-md">
                 <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
                   <path
                     strokeLinecap="round"
@@ -423,7 +423,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               <>
                 <Button
                   onClick={handleLoginRedirect}
-                  className="w-full max-w-xs bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
+                  className="w-full max-w-xs bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
                 >
                   Continue with Google
                 </Button>

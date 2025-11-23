@@ -126,7 +126,7 @@ export function ResumeManagementCard({
           {latestResumeStatus === "failed" && latestResumeError && (
             <div className="rounded-lg bg-red-50 border border-red-200 p-4 space-y-3">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                 <div className="flex-1 space-y-2">
                   <p className="text-sm font-semibold text-red-900">
                     Processing Failed
@@ -167,7 +167,7 @@ export function ResumeManagementCard({
           {/* Upload New Resume Button */}
           <Button
             onClick={() => setUploadModalOpen(true)}
-            className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
+            className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
           >
             <Upload className="h-4 w-4 mr-2" />
             Upload New Resume

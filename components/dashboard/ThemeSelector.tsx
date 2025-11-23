@@ -77,7 +77,7 @@ export function ThemeSelector({ initialThemeId }: ThemeSelectorProps) {
         {/* Success/Error Messages */}
         {successMessage && (
           <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-sm">
-            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
         )}

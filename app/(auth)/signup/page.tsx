@@ -25,6 +25,7 @@ export default function SignupPage() {
   const [submittedEmail, setSubmittedEmail] = useState('')
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
+  const [isResending, setIsResending] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const supabase = createClient()
 
@@ -68,7 +69,7 @@ export default function SignupPage() {
 
   // Handle email/password signup
   const onSubmit = async (data: SignupFormData) => {
-    setFormState('submitting')
+    setIsResending(true)
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -96,7 +97,7 @@ export default function SignupPage() {
 
       // Success - show success state
       setSubmittedEmail(data.email)
-      setFormState('success')
+      setIsResending(false)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during signup'
       toast.error(errorMessage)
@@ -108,7 +109,7 @@ export default function SignupPage() {
   const handleResendEmail = async () => {
     if (!submittedEmail) return
 
-    setFormState('submitting')
+    setIsResending(true)
 
     try {
       const { error } = await supabase.auth.resend({
@@ -125,7 +126,7 @@ export default function SignupPage() {
       const errorMessage = error instanceof Error ? error.message : 'Failed to resend email'
       toast.error(errorMessage)
     } finally {
-      setFormState('success')
+      setIsResending(false)
     }
   }
 
@@ -192,11 +193,11 @@ export default function SignupPage() {
                 {/* Resend Button */}
                 <Button
                   onClick={handleResendEmail}
-                  disabled={formState === 'submitting'}
+                  disabled={isResending}
                   variant="outline"
                   className="w-full transition-all duration-300"
                 >
-                  {formState === 'submitting' ? 'Sending...' : 'Resend email'}
+                  {isResending ? 'Sending...' : 'Resend email'}
                 </Button>
 
                 {/* Back to login */}
@@ -233,7 +234,7 @@ export default function SignupPage() {
                       placeholder="you@example.com"
                       autoComplete="email"
                       {...register('email')}
-                      disabled={formState === 'submitting'}
+                      disabled={isResending}
                       aria-invalid={!!errors.email}
                       className="transition-all duration-300"
                     />
@@ -252,7 +253,7 @@ export default function SignupPage() {
                         placeholder="Create a strong password"
                         autoComplete="new-password"
                         {...register('password')}
-                        disabled={formState === 'submitting'}
+                        disabled={isResending}
                         aria-invalid={!!errors.password}
                         className="transition-all duration-300 pr-10"
                       />
@@ -260,7 +261,7 @@ export default function SignupPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        aria-label={showPassword ? \'Hide password\' : \'Show password\'}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                       >
                         {showPassword ? (
                           <EyeOff className="w-5 h-5" />
@@ -301,7 +302,7 @@ export default function SignupPage() {
                         placeholder="Confirm your password"
                         autoComplete="new-password"
                         {...register('confirmPassword')}
-                        disabled={formState === 'submitting'}
+                        disabled={isResending}
                         aria-invalid={!!errors.confirmPassword}
                         className="transition-all duration-300 pr-10"
                       />
@@ -309,7 +310,7 @@ export default function SignupPage() {
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        aria-label={showConfirmPassword ? \'Hide password\' : \'Show password\'}
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="w-5 h-5" />
@@ -329,7 +330,7 @@ export default function SignupPage() {
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    disabled={formState === 'submitting'}
+                    disabled={isResending}
                     className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
                   >
                     {formState === 'submitting' ? 'Creating account...' : 'Create account'}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { emailSchema } from '@/lib/schemas/auth'
 import toast from 'react-hot-toast'
 
 interface MagicLinkButtonProps {
@@ -22,8 +23,12 @@ export function MagicLinkButton({
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSendMagicLink = async () => {
-    if (!email || !email.includes('@')) {
-      toast.error('Please enter a valid email address')
+    // Validate email using Zod schema for consistency with auth validation
+    const emailValidation = emailSchema.safeParse(email)
+
+    if (!emailValidation.success) {
+      const errorMessage = emailValidation.error.issues[0]?.message || 'Please enter a valid email address'
+      toast.error(errorMessage)
       return
     }
 
@@ -32,7 +37,7 @@ export function MagicLinkButton({
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: emailValidation.data,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },

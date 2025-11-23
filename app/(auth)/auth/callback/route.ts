@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     const supabase = await createClient()
 
     // Exchange code for session (works for OAuth, email confirmation, magic links)
-    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
     if (exchangeError) {
       console.error('Error exchanging code for session:', exchangeError)
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
     // Get user details
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    if (userError || !user) {
+    if (userError || !user || !user.email) {
       console.error('Error fetching user after code exchange:', userError)
       return NextResponse.redirect(`${origin}/login?error=user_fetch_failed`)
     }
@@ -118,11 +119,15 @@ export async function GET(request: Request) {
       if (profileError.code === 'PGRST116') { // Not found
         console.log('Profile not found, creating default profile for user:', user.id)
 
+        // Generate temporary handle from email hash (same as DB trigger)
+        const tempHandle = createHash('md5').update(user.email).digest('hex').substring(0, 12)
+
         const { error: createError } = await supabase
           .from('profiles')
           .insert({
             id: user.id,
             email: user.email,
+            handle: tempHandle,
             avatar_url: isOAuthFlow ? user.user_metadata?.avatar_url : null,
             onboarding_completed: false,
           })

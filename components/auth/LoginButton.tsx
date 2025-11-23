@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginButton() {
   const handleLogin = async () => {
-    const supabase = createClient()
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
-    })
+    });
 
     if (error) {
-      console.error('Error logging in:', error)
+      console.error("Error logging in:", error);
     }
-  }
+  };
 
   return (
     <button
@@ -45,5 +45,5 @@ export function LoginButton() {
       </svg>
       <span className="relative z-10">Continue with Google</span>
     </button>
-  )
+  );
 }

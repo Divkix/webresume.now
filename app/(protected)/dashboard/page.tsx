@@ -229,7 +229,7 @@ export default async function DashboardPage() {
               {/* Resume Status Mini Card */}
               <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                 <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <div className={`absolute inset-0 rounded-xl blur-lg opacity-20 ${
                       resume.status === 'completed' ? 'bg-linear-to-r from-green-500 to-emerald-500' :
                       resume.status === 'processing' ? 'bg-linear-to-r from-blue-500 to-cyan-500' :
@@ -269,7 +269,7 @@ export default async function DashboardPage() {
               {hasPublishedSite && content && (
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className={`absolute inset-0 rounded-xl blur-lg opacity-20 ${
                         completeness >= 90 ? 'bg-linear-to-r from-green-500 to-emerald-500' :
                         completeness >= 70 ? 'bg-linear-to-r from-blue-500 to-cyan-500' :
@@ -307,7 +307,7 @@ export default async function DashboardPage() {
               {hasPublishedSite && siteData?.last_published_at && (
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
                       <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <Clock className="w-5 h-5 text-indigo-600" />
@@ -327,7 +327,7 @@ export default async function DashboardPage() {
               {hasPublishedSite && profile?.handle ? (
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
                       <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <ExternalLink className="w-5 h-5 text-indigo-600" />
@@ -347,7 +347,7 @@ export default async function DashboardPage() {
               ) : content && (
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
                       <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-xl">
                         <Briefcase className="w-5 h-5 text-indigo-600" />
@@ -385,7 +385,7 @@ export default async function DashboardPage() {
                 <div className="col-span-full">
                   <div className="rounded-lg border border-red-200 bg-red-50 p-4 mb-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <h3 className="font-semibold text-red-900">Processing Failed</h3>
                         <p className="mt-1 text-sm text-red-700">
@@ -437,7 +437,7 @@ export default async function DashboardPage() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
                       <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                         <Briefcase className="h-4 w-4 text-indigo-600" />
@@ -454,7 +454,7 @@ export default async function DashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-lg blur-md opacity-20" />
                       <div className="relative bg-linear-to-r from-purple-100 to-pink-100 p-2 rounded-lg">
                         <GraduationCap className="h-4 w-4 text-purple-600" />
@@ -469,7 +469,7 @@ export default async function DashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-lg blur-md opacity-20" />
                       <div className="relative bg-linear-to-r from-emerald-100 to-teal-100 p-2 rounded-lg">
                         <Wrench className="h-4 w-4 text-emerald-600" />
@@ -486,7 +486,7 @@ export default async function DashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="relative flex-shrink-0">
+                    <div className="relative shrink-0">
                       <div className="absolute inset-0 bg-linear-to-r from-orange-500 to-amber-500 rounded-lg blur-md opacity-20" />
                       <div className="relative bg-linear-to-r from-orange-100 to-amber-100 p-2 rounded-lg">
                         <Award className="h-4 w-4 text-orange-600" />
@@ -523,7 +523,7 @@ export default async function DashboardPage() {
                   <div className="space-y-4">
                     {/* Email */}
                     <div className="flex items-start gap-3">
-                      <div className="relative flex-shrink-0 mt-0.5">
+                      <div className="relative shrink-0 mt-0.5">
                         <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
                         <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                           <Mail className="w-4 h-4 text-indigo-600" />
@@ -540,7 +540,7 @@ export default async function DashboardPage() {
                       <>
                         <Separator />
                         <div className="flex items-start gap-3">
-                          <div className="relative flex-shrink-0 mt-0.5">
+                          <div className="relative shrink-0 mt-0.5">
                             <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
                             <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                               <LinkIcon className="w-4 h-4 text-indigo-600" />
@@ -569,7 +569,7 @@ export default async function DashboardPage() {
                       <>
                         <Separator />
                         <div className="flex items-start gap-3">
-                          <div className="relative flex-shrink-0 mt-0.5">
+                          <div className="relative shrink-0 mt-0.5">
                             <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
                             <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
                               <Calendar className="w-4 h-4 text-indigo-600" />
@@ -605,7 +605,7 @@ export default async function DashboardPage() {
                 {resume.status === 'failed' && (
                   <div className="space-y-6">
                     <div className="flex items-center gap-4">
-                      <AlertCircle className="h-8 w-8 text-red-600 flex-shrink-0" />
+                      <AlertCircle className="h-8 w-8 text-red-600 shrink-0" />
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-red-900 mb-1">
                           Processing failed
@@ -633,7 +633,7 @@ export default async function DashboardPage() {
 
                 {resume.status === 'pending_claim' && (
                   <div className="flex items-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-slate-600 flex-shrink-0" />
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-600 shrink-0" />
                     <div className="flex-1">
                       <h3 className="text-xl font-bold text-slate-900 mb-1">
                         Claiming your resume...

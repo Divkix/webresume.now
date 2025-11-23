@@ -67,7 +67,7 @@ export function PrivacyStep({
         {/* Info Banner */}
         <Card className="p-4 bg-blue-50 border-blue-200">
           <div className="flex gap-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-blue-900 font-medium">
                 Your email is always visible to potential employers.

@@ -212,9 +212,6 @@ export const featureFlags = {
   // Enable rate limiting (production only)
   rateLimiting: isProduction(),
 
-  // Enable analytics (production only)
-  analytics: isProduction(),
-
   // Enable error reporting (production only)
   errorReporting: isProduction(),
 } as const;

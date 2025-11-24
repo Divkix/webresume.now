@@ -900,7 +900,7 @@ Post-onboarding landing page:
 
 - Shows current handle: `webresume.now/{handle}`
 - Preview of public site (iframe or link)
-- Quick actions: Edit content, Change theme, View analytics
+- Quick actions: Edit content, Change theme
 - `Sidebar` component for navigation
 
 ### 6. Editing (`/edit`)

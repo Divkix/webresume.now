@@ -317,8 +317,7 @@ Follow the comprehensive checklist in `docs/testing-checklist.md` to test all fl
 1. **Single Template**: Only "Minimalist Creme" available (more coming)
 2. **No Image Optimization**: Using native `<img>` tags (Cloudflare Workers constraint)
 3. **No Custom Domains**: Users get `webresume.now/{handle}` only
-4. **No Analytics**: Profile view tracking not implemented
-5. **No PDF Export**: Can't export web resume back to PDF (future feature)
+4. **No PDF Export**: Can't export web resume back to PDF (future feature)
 
 ---
 
@@ -348,7 +347,6 @@ Follow the comprehensive checklist in `docs/testing-checklist.md` to test all fl
 
 - Multiple templates (Modern, Classic, Creative)
 - Custom domains support
-- Analytics dashboard (profile views, link clicks)
 - PDF export from web resume
 - Social sharing with OG images
 - Theme customization (colors, fonts)

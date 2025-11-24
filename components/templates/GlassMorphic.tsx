@@ -16,11 +16,7 @@ import {
 } from "lucide-react";
 import { siteConfig } from "@/lib/config/site";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const GlassMorphic: React.FC<TemplateProps> = ({
-  content,
-  profile: _profile,
-}) => {
+const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
   return (
     <div className="min-h-screen bg-[#0f172a] text-white font-sans relative overflow-y-auto selection:bg-pink-500/30 scroll-smooth">
       {/* Background Gradients & Noise */}

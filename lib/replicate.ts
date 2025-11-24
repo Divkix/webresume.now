@@ -248,7 +248,7 @@ const RESUME_EXTRACTION_SCHEMA = {
   },
 };
 
-export interface ParseResumeResult {
+interface ParseResumeResult {
   id: string;
   status:
     | "starting"
@@ -259,7 +259,7 @@ export interface ParseResumeResult {
     | "aborted";
 }
 
-export interface ParseStatusResult {
+interface ParseStatusResult {
   id: string;
   status:
     | "starting"

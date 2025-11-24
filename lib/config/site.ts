@@ -24,5 +24,3 @@ export const siteConfig = {
   /** Full URL with protocol */
   url: `https://${domain}`,
 } as const;
-
-export type SiteConfig = typeof siteConfig;

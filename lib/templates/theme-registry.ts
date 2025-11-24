@@ -13,7 +13,7 @@ export const TEMPLATES = {
 
 export type ThemeId = keyof typeof TEMPLATES;
 
-export const DEFAULT_THEME: ThemeId = "minimalist_editorial";
+const DEFAULT_THEME: ThemeId = "minimalist_editorial";
 
 /**
  * Get template component by theme ID

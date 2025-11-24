@@ -3,13 +3,12 @@ import type { S3Client } from "@aws-sdk/client-s3";
 import type { Readable } from "stream";
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const ALLOWED_FILE_TYPE = "application/pdf";
 
 export function validatePDF(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
     return { valid: false, error: "File size must be less than 10MB" };
   }
-  if (file.type !== ALLOWED_FILE_TYPE) {
+  if (file.type !== "application/pdf") {
     return { valid: false, error: "Only PDF files are allowed" };
   }
   return { valid: true };
@@ -23,7 +22,7 @@ export function validatePDF(file: File): { valid: boolean; error?: string } {
  * - Limits length to 255 characters
  * - Ensures .pdf extension
  */
-export function sanitizeFilename(filename: string): string {
+function sanitizeFilename(filename: string): string {
   // Remove path traversal attempts
   let safe = filename.replace(/\.\./g, "");
   // Remove path separators

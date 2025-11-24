@@ -20,7 +20,7 @@ class EnvironmentError extends Error {
  * Gets a required environment variable
  * Throws error if not set
  */
-export function getRequiredEnv(key: string): string {
+function getRequiredEnv(key: string): string {
   const value = process.env[key];
   if (!value || value.trim() === "") {
     throw new EnvironmentError(
@@ -29,13 +29,6 @@ export function getRequiredEnv(key: string): string {
     );
   }
   return value;
-}
-
-/**
- * Gets an optional environment variable with default
- */
-export function getOptionalEnv(key: string, defaultValue: string): string {
-  return process.env[key] || defaultValue;
 }
 
 /**

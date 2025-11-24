@@ -22,7 +22,7 @@ const noXssPattern = (value: string) => {
  * Email is required, all other fields are optional
  * Includes sanitization and XSS prevention
  */
-export const contactSchema = z.object({
+const contactSchema = z.object({
   email: z
     .string()
     .trim()
@@ -76,7 +76,7 @@ export const contactSchema = z.object({
  * Title, company, start_date, and description are required
  * Includes length limits to prevent DoS
  */
-export const experienceSchema = z.object({
+const experienceSchema = z.object({
   title: z
     .string()
     .trim()
@@ -130,7 +130,7 @@ export const experienceSchema = z.object({
  * Education item schema
  * Degree and institution are required
  */
-export const educationSchema = z.object({
+const educationSchema = z.object({
   degree: z
     .string()
     .trim()
@@ -170,7 +170,7 @@ export const educationSchema = z.object({
  * Skill category schema
  * Used for grouping skills by category
  */
-export const skillSchema = z.object({
+const skillSchema = z.object({
   category: z
     .string()
     .trim()
@@ -193,7 +193,7 @@ export const skillSchema = z.object({
  * Certification schema
  * Name and issuer are required
  */
-export const certificationSchema = z.object({
+const certificationSchema = z.object({
   name: z
     .string()
     .trim()
@@ -228,7 +228,7 @@ export const certificationSchema = z.object({
  * Title and description are required
  * Includes URL validation and technology list support
  */
-export const projectSchema = z.object({
+const projectSchema = z.object({
   title: z
     .string()
     .trim()
@@ -318,10 +318,4 @@ export const resumeContentSchema = z.object({
 /**
  * Type inference for TypeScript
  */
-export type ContactFormData = z.infer<typeof contactSchema>;
-export type ExperienceFormData = z.infer<typeof experienceSchema>;
-export type EducationFormData = z.infer<typeof educationSchema>;
-export type SkillFormData = z.infer<typeof skillSchema>;
-export type CertificationFormData = z.infer<typeof certificationSchema>;
-export type ProjectFormData = z.infer<typeof projectSchema>;
 export type ResumeContentFormData = z.infer<typeof resumeContentSchema>;

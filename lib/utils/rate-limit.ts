@@ -5,16 +5,16 @@ import { featureFlags } from "./config";
 /**
  * Rate limiting configuration for different actions
  */
-export const RATE_LIMITS = {
+const RATE_LIMITS = {
   resume_update: { limit: 10, windowHours: 1 },
   privacy_update: { limit: 20, windowHours: 1 },
   handle_change: { limit: 3, windowHours: 24 },
   resume_upload: { limit: 5, windowHours: 24 },
 } as const;
 
-export type RateLimitAction = keyof typeof RATE_LIMITS;
+type RateLimitAction = keyof typeof RATE_LIMITS;
 
-export interface RateLimitResult {
+interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   resetAt: Date;
@@ -25,7 +25,7 @@ export interface RateLimitResult {
  * Checks if a user has exceeded the rate limit for a specific action
  * Uses Supabase to count actions in the time window
  */
-export async function checkRateLimit(
+async function checkRateLimit(
   userId: string,
   action: RateLimitAction,
 ): Promise<RateLimitResult> {

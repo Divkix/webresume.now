@@ -43,21 +43,3 @@ export function flattenSkills(
 ): string[] {
   return skills?.flatMap((s) => s.items) || [];
 }
-
-/**
- * Extract city and state from a full address
- * Used for privacy filtering
- * Example: "123 Main St, San Francisco, CA 94102" -> "San Francisco, CA"
- */
-export function extractCityState(location?: string | null): string {
-  if (!location) return "";
-
-  // Try to extract city, state pattern
-  const parts = location.split(",").map((p) => p.trim());
-  if (parts.length >= 2) {
-    // Return last two parts (typically city, state)
-    return parts.slice(-2).join(", ");
-  }
-
-  return location;
-}

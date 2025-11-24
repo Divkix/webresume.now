@@ -43,11 +43,3 @@ export async function requireAuthWithMessage(
     };
   }
 }
-
-/**
- * Verifies that the request is authenticated and returns the user
- * @returns Promise containing either the authenticated user or an error response
- */
-export async function requireAuth() {
-  return requireAuthWithMessage("You must be logged in to perform this action");
-}

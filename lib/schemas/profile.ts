@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sanitizeUrl, containsXssPattern } from "@/lib/utils/sanitization";
+import { containsXssPattern } from "@/lib/utils/sanitization";
 
 /**
  * Custom Zod refinement for XSS detection
@@ -29,7 +29,7 @@ export const privacySettingsSchema = z.object({
  * Enforces uniqueness, format, and length constraints
  * Includes security checks to prevent injection attacks
  */
-export const handleSchema = z
+const handleSchema = z
   .string()
   .trim()
   .min(3, "Handle must be at least 3 characters")
@@ -50,36 +50,6 @@ export const handleUpdateSchema = z.object({
   handle: handleSchema,
 });
 
-/**
- * Profile update schema
- * Optional fields for partial updates
- * Includes sanitization for URLs and text content
- */
-export const profileUpdateSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .email({ message: "Invalid email address" })
-    .max(255, "Email is too long")
-    .optional(),
-  avatar_url: z
-    .string()
-    .trim()
-    .url({ message: "Invalid URL" })
-    .max(2000, "URL is too long")
-    .transform(sanitizeUrl)
-    .nullable()
-    .optional(),
-  headline: z
-    .string()
-    .trim()
-    .max(100, "Headline must not exceed 100 characters")
-    .refine(noXssPattern, { message: "Invalid content detected" })
-    .nullable()
-    .optional(),
-});
-
 // Type exports for TypeScript inference
 export type PrivacySettings = z.infer<typeof privacySettingsSchema>;
 export type HandleUpdate = z.infer<typeof handleUpdateSchema>;
-export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

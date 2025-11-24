@@ -45,7 +45,8 @@ export async function middleware(request: NextRequest) {
             getAll() {
               return request.cookies.getAll();
             },
-            setAll(cookiesToSet) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            setAll(_cookiesToSet) {
               // No-op for middleware (cookies already set by updateSession)
             },
           },

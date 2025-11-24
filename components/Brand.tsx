@@ -39,10 +39,3 @@ export function Brand({
     </span>
   );
 }
-
-/**
- * Returns the brand URL format: domain/{handle}
- */
-export function brandUrl(handle: string): string {
-  return `${siteConfig.domain}/${handle}`;
-}

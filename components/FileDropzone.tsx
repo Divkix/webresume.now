@@ -302,6 +302,11 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         />
 
         <div className="relative z-10 flex flex-col items-center gap-4">
+          {/* Title text first */}
+          <p className="text-lg font-semibold text-slate-900">
+            {file ? file.name : "Drop your PDF resume here"}
+          </p>
+
           {/* Icon with gradient background */}
           <div className="relative">
             <div
@@ -328,12 +333,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-lg font-semibold text-slate-900 mb-1">
-              {file ? file.name : "Drop your PDF resume here"}
-            </p>
-            <p className="text-sm text-slate-500">or click to browse - Max 10MB</p>
-          </div>
+          {/* Secondary text below */}
+          <p className="text-sm text-slate-500">or click to browse - Max 10MB</p>
         </div>
       </div>
 

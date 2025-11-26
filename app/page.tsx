@@ -36,9 +36,14 @@ export default function Home() {
             </span>
           </h1>
 
-          <p className="text-xl sm:text-2xl text-slate-600 mb-6 max-w-2xl mx-auto leading-relaxed font-light">
+          <p className="text-xl sm:text-2xl text-slate-600 mb-8 max-w-2xl mx-auto leading-relaxed font-light">
             Drop your PDF. Get a shareable link. It takes less than a minute.
           </p>
+
+          {/* Inline Upload Zone */}
+          <div className="max-w-2xl mx-auto mb-10">
+            <FileDropzone />
+          </div>
 
           {/* Social Proof Badge */}
           <div className="flex justify-center mb-8">
@@ -171,11 +176,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Inline Upload Zone */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <FileDropzone />
           </div>
         </div>
       </main>

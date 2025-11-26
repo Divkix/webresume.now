@@ -31,7 +31,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
         {/* Editorial Header */}
         <header className="mb-32 md:mb-48 grid grid-cols-1 md:grid-cols-12 gap-y-8">
           <div className="md:col-span-8">
-            <h1 className="font-serif text-6xl md:text-9xl leading-[0.9] tracking-tighter mb-8">
+            <h1 className="font-serif text-6xl md:text-9xl leading-tight tracking-tighter mb-8">
               {firstName}
               {lastName && (
                 <>

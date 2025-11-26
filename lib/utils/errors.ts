@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-export type ErrorCategory = "transient" | "fatal" | "auth" | "validation" | "rate_limit";
+type ErrorCategory = "transient" | "fatal" | "auth" | "validation" | "rate_limit";
 
 /**
  * Classifies an HTTP status code into an error category.
@@ -56,25 +56,4 @@ export function showErrorToast(status: number, context?: string) {
   } else {
     toast.error(message);
   }
-}
-
-/**
- * Calculates exponential backoff delay with jitter.
- * @param attempt - The current attempt number (0-indexed)
- * @param baseMs - Base delay in milliseconds (default: 1000)
- * @param maxMs - Maximum delay in milliseconds (default: 30000)
- * @returns Delay in milliseconds
- */
-export function calculateBackoff(attempt: number, baseMs = 1000, maxMs = 30000): number {
-  const backoff = Math.min(baseMs * 2 ** attempt, maxMs);
-  const jitter = backoff * 0.25 * Math.random();
-  return backoff + jitter;
-}
-
-/**
- * Determines if an error should be retried based on its category.
- */
-export function shouldRetry(status: number): boolean {
-  const category = classifyError(status);
-  return category === "transient";
 }

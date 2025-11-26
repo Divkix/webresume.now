@@ -4,7 +4,7 @@ import type { ThemeId } from "./theme-registry";
 /**
  * Demo profile metadata for landing page cards
  */
-export interface DemoProfile {
+interface DemoProfile {
   id: ThemeId;
   name: string;
   role: string;
@@ -381,23 +381,6 @@ export const DEMO_RESUME_CONTENT: Record<ThemeId, ResumeContent> = {
     ],
   },
 };
-
-/**
- * Get demo data for a specific theme
- */
-export function getDemoData(themeId: ThemeId): {
-  content: ResumeContent;
-  profile: { avatar_url: string | null; handle: string };
-} {
-  const profile = DEMO_PROFILES.find((p) => p.id === themeId);
-  return {
-    content: DEMO_RESUME_CONTENT[themeId],
-    profile: {
-      avatar_url: null,
-      handle: profile?.name.toLowerCase().replace(/\s+/g, "") || "demo",
-    },
-  };
-}
 
 /**
  * Template background configuration for modal display

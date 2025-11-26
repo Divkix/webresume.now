@@ -162,7 +162,12 @@ export function TemplatePreviewModal({
           </div>
 
           {/* Template Content - transform-gpu creates containing block for fixed elements */}
-          <div className={cn("flex-1 overflow-y-auto relative transform-gpu", templateConfig?.bg ?? "bg-white")}>
+          <div
+            className={cn(
+              "flex-1 overflow-y-auto relative transform-gpu",
+              templateConfig?.bg ?? "bg-white",
+            )}
+          >
             <Template content={content} profile={profile} />
           </div>
 

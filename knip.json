@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "app/**/*.{ts,tsx,mdx}",
+    "components/**/*.{ts,tsx,mdx}",
+    "hooks/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}",
+    "open-next.config.ts"
+  ],
+  "ignore": ["app/globals.css"],
+  "ignoreBinaries": ["supabase"]
+}

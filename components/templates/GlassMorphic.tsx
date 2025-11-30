@@ -9,6 +9,7 @@ import {
   Linkedin,
   Mail,
   MapPin,
+  Menu,
 } from "lucide-react";
 import type React from "react";
 import { siteConfig } from "@/lib/config/site";
@@ -36,32 +37,47 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-12 md:py-24">
-        {/* Glass Nav */}
-        <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 flex gap-8 shadow-2xl">
-          <a
-            href="#about"
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-          >
-            About
-          </a>
-          <a
-            href="#experience"
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-          >
-            Experience
-          </a>
-          <a
-            href="#projects"
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-          >
-            Projects
-          </a>
-          <a
-            href="#contact"
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors"
-          >
-            Contact
-          </a>
+        {/* Glass Nav - Mobile: simplified, Desktop: full */}
+        <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 sm:px-6 py-3 shadow-2xl">
+          {/* Mobile: Show icon-only nav or hamburger indicator */}
+          <div className="flex sm:hidden items-center gap-4">
+            <a
+              href="#about"
+              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </a>
+            <span className="text-xs font-medium text-white/50 uppercase tracking-wider">
+              Portfolio
+            </span>
+          </div>
+          {/* Desktop: Full nav */}
+          <div className="hidden sm:flex gap-4 md:gap-8">
+            <a
+              href="#about"
+              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              About
+            </a>
+            <a
+              href="#experience"
+              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              Experience
+            </a>
+            <a
+              href="#projects"
+              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              Projects
+            </a>
+            <a
+              href="#contact"
+              className="text-sm font-medium text-white/70 hover:text-white transition-colors"
+            >
+              Contact
+            </a>
+          </div>
         </nav>
 
         {/* Hero Section */}
@@ -173,9 +189,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
                     </span>
                   </div>
                   {job.description && job.description.trim() !== "" ? (
-                    <p className="text-sm text-white/80 line-clamp-3 leading-relaxed mb-4">
-                      {job.description}
-                    </p>
+                    <p className="text-sm text-white/80 leading-relaxed mb-4">{job.description}</p>
                   ) : job.highlights && job.highlights.length > 0 ? (
                     <ul className="text-sm text-white/80 space-y-2 list-disc pl-5 mb-4 leading-relaxed">
                       {job.highlights.slice(0, 3).map((highlight, i) => (
@@ -235,7 +249,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
                     )}
                   </div>
                   <div className="p-6 bg-white/2 backdrop-blur-sm">
-                    <p className="text-sm text-white/80 line-clamp-2 leading-relaxed mb-4">
+                    <p className="text-sm text-white/80 leading-relaxed mb-4">
                       {project.description}
                     </p>
                     {project.technologies && project.technologies.length > 0 && (

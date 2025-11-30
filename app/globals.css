@@ -217,3 +217,57 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print Styles */
+@media print {
+  /* Hide interactive/animated elements */
+  .animate-pulse-slow,
+  .animate-shimmer,
+  .animate-gradient-shift,
+  .animate-float,
+  .animate-fade-in-up,
+  .animate-ping,
+  .animate-pulse,
+  [class*="animate-"] {
+    animation: none !important;
+  }
+
+  /* Hide fixed elements - convert to static for print flow */
+  .fixed {
+    position: static !important;
+  }
+
+  /* Hide attribution widget when printing */
+  [data-attribution-widget] {
+    display: none !important;
+  }
+
+  /* Hide navigation elements that don't make sense in print */
+  nav.fixed {
+    display: none !important;
+  }
+
+  /* Ensure backgrounds print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid page breaks inside cards */
+  .rounded-3xl,
+  .rounded-2xl {
+    break-inside: avoid;
+  }
+
+  /* Reset blur effects for print clarity */
+  .backdrop-blur-xl,
+  .backdrop-blur-md,
+  .backdrop-blur-sm,
+  .blur-3xl,
+  .blur-2xl,
+  .blur-xl,
+  [class*="blur-"] {
+    backdrop-filter: none !important;
+    filter: none !important;
+  }
+}

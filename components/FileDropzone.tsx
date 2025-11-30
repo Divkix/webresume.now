@@ -110,8 +110,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       const { uploadUrl, key } = await signResponse.json();
 
-      // Step 2: Upload to R2
-      setUploadProgress(25);
+      // Step 2: Upload to R2 - progress reflects actual stages
+      setUploadProgress(40); // Got presigned URL, ready to upload
 
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
@@ -121,7 +121,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         body: fileToUpload,
       });
 
-      setUploadProgress(75);
+      setUploadProgress(90); // Upload complete, finalizing
 
       if (!uploadResponse.ok) {
         throw new Error("Failed to upload file");
@@ -248,6 +248,14 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setUploadProgress(0);
   };
 
+  const handleRetry = () => {
+    setError(null);
+    setUploadProgress(0);
+    if (file) {
+      uploadFile(file);
+    }
+  };
+
   // Dropzone content (before upload complete)
   const dropzoneContent = (
     <div className="space-y-4">
@@ -294,6 +302,11 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         />
 
         <div className="relative z-10 flex flex-col items-center gap-4">
+          {/* Title text first */}
+          <p className="text-lg font-semibold text-slate-900">
+            {file ? file.name : "Drop your PDF resume here"}
+          </p>
+
           {/* Icon with gradient background */}
           <div className="relative">
             <div
@@ -320,12 +333,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-lg font-semibold text-slate-900 mb-1">
-              {file ? file.name : "Drop your PDF resume here"}
-            </p>
-            <p className="text-sm text-slate-500">or click to browse • Max 10MB</p>
-          </div>
+          {/* Secondary text below */}
+          <p className="text-sm text-slate-500">or click to browse - Max 10MB</p>
         </div>
       </div>
 
@@ -338,18 +347,33 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             aria-label={`Upload progress: ${uploadProgress}%`}
           />
           <p className="text-xs text-center text-slate-500 font-medium" aria-live="polite">
-            Uploading... {uploadProgress}%
+            {uploadProgress < 40
+              ? "Preparing upload..."
+              : uploadProgress < 90
+                ? "Uploading file..."
+                : uploadProgress < 100
+                  ? "Finalizing..."
+                  : "Complete!"}{" "}
+            {uploadProgress}%
           </p>
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Error Message with Retry Button */}
       {error && (
         <div
-          className="bg-red-50 border border-red-200 rounded-xl p-3 shadow-depth-sm"
+          className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-depth-sm"
           role="alert"
         >
-          <p className="text-sm text-red-800 font-medium">{error}</p>
+          <p className="text-sm text-red-800 font-medium mb-3">{error}</p>
+          <Button
+            onClick={handleRetry}
+            variant="outline"
+            size="sm"
+            className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white border-0 font-semibold transition-all duration-300"
+          >
+            Try Again
+          </Button>
         </div>
       )}
 
@@ -404,11 +428,54 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
 
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Processing Your Resume...</h3>
-              <p className="text-sm text-slate-600" aria-live="polite">
-                Claiming your upload and starting AI analysis
+              <h3 className="text-lg font-bold text-slate-900 mb-2">AI Parsing Your Resume...</h3>
+              <p className="text-sm text-slate-600 mb-1" aria-live="polite">
+                Extracting your experience, skills, and achievements
               </p>
+              <p className="text-xs text-slate-400 font-medium">This typically takes ~30 seconds</p>
             </div>
+
+            {/* Subtle animated progress indicator */}
+            <div className="w-full max-w-xs">
+              <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-linear-to-r from-indigo-500 to-blue-500 rounded-full animate-pulse w-2/3" />
+              </div>
+            </div>
+          </div>
+        ) : error ? (
+          /* Error State during claiming */
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500 rounded-full blur-xl opacity-20" />
+              <div className="relative w-16 h-16 bg-red-100 rounded-full flex items-center justify-center shadow-depth-md">
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Something Went Wrong</h3>
+              <p className="text-sm text-red-600 mb-4">{error}</p>
+            </div>
+
+            <Button
+              onClick={handleReset}
+              className="w-full max-w-xs bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all duration-300"
+            >
+              Try Again
+            </Button>
           </div>
         ) : (
           /* Upload Complete - Show different CTA based on auth status */
@@ -451,9 +518,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               <>
                 <Button
                   onClick={handleLoginRedirect}
-                  className="w-full max-w-xs bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all"
+                  disabled={claiming}
+                  className="w-full max-w-xs bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-md hover:shadow-depth-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Continue with Google
+                  Sign in to Publish
                 </Button>
 
                 <p className="text-xs text-slate-500 text-center font-medium">
@@ -463,7 +531,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-300"
                 >
                   Upload a different file
                 </button>

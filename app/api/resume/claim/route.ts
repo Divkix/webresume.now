@@ -71,6 +71,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate hash format if provided (64 hex chars for SHA-256)
+    if (file_hash && !/^[a-f0-9]{64}$/i.test(file_hash)) {
+      return createErrorResponse(
+        "Invalid file hash format",
+        ERROR_CODES.VALIDATION_ERROR,
+        400,
+      );
+    }
+
     // 4. Rate limiting check (5 uploads per 24 hours)
     const rateLimitResponse = await enforceRateLimit(user.id, "resume_upload");
     if (rateLimitResponse) {
@@ -118,7 +127,7 @@ export async function POST(request: Request) {
 
       if (cached?.parsed_content) {
         // Update new resume to completed with cached content (skip Replicate entirely)
-        await supabase
+        const { error: resumeUpdateError } = await supabase
           .from("resumes")
           .update({
             status: "completed",
@@ -128,43 +137,111 @@ export async function POST(request: Request) {
           })
           .eq("id", resume.id);
 
-        // Copy content to user's site_data for publishing
-        await supabase.from("site_data").upsert(
-          {
-            user_id: user.id,
-            resume_id: resume.id,
-            content: cached.parsed_content,
-            last_published_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" },
-        );
+        if (resumeUpdateError) {
+          console.error("Failed to update resume with cached content:", resumeUpdateError);
+          // Fall through to normal parsing path
+        } else {
+          // Copy content to user's site_data for publishing
+          const { error: siteDataError } = await supabase.from("site_data").upsert(
+            {
+              user_id: user.id,
+              resume_id: resume.id,
+              content: cached.parsed_content,
+              last_published_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" },
+          );
 
-        // Still need to move the file from temp to user folder
-        // (but we skip the expensive Replicate API call)
-        try {
-          await r2Client.send(
-            new CopyObjectCommand({
-              Bucket: R2_BUCKET,
-              CopySource: `${R2_BUCKET}/${key}`,
-              Key: newKey,
-            }),
-          );
-          await r2Client.send(
-            new DeleteObjectCommand({
-              Bucket: R2_BUCKET,
-              Key: key,
-            }),
-          );
-        } catch (error) {
-          console.error("R2 operations failed for cached resume:", error);
-          // Non-critical - resume is still valid
+          if (siteDataError) {
+            console.error("Failed to upsert site_data with cached content:", siteDataError);
+            // Fall through to normal parsing path - reset resume status
+            await supabase
+              .from("resumes")
+              .update({ status: "pending_claim", parsed_at: null, parsed_content: null })
+              .eq("id", resume.id);
+          } else {
+            // Still need to move the file from temp to user folder
+            // (but we skip the expensive Replicate API call)
+            try {
+              await r2Client.send(
+                new CopyObjectCommand({
+                  Bucket: R2_BUCKET,
+                  CopySource: `${R2_BUCKET}/${key}`,
+                  Key: newKey,
+                }),
+              );
+              await r2Client.send(
+                new DeleteObjectCommand({
+                  Bucket: R2_BUCKET,
+                  Key: key,
+                }),
+              );
+            } catch (error) {
+              console.error("R2 operations failed for cached resume:", error);
+              // Non-critical - resume is still valid
+            }
+
+            return createSuccessResponse({
+              resume_id: resume.id,
+              status: "completed",
+              cached: true,
+            });
+          }
         }
+      }
+    }
 
-        return createSuccessResponse({
-          resume_id: resume.id,
-          status: "completed",
-          cached: true,
-        });
+    // 5c. Check if another resume with same hash is currently processing
+    // If so, wait for it instead of triggering duplicate parsing
+    if (file_hash) {
+      const { data: processing } = await supabase
+        .from("resumes")
+        .select("id")
+        .eq("file_hash", file_hash)
+        .eq("status", "processing")
+        .neq("id", resume.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (processing) {
+        // Another user is already parsing this file - wait for their result
+        const { error: waitError } = await supabase
+          .from("resumes")
+          .update({
+            status: "waiting_for_cache",
+            file_hash,
+          })
+          .eq("id", resume.id);
+
+        if (waitError) {
+          console.error("Failed to set waiting_for_cache status:", waitError);
+          // Fall through to normal processing
+        } else {
+          // Move file to user's folder
+          try {
+            await r2Client.send(
+              new CopyObjectCommand({
+                Bucket: R2_BUCKET,
+                CopySource: `${R2_BUCKET}/${key}`,
+                Key: newKey,
+              }),
+            );
+            await r2Client.send(
+              new DeleteObjectCommand({
+                Bucket: R2_BUCKET,
+                Key: key,
+              }),
+            );
+          } catch (error) {
+            console.error("R2 operations failed for waiting resume:", error);
+          }
+
+          return createSuccessResponse({
+            resume_id: resume.id,
+            status: "processing", // Client sees "processing" and subscribes to realtime
+            waiting_for_cache: true,
+          });
+        }
       }
     }
 

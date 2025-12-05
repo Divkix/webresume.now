@@ -1,5 +1,6 @@
 import { normalizeResumeData } from "@/lib/replicate";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/lib/supabase/types";
 import { verifyReplicateWebhook } from "@/lib/utils/webhook-verification";
 
 /**
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     const supabase = createAdminClient();
     const { data: resume, error: fetchError } = await supabase
       .from("resumes")
-      .select("id, user_id, status")
+      .select("id, user_id, status, file_hash")
       .eq("replicate_job_id", replicateJobId)
       .single();
 
@@ -105,12 +106,15 @@ export async function POST(request: Request) {
         return new Response("OK", { status: 200 });
       }
 
+      // Cast to Json for Supabase compatibility
+      const contentAsJson = normalizedContent as unknown as Json;
+
       // Save to site_data
       const { error: upsertError } = await supabase.from("site_data").upsert(
         {
           user_id: resume.user_id,
           resume_id: resume.id,
-          content: JSON.parse(JSON.stringify(normalizedContent)),
+          content: contentAsJson,
           last_published_at: new Date().toISOString(),
         },
         { onConflict: "user_id" },
@@ -134,9 +138,44 @@ export async function POST(request: Request) {
         .update({
           status: "completed",
           parsed_at: new Date().toISOString(),
-          parsed_content: JSON.parse(JSON.stringify(normalizedContent)), // Store for file hash cache
+          parsed_content: contentAsJson, // Store for file hash cache
         })
         .eq("id", resume.id);
+
+      // Fan out to all resumes waiting for this file hash
+      if (resume.file_hash) {
+        const { data: waitingResumes } = await supabase
+          .from("resumes")
+          .select("id, user_id")
+          .eq("file_hash", resume.file_hash)
+          .eq("status", "waiting_for_cache");
+
+        if (waitingResumes?.length) {
+          for (const waiting of waitingResumes) {
+            // Update resume with cached content
+            await supabase
+              .from("resumes")
+              .update({
+                status: "completed",
+                parsed_at: new Date().toISOString(),
+                parsed_content: contentAsJson,
+              })
+              .eq("id", waiting.id);
+
+            // Create/update site_data for waiting user
+            await supabase.from("site_data").upsert(
+              {
+                user_id: waiting.user_id,
+                resume_id: waiting.id,
+                content: contentAsJson,
+                last_published_at: new Date().toISOString(),
+              },
+              { onConflict: "user_id" },
+            );
+          }
+          console.log(`Fan-out: Updated ${waitingResumes.length} waiting resumes for hash ${resume.file_hash}`);
+        }
+      }
 
       console.log("Resume processing completed successfully");
     }

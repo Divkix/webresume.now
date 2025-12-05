@@ -42,7 +42,7 @@
     }
   },
   "vars": {
-    "NEXT_PUBLIC_SUPABASE_URL": "https://civmyypbwgycsctodywc.supabase.co",
-    "NODE_ENV": "production"
+    "NEXT_PUBLIC_SUPABASE_URL": "https://civmyypbwgycsctodywc.supabase.co"
+    // NODE_ENV is auto-set by Next.js - don't set manually (causes build errors)
   }
 }

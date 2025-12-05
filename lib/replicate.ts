@@ -12,10 +12,7 @@ let _replicate: Replicate | null = null;
  * - Adds cf-aig-authorization header for gateway authentication
  */
 function createGatewayFetch(cfAuthToken: string) {
-  return async (
-    url: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
+  return async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const headers = new Headers(init?.headers);
 
     // Remove SDK's Authorization header (BYOK injects Replicate token from Secrets Store)

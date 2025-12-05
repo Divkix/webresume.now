@@ -89,10 +89,13 @@ export async function POST(request: Request) {
       expiresIn: 7 * 24 * 60 * 60, // 7 days
     });
 
-    // 6. Trigger new Replicate parsing job
+    // 6. Trigger new Replicate parsing job WITH webhook URL
+    // Without webhook, if user closes browser the resume stays stuck "processing" forever
     let prediction;
     try {
-      prediction = await parseResume(presignedUrl);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined;
+      prediction = await parseResume(presignedUrl, webhookUrl);
     } catch (error) {
       console.error("Failed to trigger retry parsing:", error);
       return createErrorResponse(

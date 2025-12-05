@@ -121,15 +121,22 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       }
       setUploadProgress(20);
 
-      // Step 2: Get presigned URL
+      // Step 2: Get presigned URL (include file size for server-side validation)
       const signResponse = await fetch("/api/upload/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: fileToUpload.name }),
+        body: JSON.stringify({
+          filename: fileToUpload.name,
+          contentLength: fileToUpload.size,
+        }),
       });
 
       if (!signResponse.ok) {
         const data = await signResponse.json();
+        // Handle rate limiting specifically
+        if (signResponse.status === 429) {
+          throw new Error(data.message || "Too many upload attempts. Please wait and try again.");
+        }
         throw new Error(data.error || "Failed to get upload URL");
       }
 

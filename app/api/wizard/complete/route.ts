@@ -1,5 +1,6 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { createClient } from "@/lib/supabase/server";
 import {
   createErrorResponse,
@@ -158,6 +159,8 @@ export async function POST(request: Request) {
     }
 
     // 7. Revalidate public page cache with new handle
+    // Tag invalidation works with unstable_cache, path works with full route cache
+    revalidateTag(getResumeCacheTag(body.handle));
     revalidatePath(`/${body.handle}`);
 
     // 8. Return success response

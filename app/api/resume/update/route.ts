@@ -1,5 +1,6 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { resumeContentSchema } from "@/lib/schemas/resume";
 import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
@@ -103,7 +104,8 @@ export async function PUT(request: Request) {
 
     if (profile?.handle) {
       // Revalidate the public resume page immediately
-      // Next visitor will see updated content
+      // Tag invalidation works with unstable_cache, path works with full route cache
+      revalidateTag(getResumeCacheTag(profile.handle));
       revalidatePath(`/${profile.handle}`);
     }
 

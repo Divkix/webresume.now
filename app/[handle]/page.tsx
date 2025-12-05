@@ -2,14 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AttributionWidget } from "@/components/AttributionWidget";
 import { siteConfig } from "@/lib/config/site";
-import { createClient } from "@/lib/supabase/server";
+import { getResumeData } from "@/lib/data/resume";
 import { getTemplate } from "@/lib/templates/theme-registry";
-import type { ResumeContent } from "@/lib/types/database";
-import { extractCityState, isValidPrivacySettings } from "@/lib/utils/privacy";
 
-// Enable ISR-like caching: revalidate every hour
-// This reduces DB load by ~99% for high-traffic pages
-// Stale pages are served while revalidating in background
+// Enable ISR-like caching: revalidate every hour as fallback
+// Primary invalidation happens via revalidateTag in update APIs
+// This now actually works because we use unstable_cache instead of cookies()
 export const revalidate = 3600; // 1 hour in seconds
 
 // Dynamic params are always allowed (new handles can be created)
@@ -19,81 +17,6 @@ interface PageProps {
   params: Promise<{
     handle: string;
   }>;
-}
-
-interface PrivacySettings {
-  show_phone: boolean;
-  show_address: boolean;
-}
-
-/**
- * Fetch user profile and resume data by handle
- * Applies privacy filtering based on user preferences
- */
-async function getResumeData(handle: string) {
-  const supabase = await createClient();
-
-  // Fetch profile with site_data in a single query
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(
-      `
-      id,
-      handle,
-      email,
-      avatar_url,
-      headline,
-      privacy_settings,
-      site_data (
-        content,
-        theme_id,
-        last_published_at
-      )
-    `,
-    )
-    .eq("handle", handle)
-    .single();
-
-  if (error || !data) {
-    return null;
-  }
-
-  // Ensure site_data exists
-  if (!data.site_data) {
-    return null;
-  }
-
-  const siteData = Array.isArray(data.site_data) ? data.site_data[0] : data.site_data;
-
-  // Deep clone content to avoid mutation
-  const content: ResumeContent = JSON.parse(JSON.stringify(siteData.content));
-
-  // Apply privacy filtering with type guard
-  const privacySettings: PrivacySettings = isValidPrivacySettings(data.privacy_settings)
-    ? data.privacy_settings
-    : { show_phone: false, show_address: false };
-
-  // Remove phone if privacy setting is false
-  if (!privacySettings.show_phone && content.contact?.phone) {
-    delete content.contact.phone;
-  }
-
-  // Filter address to city/state only if privacy setting is false
-  if (!privacySettings.show_address && content.contact?.location) {
-    content.contact.location = extractCityState(content.contact.location);
-  }
-
-  return {
-    profile: {
-      id: data.id,
-      handle: data.handle,
-      email: data.email,
-      avatar_url: data.avatar_url,
-      headline: data.headline,
-    },
-    content,
-    theme_id: siteData.theme_id,
-  };
 }
 
 /**
@@ -148,6 +71,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 /**
  * Public resume viewer page
  * Renders user's resume with privacy filtering applied
+ *
+ * Caching: This page uses unstable_cache for data fetching (in lib/data/resume.ts),
+ * allowing ISR-like behavior on Cloudflare Workers.
+ * Cache is invalidated via revalidateTag when content updates.
  */
 export default async function HandlePage({ params }: PageProps) {
   const { handle } = await params;
@@ -172,7 +99,7 @@ export default async function HandlePage({ params }: PageProps) {
           handle: profile.handle || handle,
         }}
       />
-      <AttributionWidget theme={theme_id} />
+      <AttributionWidget theme={theme_id ?? "minimalist_editorial"} />
     </>
   );
 }

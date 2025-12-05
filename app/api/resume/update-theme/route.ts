@@ -1,5 +1,6 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { createClient } from "@/lib/supabase/server";
 import { TEMPLATES, type ThemeId } from "@/lib/templates/theme-registry";
 import {
@@ -83,7 +84,8 @@ export async function POST(request: Request) {
 
     if (profile?.handle) {
       // Revalidate the public resume page immediately
-      // Next visitor will see updated theme
+      // Tag invalidation works with unstable_cache, path works with full route cache
+      revalidateTag(getResumeCacheTag(profile.handle));
       revalidatePath(`/${profile.handle}`);
     }
 

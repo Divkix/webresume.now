@@ -1,3 +1,5 @@
+import { revalidateTag } from "next/cache";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { normalizeResumeData } from "@/lib/replicate";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
@@ -201,6 +203,17 @@ export async function POST(request: Request) {
             );
           }
         }
+      }
+
+      // Invalidate cache for public resume page
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("handle")
+        .eq("id", resume.user_id)
+        .single();
+
+      if (profile?.handle) {
+        revalidateTag(getResumeCacheTag(profile.handle));
       }
 
       console.log("Resume processing completed successfully");

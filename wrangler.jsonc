@@ -4,7 +4,7 @@
   // Fix __name is not defined error with next-themes and other libraries
   // See: https://opennext.js.org/cloudflare/howtos/keep_names
   "build": {
-    "keep_names": false,
+    "keep_names": false
   },
   "compatibility_date": "2025-10-21",
   "compatibility_flags": [
@@ -13,14 +13,14 @@
     "nodejs_compat",
     // Allow to fetch URLs in your app
     // see https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public
-    "global_fetch_strictly_public",
+    "global_fetch_strictly_public"
   ],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS",
+    "binding": "ASSETS"
   },
   "placement": {
-    "mode": "smart",
+    "mode": "smart"
   },
   // "routes": [
   //     {
@@ -38,15 +38,11 @@
       "enabled": true,
       "head_sampling_rate": 1,
       "persist": true,
-      "invocation_logs": true,
-    },
+      "invocation_logs": true
+    }
   },
   "vars": {
-    "MAX_WATCHES_PER_USER": "10",
-    "SCRAPER_BATCH_SIZE": "3",
-    "NOTIFICATION_FROM_EMAIL": "notifications@webresume.now",
-    "NEXT_PUBLIC_SITE_URL": "https://webresume.now",
     "NEXT_PUBLIC_SUPABASE_URL": "https://civmyypbwgycsctodywc.supabase.co",
-    "NODE_ENV": "production",
-  },
+    "NODE_ENV": "production"
+  }
 }

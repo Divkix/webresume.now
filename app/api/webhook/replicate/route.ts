@@ -151,9 +151,8 @@ export async function POST(request: Request) {
           .eq("status", "waiting_for_cache");
 
         if (waitingResumes?.length) {
-          for (const waiting of waitingResumes) {
-            // Update resume with cached content
-            await supabase
+          const updatePromises = waitingResumes.map(async (waiting) => {
+            const { error: resumeError } = await supabase
               .from("resumes")
               .update({
                 status: "completed",
@@ -162,8 +161,12 @@ export async function POST(request: Request) {
               })
               .eq("id", waiting.id);
 
-            // Create/update site_data for waiting user
-            await supabase.from("site_data").upsert(
+            if (resumeError) {
+              console.error(`Failed to update waiting resume ${waiting.id}:`, resumeError);
+              return { success: false, id: waiting.id, error: resumeError };
+            }
+
+            const { error: siteDataError } = await supabase.from("site_data").upsert(
               {
                 user_id: waiting.user_id,
                 resume_id: waiting.id,
@@ -172,8 +175,31 @@ export async function POST(request: Request) {
               },
               { onConflict: "user_id" },
             );
+
+            if (siteDataError) {
+              console.error(
+                `Failed to upsert site_data for waiting resume ${waiting.id}:`,
+                siteDataError,
+              );
+              return { success: false, id: waiting.id, error: siteDataError };
+            }
+
+            return { success: true, id: waiting.id };
+          });
+
+          const results = await Promise.allSettled(updatePromises);
+          const failed = results.filter(
+            (r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.success),
+          );
+          if (failed.length > 0) {
+            console.error(
+              `Fan-out: ${failed.length}/${waitingResumes.length} updates failed for hash ${resume.file_hash}`,
+            );
+          } else {
+            console.log(
+              `Fan-out: Updated ${waitingResumes.length} waiting resumes for hash ${resume.file_hash}`,
+            );
           }
-          console.log(`Fan-out: Updated ${waitingResumes.length} waiting resumes for hash ${resume.file_hash}`);
         }
       }
 

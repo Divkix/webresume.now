@@ -10,6 +10,17 @@ import { Progress } from "@/components/ui/progress";
 import { createClient } from "@/lib/supabase/client";
 import { validatePDF } from "@/lib/utils/validation";
 
+/**
+ * Compute SHA-256 hash of a file for deduplication caching.
+ * Uses Web Crypto API (available in all modern browsers).
+ */
+async function computeFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 interface FileDropzoneProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -96,7 +107,19 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
-      // Step 1: Get presigned URL
+      // Step 1: Compute file hash for deduplication caching
+      setUploadProgress(10);
+      let fileHash: string | undefined;
+      try {
+        fileHash = await computeFileHash(fileToUpload);
+        localStorage.setItem("temp_file_hash", fileHash);
+      } catch {
+        // Fallback: proceed without hash (older browsers without crypto.subtle)
+        console.warn("Could not compute file hash, proceeding without cache");
+      }
+      setUploadProgress(20);
+
+      // Step 2: Get presigned URL
       const signResponse = await fetch("/api/upload/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -110,8 +133,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       const { uploadUrl, key } = await signResponse.json();
 
-      // Step 2: Upload to R2 - progress reflects actual stages
-      setUploadProgress(40); // Got presigned URL, ready to upload
+      // Step 3: Upload to R2 - progress reflects actual stages
+      setUploadProgress(50); // Got presigned URL, ready to upload
 
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
@@ -174,10 +197,13 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
+      // Include file hash for deduplication caching
+      const fileHash = localStorage.getItem("temp_file_hash");
+
       const claimResponse = await fetch("/api/resume/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ key, file_hash: fileHash }),
       });
 
       if (!claimResponse.ok) {
@@ -187,8 +213,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       await claimResponse.json();
 
-      // Clear temp key from localStorage
+      // Clear temp data from localStorage
       localStorage.removeItem("temp_upload_key");
+      localStorage.removeItem("temp_file_hash");
 
       toast.success("Resume claimed successfully! Processing...");
 

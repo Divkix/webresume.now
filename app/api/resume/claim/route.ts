@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    const { key } = body;
+    const { key, file_hash } = body;
 
     if (!key || !key.startsWith("temp/")) {
       return createErrorResponse(
@@ -100,6 +100,77 @@ export async function POST(request: Request) {
         ERROR_CODES.DATABASE_ERROR,
         500,
       );
+    }
+
+    // 5b. Check for cached parse result (same file uploaded before)
+    if (file_hash) {
+      const { data: cached } = await supabase
+        .from("resumes")
+        .select("id")
+        .eq("file_hash", file_hash)
+        .eq("status", "completed")
+        .neq("id", resume.id) // Exclude current resume
+        .limit(1)
+        .maybeSingle();
+
+      if (cached) {
+        // Get the cached site_data content
+        const { data: cachedSiteData } = await supabase
+          .from("site_data")
+          .select("content")
+          .eq("resume_id", cached.id)
+          .single();
+
+        if (cachedSiteData) {
+          // Update new resume to completed (skip Replicate entirely)
+          await supabase
+            .from("resumes")
+            .update({
+              status: "completed",
+              file_hash,
+              parsed_at: new Date().toISOString(),
+            })
+            .eq("id", resume.id);
+
+          // Copy content to new user's site_data
+          await supabase.from("site_data").upsert(
+            {
+              user_id: user.id,
+              resume_id: resume.id,
+              content: cachedSiteData.content,
+              last_published_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" },
+          );
+
+          // Still need to move the file from temp to user folder
+          // (but we skip the expensive Replicate API call)
+          try {
+            await r2Client.send(
+              new CopyObjectCommand({
+                Bucket: R2_BUCKET,
+                CopySource: `${R2_BUCKET}/${key}`,
+                Key: newKey,
+              }),
+            );
+            await r2Client.send(
+              new DeleteObjectCommand({
+                Bucket: R2_BUCKET,
+                Key: key,
+              }),
+            );
+          } catch (error) {
+            console.error("R2 operations failed for cached resume:", error);
+            // Non-critical - resume is still valid
+          }
+
+          return createSuccessResponse({
+            resume_id: resume.id,
+            status: "completed",
+            cached: true,
+          });
+        }
+      }
     }
 
     // Helper to mark resume as failed and return error
@@ -215,15 +286,17 @@ export async function POST(request: Request) {
       parseError = error instanceof Error ? error.message : "Failed to start AI parsing";
     }
 
-    // 12. Update resume with replicate job ID or error
+    // 12. Update resume with replicate job ID or error (include file_hash for future caching)
     const updatePayload: {
       status: "processing" | "failed";
       replicate_job_id?: string;
       error_message?: string;
+      file_hash?: string;
     } = replicateJobId
       ? {
           status: "processing",
           replicate_job_id: replicateJobId,
+          ...(file_hash && { file_hash }),
         }
       : {
           status: "failed",

@@ -83,13 +83,14 @@ export default function WizardPage() {
         // 2. Check for pending upload claim
         const tempKey = localStorage.getItem("temp_upload_key");
         if (tempKey) {
-          // Claim the upload
+          // Claim the upload (include file_hash for deduplication caching)
+          const fileHash = localStorage.getItem("temp_file_hash");
           setLoading(true);
           try {
             const claimResponse = await fetch("/api/resume/claim", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ key: tempKey }),
+              body: JSON.stringify({ key: tempKey, file_hash: fileHash }),
             });
 
             const claimData = await claimResponse.json();
@@ -103,63 +104,69 @@ export default function WizardPage() {
 
             // Clear localStorage after successful claim
             localStorage.removeItem("temp_upload_key");
+            localStorage.removeItem("temp_file_hash");
 
-            // Subscribe to Realtime updates for this resume
-            const parsingComplete = await new Promise<boolean>((resolve) => {
-              const timeoutId: { current: NodeJS.Timeout | null } = {
-                current: null,
-              };
+            // If not cached, wait for Realtime updates (parsing in progress)
+            if (!claimData.cached) {
+              // Subscribe to Realtime updates for this resume
+              const parsingComplete = await new Promise<boolean>((resolve) => {
+                const timeoutId: { current: NodeJS.Timeout | null } = {
+                  current: null,
+                };
 
-              const channel = supabase
-                .channel(`wizard-resume-${resumeId}`)
-                .on(
-                  "postgres_changes",
-                  {
-                    event: "UPDATE",
-                    schema: "public",
-                    table: "resumes",
-                    filter: `id=eq.${resumeId}`,
-                  },
-                  (payload) => {
-                    const newStatus = payload.new?.status;
+                const channel = supabase
+                  .channel(`wizard-resume-${resumeId}`)
+                  .on(
+                    "postgres_changes",
+                    {
+                      event: "UPDATE",
+                      schema: "public",
+                      table: "resumes",
+                      filter: `id=eq.${resumeId}`,
+                    },
+                    (payload) => {
+                      const newStatus = payload.new?.status;
 
-                    if (newStatus === "completed") {
-                      if (timeoutId.current) clearTimeout(timeoutId.current);
-                      channel.unsubscribe();
-                      supabase.removeChannel(channel);
-                      resolve(true);
-                    }
+                      if (newStatus === "completed") {
+                        if (timeoutId.current) clearTimeout(timeoutId.current);
+                        channel.unsubscribe();
+                        supabase.removeChannel(channel);
+                        resolve(true);
+                      }
 
-                    if (newStatus === "failed") {
-                      if (timeoutId.current) clearTimeout(timeoutId.current);
-                      channel.unsubscribe();
-                      supabase.removeChannel(channel);
-                      setError(
-                        payload.new?.error_message || "Resume parsing failed. Please try again.",
-                      );
-                      setTimeout(() => router.push("/dashboard"), 3000);
-                      resolve(false);
-                    }
-                  },
-                )
-                .subscribe();
+                      if (newStatus === "failed") {
+                        if (timeoutId.current) clearTimeout(timeoutId.current);
+                        channel.unsubscribe();
+                        supabase.removeChannel(channel);
+                        setError(
+                          payload.new?.error_message || "Resume parsing failed. Please try again.",
+                        );
+                        setTimeout(() => router.push("/dashboard"), 3000);
+                        resolve(false);
+                      }
+                    },
+                  )
+                  .subscribe();
 
-              // Timeout after 90 seconds
-              timeoutId.current = setTimeout(() => {
-                channel.unsubscribe();
-                supabase.removeChannel(channel);
-                router.push(`/waiting?resume_id=${resumeId}`);
-                resolve(false);
-              }, 90000);
-            });
+                // Timeout after 90 seconds
+                timeoutId.current = setTimeout(() => {
+                  channel.unsubscribe();
+                  supabase.removeChannel(channel);
+                  router.push(`/waiting?resume_id=${resumeId}`);
+                  resolve(false);
+                }, 90000);
+              });
 
-            if (!parsingComplete) {
-              return;
+              if (!parsingComplete) {
+                return;
+              }
             }
+            // If cached, skip waiting - site_data already populated
           } catch (claimError) {
             console.error("Claim error:", claimError);
             setError(claimError instanceof Error ? claimError.message : "Failed to claim resume");
             localStorage.removeItem("temp_upload_key");
+            localStorage.removeItem("temp_file_hash");
             setTimeout(() => router.push("/dashboard"), 3000);
             return;
           }

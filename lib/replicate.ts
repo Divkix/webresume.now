@@ -40,9 +40,52 @@ function getReplicate(): Replicate {
   return _replicate;
 }
 
+/**
+ * Clean email extracted from AI parsing
+ * Handles common OCR artifacts and formatting issues
+ */
+function cleanExtractedEmail(email: string | null | undefined): string {
+  if (!email) return "";
+
+  const cleaned = email
+    .trim()
+    .toLowerCase()
+    // Remove common OCR artifacts
+    .replace(/\s+/g, "") // Remove all whitespace
+    .replace(/[<>[\]{}()]/g, "") // Remove brackets
+    .replace(/^mailto:/i, "") // Remove mailto: prefix
+    .replace(/[,;:]+$/, "") // Remove trailing punctuation
+    .replace(/\.{2,}/g, ".") // Collapse multiple dots
+    .replace(/^\.+|\.+$/g, ""); // Remove leading/trailing dots
+
+  // Basic structural validation - must have @ and .
+  if (!cleaned.includes("@") || !cleaned.includes(".")) {
+    return "";
+  }
+
+  return cleaned;
+}
+
 // Zod schemas for runtime validation
+// NOTE: Email validation here is intentionally lenient compared to lib/schemas/resume.ts
+// AI-extracted emails from PDFs often have OCR artifacts (extra spaces, brackets, etc.)
+// that would fail strict RFC 5322 validation. We clean and validate loosely here,
+// allowing users to fix any issues in the dashboard edit form which uses strict validation.
+// See: https://github.com/colinhacks/zod/issues/2961 (Zod email regex strictness)
 const ContactSchema = z.object({
-  email: z.email({ message: "Invalid email address" }),
+  email: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => cleanExtractedEmail(val))
+    .refine(
+      (val) => {
+        if (!val) return true; // Allow empty after cleaning (user can add in dashboard)
+        // Basic email regex - more lenient than RFC 5322
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      },
+      { message: "Invalid email address" },
+    ),
   phone: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   linkedin: z.string().optional().nullable(),
@@ -412,13 +455,18 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
     console.warn("AI parsing returned null values - defaults applied to experience entries");
   }
 
+  // Log if email extraction failed
+  if (!data.contact.email) {
+    console.warn("AI parsing: email extraction failed or was invalid - user can add in dashboard");
+  }
+
   // Apply defaults for nullable fields and sanitize URLs
   const normalized: ResumeContent = {
     full_name: data.full_name,
     headline: data.headline ?? "",
     summary: data.summary ?? "",
     contact: {
-      email: data.contact.email,
+      email: data.contact.email || "", // May be empty if AI extraction failed
       phone: data.contact.phone ?? undefined,
       location: data.contact.location ?? undefined,
       linkedin: sanitizeUrl(data.contact.linkedin),

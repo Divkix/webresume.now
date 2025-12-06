@@ -9,10 +9,14 @@ interface EditResumeFormWrapperProps {
   initialData: ResumeContent;
 }
 
+interface ErrorResponse {
+  error?: string;
+}
+
 export function EditResumeFormWrapper({ initialData }: EditResumeFormWrapperProps) {
   const router = useRouter();
 
-  const handleSave = async (data: ResumeContent) => {
+  const handleSave = async (data: ResumeContent): Promise<void> => {
     const response = await fetch("/api/resume/update", {
       method: "PUT",
       headers: {
@@ -22,7 +26,7 @@ export function EditResumeFormWrapper({ initialData }: EditResumeFormWrapperProp
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = (await response.json()) as ErrorResponse;
       const errorMessage = error.error || "Failed to update resume";
 
       // Display specific error messages to user
@@ -37,12 +41,10 @@ export function EditResumeFormWrapper({ initialData }: EditResumeFormWrapperProp
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
+    await response.json();
 
     // Refresh the page to get updated data
     router.refresh();
-
-    return result;
   };
 
   return <EditResumeForm initialData={initialData} onSave={handleSave} />;

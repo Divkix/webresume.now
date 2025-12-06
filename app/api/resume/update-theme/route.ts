@@ -1,7 +1,11 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
 import { getResumeCacheTag } from "@/lib/data/resume";
-import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/db";
+import { siteData, user } from "@/lib/db/schema";
 import { TEMPLATES, type ThemeId } from "@/lib/templates/theme-registry";
 import {
   createErrorResponse,
@@ -16,20 +20,35 @@ function isValidTheme(theme: string): theme is ThemeId {
   return VALID_THEMES.includes(theme as ThemeId);
 }
 
+interface ThemeUpdateRequestBody {
+  theme_id?: string;
+}
+
 export async function POST(request: Request) {
   try {
-    // Check authentication
-    const authResult = await requireAuthWithMessage("You must be logged in to update theme");
-    if (authResult.error) return authResult.error;
-    const { user } = authResult;
+    // 1. Get D1 database binding
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    const supabase = await createClient();
+    // 2. Check authentication via Better Auth
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    // Parse request body
-    const body = await request.json();
+    if (!session?.user) {
+      return createErrorResponse(
+        "You must be logged in to update theme",
+        ERROR_CODES.UNAUTHORIZED,
+        401,
+      );
+    }
+
+    const userId = session.user.id;
+
+    // 3. Parse request body
+    const body = (await request.json()) as ThemeUpdateRequestBody;
     const { theme_id } = body;
 
-    // Validate theme_id
+    // 4. Validate theme_id
     if (!theme_id || typeof theme_id !== "string") {
       return createErrorResponse(
         "theme_id is required and must be a string",
@@ -44,43 +63,35 @@ export async function POST(request: Request) {
       });
     }
 
-    // Update site_data theme_id
-    const { data, error: updateError } = await supabase
-      .from("site_data")
-      .update({
-        theme_id,
-        updated_at: new Date().toISOString(),
+    const now = new Date().toISOString();
+
+    // 5. Update site_data theme_id
+    const updateResult = await db
+      .update(siteData)
+      .set({
+        themeId: theme_id,
+        updatedAt: now,
       })
-      .eq("user_id", user.id)
-      .select("theme_id")
-      .single();
+      .where(eq(siteData.userId, userId))
+      .returning({ themeId: siteData.themeId });
 
-    if (updateError) {
-      console.error("Failed to update theme:", updateError);
-
-      // Check if site_data doesn't exist yet
-      if (updateError.code === "PGRST116") {
-        return createErrorResponse(
-          "Resume data not found. Please upload a resume first.",
-          ERROR_CODES.NOT_FOUND,
-          404,
-        );
-      }
-
+    if (updateResult.length === 0) {
+      // No rows updated - site_data doesn't exist yet
       return createErrorResponse(
-        "Failed to update theme. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
+        "Resume data not found. Please upload a resume first.",
+        ERROR_CODES.NOT_FOUND,
+        404,
       );
     }
 
-    // Invalidate cache for public resume page
+    const data = updateResult[0];
+
+    // 6. Invalidate cache for public resume page
     // Fetch user's handle to revalidate their public page
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("handle")
-      .eq("id", user.id)
-      .single();
+    const profile = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { handle: true },
+    });
 
     if (profile?.handle) {
       // Revalidate the public resume page immediately
@@ -91,7 +102,7 @@ export async function POST(request: Request) {
 
     return createSuccessResponse({
       success: true,
-      theme_id: data.theme_id,
+      theme_id: data.themeId,
       message: "Theme updated successfully",
     });
   } catch (error) {

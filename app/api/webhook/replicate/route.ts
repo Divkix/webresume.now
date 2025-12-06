@@ -1,8 +1,10 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 import { getResumeCacheTag } from "@/lib/data/resume";
+import { getDb } from "@/lib/db";
+import { resumes, siteData, user } from "@/lib/db/schema";
 import { normalizeResumeData } from "@/lib/replicate";
-import { createAdminClient } from "@/lib/supabase/admin";
-import type { Json } from "@/lib/supabase/types";
 import { verifyReplicateWebhook } from "@/lib/utils/webhook-verification";
 
 /**
@@ -49,36 +51,46 @@ export async function POST(request: Request) {
       return new Response("OK", { status: 200 });
     }
 
-    // 4. Find resume by replicate_job_id (use admin client to bypass RLS)
-    const supabase = createAdminClient();
-    const { data: resume, error: fetchError } = await supabase
-      .from("resumes")
-      .select("id, user_id, status, file_hash")
-      .eq("replicate_job_id", replicateJobId)
-      .single();
+    // 4. Get database connection (no auth session, webhook uses signature verification)
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    if (fetchError || !resume) {
+    // 5. Find resume by replicate_job_id
+    const resumeResult = await db
+      .select({
+        id: resumes.id,
+        userId: resumes.userId,
+        status: resumes.status,
+        fileHash: resumes.fileHash,
+      })
+      .from(resumes)
+      .where(eq(resumes.replicateJobId, replicateJobId))
+      .limit(1);
+
+    if (!resumeResult.length) {
       console.error("Resume not found for job:", replicateJobId);
       return new Response("Resume not found", { status: 404 });
     }
 
-    // 5. Skip if already processed (idempotency)
+    const resume = resumeResult[0];
+
+    // 6. Skip if already processed (idempotency)
     if (resume.status === "completed" || resume.status === "failed") {
       console.log("Resume already processed, skipping");
       return new Response("OK", { status: 200 });
     }
 
-    // 6. Handle success
+    // 7. Handle success
     if (status === "succeeded") {
       if (!output?.extraction_schema_json) {
         console.error("Missing extraction_schema_json in output");
-        await supabase
-          .from("resumes")
-          .update({
+        await db
+          .update(resumes)
+          .set({
             status: "failed",
-            error_message: "Missing parsed data in Replicate output",
+            errorMessage: "Missing parsed data in Replicate output",
           })
-          .eq("id", resume.id);
+          .where(eq(resumes.id, resume.id));
         return new Response("OK", { status: 200 });
       }
 
@@ -97,96 +109,120 @@ export async function POST(request: Request) {
 
         console.error("Validation failed:", rawMessage);
 
-        await supabase
-          .from("resumes")
-          .update({
+        await db
+          .update(resumes)
+          .set({
             status: "failed",
-            error_message: userMessage,
+            errorMessage: userMessage,
           })
-          .eq("id", resume.id);
+          .where(eq(resumes.id, resume.id));
 
         return new Response("OK", { status: 200 });
       }
 
-      // Cast to Json for Supabase compatibility
-      const contentAsJson = normalizedContent as unknown as Json;
+      // Serialize content to JSON string for D1
+      const contentJson = JSON.stringify(normalizedContent);
 
-      // Save to site_data
-      const { error: upsertError } = await supabase.from("site_data").upsert(
-        {
-          user_id: resume.user_id,
-          resume_id: resume.id,
-          content: contentAsJson,
-          last_published_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
+      // Check if site_data exists for this user
+      const existingSiteData = await db
+        .select({ id: siteData.id })
+        .from(siteData)
+        .where(eq(siteData.userId, resume.userId))
+        .limit(1);
 
-      if (upsertError) {
-        console.error("Failed to save site_data:", upsertError);
-        await supabase
-          .from("resumes")
-          .update({
-            status: "failed",
-            error_message: `Database error: ${upsertError.message}`,
+      if (existingSiteData.length > 0) {
+        // Update existing site_data
+        await db
+          .update(siteData)
+          .set({
+            resumeId: resume.id,
+            content: contentJson,
+            lastPublishedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           })
-          .eq("id", resume.id);
-        return new Response("OK", { status: 200 });
+          .where(eq(siteData.userId, resume.userId));
+      } else {
+        // Insert new site_data
+        await db.insert(siteData).values({
+          id: crypto.randomUUID(),
+          userId: resume.userId,
+          resumeId: resume.id,
+          content: contentJson,
+          lastPublishedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       // Update resume status and store parsed content for caching
-      await supabase
-        .from("resumes")
-        .update({
+      await db
+        .update(resumes)
+        .set({
           status: "completed",
-          parsed_at: new Date().toISOString(),
-          parsed_content: contentAsJson, // Store for file hash cache
+          parsedAt: new Date().toISOString(),
+          parsedContent: contentJson,
         })
-        .eq("id", resume.id);
+        .where(eq(resumes.id, resume.id));
 
       // Fan out to all resumes waiting for this file hash
-      if (resume.file_hash) {
-        const { data: waitingResumes } = await supabase
-          .from("resumes")
-          .select("id, user_id")
-          .eq("file_hash", resume.file_hash)
-          .eq("status", "waiting_for_cache");
+      if (resume.fileHash) {
+        // Get full resume data to check status
+        const waitingResumesFull = await db
+          .select({ id: resumes.id, userId: resumes.userId, status: resumes.status })
+          .from(resumes)
+          .where(eq(resumes.fileHash, resume.fileHash));
 
-        if (waitingResumes?.length) {
-          const updatePromises = waitingResumes.map(async (waiting) => {
-            const { error: resumeError } = await supabase
-              .from("resumes")
-              .update({
-                status: "completed",
-                parsed_at: new Date().toISOString(),
-                parsed_content: contentAsJson,
-              })
-              .eq("id", waiting.id);
+        const resumesToUpdate = waitingResumesFull.filter(
+          (r) => r.id !== resume.id && r.status === "waiting_for_cache",
+        );
 
-            if (resumeError) {
-              console.error(`Failed to update waiting resume ${waiting.id}:`, resumeError);
-              return { success: false, id: waiting.id, error: resumeError };
+        if (resumesToUpdate.length > 0) {
+          const updatePromises = resumesToUpdate.map(async (waiting) => {
+            try {
+              // Update resume status
+              await db
+                .update(resumes)
+                .set({
+                  status: "completed",
+                  parsedAt: new Date().toISOString(),
+                  parsedContent: contentJson,
+                })
+                .where(eq(resumes.id, waiting.id));
+
+              // Upsert site_data for waiting user
+              const existingWaitingSiteData = await db
+                .select({ id: siteData.id })
+                .from(siteData)
+                .where(eq(siteData.userId, waiting.userId))
+                .limit(1);
+
+              if (existingWaitingSiteData.length > 0) {
+                await db
+                  .update(siteData)
+                  .set({
+                    resumeId: waiting.id,
+                    content: contentJson,
+                    lastPublishedAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  })
+                  .where(eq(siteData.userId, waiting.userId));
+              } else {
+                await db.insert(siteData).values({
+                  id: crypto.randomUUID(),
+                  userId: waiting.userId,
+                  resumeId: waiting.id,
+                  content: contentJson,
+                  lastPublishedAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+
+              return { success: true, id: waiting.id };
+            } catch (updateError) {
+              console.error(`Failed to update waiting resume ${waiting.id}:`, updateError);
+              return { success: false, id: waiting.id, error: updateError };
             }
-
-            const { error: siteDataError } = await supabase.from("site_data").upsert(
-              {
-                user_id: waiting.user_id,
-                resume_id: waiting.id,
-                content: contentAsJson,
-                last_published_at: new Date().toISOString(),
-              },
-              { onConflict: "user_id" },
-            );
-
-            if (siteDataError) {
-              console.error(
-                `Failed to upsert site_data for waiting resume ${waiting.id}:`,
-                siteDataError,
-              );
-              return { success: false, id: waiting.id, error: siteDataError };
-            }
-
-            return { success: true, id: waiting.id };
           });
 
           const results = await Promise.allSettled(updatePromises);
@@ -195,39 +231,39 @@ export async function POST(request: Request) {
           );
           if (failed.length > 0) {
             console.error(
-              `Fan-out: ${failed.length}/${waitingResumes.length} updates failed for hash ${resume.file_hash}`,
+              `Fan-out: ${failed.length}/${resumesToUpdate.length} updates failed for hash ${resume.fileHash}`,
             );
           } else {
             console.log(
-              `Fan-out: Updated ${waitingResumes.length} waiting resumes for hash ${resume.file_hash}`,
+              `Fan-out: Updated ${resumesToUpdate.length} waiting resumes for hash ${resume.fileHash}`,
             );
           }
         }
       }
 
       // Invalidate cache for public resume page
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("handle")
-        .eq("id", resume.user_id)
-        .single();
+      const profile = await db
+        .select({ handle: user.handle })
+        .from(user)
+        .where(eq(user.id, resume.userId))
+        .limit(1);
 
-      if (profile?.handle) {
-        revalidateTag(getResumeCacheTag(profile.handle));
+      if (profile.length > 0 && profile[0].handle) {
+        revalidateTag(getResumeCacheTag(profile[0].handle));
       }
 
       console.log("Resume processing completed successfully");
     }
 
-    // 7. Handle failure
+    // 8. Handle failure
     else if (status === "failed" || status === "canceled") {
-      await supabase
-        .from("resumes")
-        .update({
+      await db
+        .update(resumes)
+        .set({
           status: "failed",
-          error_message: error || "AI parsing failed",
+          errorMessage: error || "AI parsing failed",
         })
-        .eq("id", resume.id);
+        .where(eq(resumes.id, resume.id));
 
       console.log("Resume processing failed:", error);
     }

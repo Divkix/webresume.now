@@ -1,7 +1,12 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
+import { getAuth } from "@/lib/auth";
 import { getResumeCacheTag } from "@/lib/data/resume";
-import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/db";
+import { siteData, user } from "@/lib/db/schema";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -61,14 +66,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
-
     // 2. Authenticate user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const auth = await getAuth();
+    const headersList = await headers();
+    const session = await auth.api.getSession({
+      headers: headersList,
+    });
 
-    if (!user) {
+    if (!session?.user) {
       return createErrorResponse(
         "You must be logged in to complete onboarding",
         ERROR_CODES.UNAUTHORIZED,
@@ -76,7 +81,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Parse and validate request body
+    const authUser = session.user;
+
+    // 3. Get database connection
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
+
+    // 4. Parse and validate request body
     let body: WizardCompleteRequest;
     try {
       const rawBody = await request.json();
@@ -96,23 +107,14 @@ export async function POST(request: Request) {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    // 4. Check if handle is available (not already taken)
-    const { data: existingHandle, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("handle", body.handle)
-      .maybeSingle();
+    // 5. Check if handle is available (not already taken by another user)
+    const existingHandle = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.handle, body.handle), ne(user.id, authUser.id)))
+      .limit(1);
 
-    if (checkError) {
-      console.error("Handle check error:", checkError);
-      return createErrorResponse(
-        "Failed to check handle availability. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
-    }
-
-    if (existingHandle && existingHandle.id !== user.id) {
+    if (existingHandle.length > 0) {
       return createErrorResponse(
         "This handle is already taken. Please choose another.",
         ERROR_CODES.VALIDATION_ERROR,
@@ -121,49 +123,45 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Update profiles table with handle, privacy settings, and mark onboarding as completed
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
+    // 6. Update user table with handle, privacy settings, and mark onboarding as completed
+    const privacySettings = JSON.stringify(body.privacy_settings);
+
+    await db
+      .update(user)
+      .set({
         handle: body.handle,
-        privacy_settings: body.privacy_settings,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
+        privacySettings,
+        onboardingCompleted: true,
+        updatedAt: new Date().toISOString(),
       })
-      .eq("id", user.id);
+      .where(eq(user.id, authUser.id));
 
-    if (profileError) {
-      console.error("Profile update error:", profileError);
-      return createErrorResponse(
-        "Failed to update profile. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
+    // 7. Update site_data with theme_id
+    const existingSiteData = await db
+      .select({ id: siteData.id })
+      .from(siteData)
+      .where(eq(siteData.userId, authUser.id))
+      .limit(1);
+
+    if (existingSiteData.length > 0) {
+      await db
+        .update(siteData)
+        .set({
+          themeId: body.theme_id,
+          lastPublishedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(siteData.userId, authUser.id));
+    } else {
+      // Site data doesn't exist yet - it will be created when resume is parsed
+      console.warn("Site data does not exist yet, skipping theme update");
     }
 
-    // 6. Update site_data with theme_id
-    const { error: siteDataError } = await supabase
-      .from("site_data")
-      .update({
-        theme_id: body.theme_id,
-        last_published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", user.id);
-
-    if (siteDataError) {
-      console.error("Site data update error:", siteDataError);
-      // Don't fail if site_data doesn't exist yet - it will be created when resume is parsed
-      // Just log the error and continue
-      console.warn("Site data update failed, but continuing wizard completion");
-    }
-
-    // 7. Revalidate public page cache with new handle
-    // Tag invalidation works with unstable_cache, path works with full route cache
+    // 8. Revalidate public page cache with new handle
     revalidateTag(getResumeCacheTag(body.handle));
     revalidatePath(`/${body.handle}`);
 
-    // 8. Return success response
+    // 9. Return success response
     return createSuccessResponse({
       success: true,
       handle: body.handle,

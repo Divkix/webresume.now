@@ -1,12 +1,11 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
 import { unstable_cache } from "next/cache";
-import { createAnonClient } from "@/lib/supabase/anon";
+import { getDb } from "@/lib/db";
+import type { PrivacySettings } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
 import { extractCityState, isValidPrivacySettings } from "@/lib/utils/privacy";
-
-interface PrivacySettings {
-  show_phone: boolean;
-  show_address: boolean;
-}
 
 export interface ResumeData {
   profile: {
@@ -29,53 +28,44 @@ export function getResumeCacheTag(handle: string): string {
 }
 
 /**
- * Fetch resume data from Supabase WITHOUT using cookies.
+ * Fetch resume data from D1 via Drizzle WITHOUT using cookies.
  * This is the raw fetcher that gets wrapped by unstable_cache.
  *
  * Privacy filtering is applied at cache time, so cached content
  * is already privacy-filtered.
  */
 async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
-  const supabase = createAnonClient();
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
 
-  // Fetch profile with site_data in a single query
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(
-      `
-      id,
-      handle,
-      email,
-      avatar_url,
-      headline,
-      privacy_settings,
-      site_data (
-        content,
-        theme_id,
-        last_published_at
-      )
-    `,
-    )
-    .eq("handle", handle)
-    .single();
+  // Fetch user by handle with siteData relation
+  const userData = await db.query.user.findFirst({
+    where: eq(user.handle, handle),
+    with: {
+      siteData: true,
+    },
+  });
 
-  if (error || !data) {
+  if (!userData) {
     return null;
   }
 
-  // Ensure site_data exists
-  if (!data.site_data) {
+  // Ensure siteData exists
+  if (!userData.siteData) {
     return null;
   }
 
-  const siteData = Array.isArray(data.site_data) ? data.site_data[0] : data.site_data;
+  // Parse content JSON (stored as text in D1)
+  const content: ResumeContent = JSON.parse(userData.siteData.content);
 
-  // Deep clone content to avoid mutation
-  const content: ResumeContent = JSON.parse(JSON.stringify(siteData.content));
+  // Parse privacy settings from JSON string
+  const parsedPrivacySettings = userData.privacySettings
+    ? (JSON.parse(userData.privacySettings) as PrivacySettings)
+    : null;
 
   // Apply privacy filtering with type guard
-  const privacySettings: PrivacySettings = isValidPrivacySettings(data.privacy_settings)
-    ? data.privacy_settings
+  const privacySettings: PrivacySettings = isValidPrivacySettings(parsedPrivacySettings)
+    ? parsedPrivacySettings
     : { show_phone: false, show_address: false };
 
   // Remove phone if privacy setting is false
@@ -90,14 +80,14 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
 
   return {
     profile: {
-      id: data.id,
-      handle: data.handle,
-      email: data.email,
-      avatar_url: data.avatar_url,
-      headline: data.headline,
+      id: userData.id,
+      handle: userData.handle!,
+      email: userData.email,
+      avatar_url: userData.image,
+      headline: userData.headline,
     },
     content,
-    theme_id: siteData.theme_id,
+    theme_id: userData.siteData.themeId,
   };
 }
 

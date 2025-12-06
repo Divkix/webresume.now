@@ -1,11 +1,14 @@
 /**
  * IP-based rate limiting for anonymous endpoints
  *
- * Uses Supabase for persistence since Cloudflare KV is not configured.
+ * Uses Drizzle/D1 for persistence.
  * Hashes IPs for privacy (GDPR-friendly, no raw IPs stored).
  */
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, gte, sql } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { uploadRateLimits } from "@/lib/db/schema";
 import { featureFlags } from "./config";
 
 const HOURLY_LIMIT = 10;
@@ -71,32 +74,34 @@ export async function checkIPRateLimit(ip: string): Promise<IPRateLimitResult> {
   const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Use admin client to bypass RLS (rate limit table is service-role only)
-  // Cast to any since upload_rate_limits table types haven't been generated yet
-  // After running migration, regenerate types with: bun run db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = createAdminClient() as any;
-
   try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
+
     // Count requests in both windows in parallel
     const [hourlyResult, dailyResult] = await Promise.all([
-      supabase
-        .from("upload_rate_limits")
-        .select("*", { count: "exact", head: true })
-        .eq("ip_hash", ipHash)
-        .gte("created_at", oneHourAgo),
-      supabase
-        .from("upload_rate_limits")
-        .select("*", { count: "exact", head: true })
-        .eq("ip_hash", ipHash)
-        .gte("created_at", oneDayAgo),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(uploadRateLimits)
+        .where(
+          and(
+            gte(uploadRateLimits.createdAt, oneHourAgo),
+            sql`${uploadRateLimits.ipHash} = ${ipHash}`,
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(uploadRateLimits)
+        .where(
+          and(
+            gte(uploadRateLimits.createdAt, oneDayAgo),
+            sql`${uploadRateLimits.ipHash} = ${ipHash}`,
+          ),
+        ),
     ]);
 
-    if (hourlyResult.error) throw hourlyResult.error;
-    if (dailyResult.error) throw dailyResult.error;
-
-    const hourlyCount = hourlyResult.count || 0;
-    const dailyCount = dailyResult.count || 0;
+    const hourlyCount = hourlyResult[0]?.count ?? 0;
+    const dailyCount = dailyResult[0]?.count ?? 0;
 
     const hourlyRemaining = Math.max(0, HOURLY_LIMIT - hourlyCount);
     const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyCount);
@@ -120,11 +125,13 @@ export async function checkIPRateLimit(ip: string): Promise<IPRateLimitResult> {
     }
 
     // Record this request (insert before returning success)
-    const { error: insertError } = await supabase
-      .from("upload_rate_limits")
-      .insert({ ip_hash: ipHash });
-
-    if (insertError) {
+    try {
+      await db.insert(uploadRateLimits).values({
+        id: crypto.randomUUID(),
+        ipHash,
+        createdAt: now.toISOString(),
+      });
+    } catch (insertError) {
       console.error("Failed to record rate limit:", insertError);
       // Continue anyway - fail open for legitimate users
       // The claim endpoint has authenticated rate limiting as a second layer

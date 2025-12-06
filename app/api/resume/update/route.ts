@@ -1,8 +1,13 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
 import { getResumeCacheTag } from "@/lib/data/resume";
+import { getDb } from "@/lib/db";
+import { siteData, user } from "@/lib/db/schema";
 import { resumeContentSchema } from "@/lib/schemas/resume";
-import { createClient } from "@/lib/supabase/server";
+import type { ResumeContent } from "@/lib/types/database";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
@@ -10,6 +15,10 @@ import {
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
 import { validateRequestSize } from "@/lib/utils/validation";
+
+interface UpdateRequestBody {
+  content?: ResumeContent;
+}
 
 /**
  * PUT /api/resume/update
@@ -39,23 +48,34 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 2. Authenticate user
-    const authResult = await requireAuthWithMessage("You must be logged in to update your resume");
-    if (authResult.error) return authResult.error;
-    const { user } = authResult;
+    // 2. Get D1 database binding
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    const supabase = await createClient();
+    // 3. Authenticate user via Better Auth
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    // 3. Check rate limit (10 updates per hour)
-    const rateLimitResponse = await enforceRateLimit(user.id, "resume_update");
+    if (!session?.user) {
+      return createErrorResponse(
+        "You must be logged in to update your resume",
+        ERROR_CODES.UNAUTHORIZED,
+        401,
+      );
+    }
+
+    const userId = session.user.id;
+
+    // 4. Check rate limit (10 updates per hour)
+    const rateLimitResponse = await enforceRateLimit(userId, "resume_update");
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // 4. Parse and validate request body
-    let body;
+    // 5. Parse and validate request body
+    let body: UpdateRequestBody;
     try {
-      body = await request.json();
+      body = (await request.json()) as UpdateRequestBody;
     } catch {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
@@ -72,21 +92,24 @@ export async function PUT(request: Request) {
     }
 
     const content = validation.data;
+    const now = new Date().toISOString();
 
-    // 5. Update site_data
-    const { data, error } = await supabase
-      .from("site_data")
-      .update({
-        content,
-        last_published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+    // 6. Update site_data
+    const updateResult = await db
+      .update(siteData)
+      .set({
+        content: JSON.stringify(content),
+        lastPublishedAt: now,
+        updatedAt: now,
       })
-      .eq("user_id", user.id)
-      .select("id, content, last_published_at")
-      .single();
+      .where(eq(siteData.userId, userId))
+      .returning({
+        id: siteData.id,
+        content: siteData.content,
+        lastPublishedAt: siteData.lastPublishedAt,
+      });
 
-    if (error) {
-      console.error("Database update error:", error);
+    if (updateResult.length === 0) {
       return createErrorResponse(
         "Failed to update resume. Please try again.",
         ERROR_CODES.DATABASE_ERROR,
@@ -94,13 +117,14 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 6. Invalidate cache for public resume page
+    const data = updateResult[0];
+
+    // 7. Invalidate cache for public resume page
     // Fetch user's handle to revalidate their public page
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("handle")
-      .eq("id", user.id)
-      .single();
+    const profile = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { handle: true },
+    });
 
     if (profile?.handle) {
       // Revalidate the public resume page immediately
@@ -109,13 +133,13 @@ export async function PUT(request: Request) {
       revalidatePath(`/${profile.handle}`);
     }
 
-    // 7. Return success response
+    // 8. Return success response
     return createSuccessResponse({
       success: true,
       data: {
         id: data.id,
-        content: data.content,
-        last_published_at: data.last_published_at,
+        content: JSON.parse(data.content),
+        last_published_at: data.lastPublishedAt,
       },
     });
   } catch (error) {

@@ -18,6 +18,11 @@ interface HandleFormProps {
   currentHandle: string;
 }
 
+interface ErrorResponse {
+  error?: string;
+  message?: string;
+}
+
 export function HandleForm({ currentHandle }: HandleFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -69,7 +74,7 @@ export function HandleForm({ currentHandle }: HandleFormProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = (await response.json()) as ErrorResponse;
         throw new Error(errorData.message || "Failed to update handle");
       }
 

@@ -1,13 +1,12 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { createClient } from "@/lib/supabase/client";
+import { signIn, useSession } from "@/lib/auth/client";
 import { validatePDF } from "@/lib/utils/validation";
 
 /**
@@ -26,12 +25,24 @@ interface FileDropzoneProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+interface UploadSignResponse {
+  uploadUrl: string;
+  key: string;
+  error?: string;
+  message?: string;
+}
+
+interface ClaimResponse {
+  error?: string;
+}
+
 export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const isModal = open !== undefined && onOpenChange !== undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user ?? null;
 
-  const [user, setUser] = useState<User | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -39,18 +50,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-      setUser(currentUser);
-    };
-    checkAuth();
-  }, []);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -132,7 +131,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       });
 
       if (!signResponse.ok) {
-        const data = await signResponse.json();
+        const data = (await signResponse.json()) as UploadSignResponse;
         // Handle rate limiting specifically
         if (signResponse.status === 429) {
           throw new Error(data.message || "Too many upload attempts. Please wait and try again.");
@@ -140,7 +139,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         throw new Error(data.error || "Failed to get upload URL");
       }
 
-      const { uploadUrl, key } = await signResponse.json();
+      const { uploadUrl, key } = (await signResponse.json()) as UploadSignResponse;
 
       // Step 3: Upload to R2 - progress reflects actual stages
       setUploadProgress(50); // Got presigned URL, ready to upload
@@ -220,7 +219,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       });
 
       if (!claimResponse.ok) {
-        const data = await claimResponse.json();
+        const data = (await claimResponse.json()) as ClaimResponse;
         throw new Error(data.error || "Failed to claim resume");
       }
 
@@ -275,13 +274,15 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   };
 
   const handleLoginRedirect = async () => {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "/wizard",
+      });
+    } catch (err) {
+      console.error("Error signing in:", err);
+      toast.error("Failed to sign in. Please try again.");
+    }
   };
 
   const handleReset = () => {

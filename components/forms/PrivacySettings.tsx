@@ -16,6 +16,11 @@ interface PrivacySettingsFormProps {
   userHandle: string | null;
 }
 
+interface ErrorResponse {
+  error?: string;
+  message?: string;
+}
+
 export function PrivacySettingsForm({ initialSettings, userHandle }: PrivacySettingsFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -40,7 +45,7 @@ export function PrivacySettingsForm({ initialSettings, userHandle }: PrivacySett
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = (await response.json()) as ErrorResponse;
         throw new Error(errorData.message || "Failed to update privacy settings");
       }
 

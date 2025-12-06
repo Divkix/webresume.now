@@ -1,17 +1,17 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth } from "@/lib/auth";
 import { SidebarLayoutClient } from "./SidebarLayoutClient";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
+  const auth = await getAuth();
 
-  // Check authentication
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  // Check authentication via Better Auth
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  if (error || !user) {
+  if (!session) {
     redirect("/");
   }
 

@@ -1,54 +1,64 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { count, desc, eq } from "drizzle-orm";
 import { User } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HandleForm } from "@/components/forms/HandleForm";
 import { PrivacySettingsForm } from "@/components/forms/PrivacySettings";
 import { ResumeManagementCard } from "@/components/settings/ResumeManagementCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import type { PrivacySettings } from "@/lib/db/schema";
+import { resumes, user } from "@/lib/db/schema";
 import { isValidPrivacySettings } from "@/lib/utils/privacy";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
+  const auth = await getAuth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     redirect("/");
   }
 
-  // Fetch user profile
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id, handle, email, avatar_url, headline, privacy_settings")
-    .eq("id", user.id)
-    .single();
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
 
-  if (error || !profile) {
-    console.error("Failed to fetch profile:", error);
+  // Fetch user profile
+  const profile = await db.query.user.findFirst({
+    where: eq(user.id, session.user.id),
+  });
+
+  if (!profile) {
+    console.error("Failed to fetch profile for user:", session.user.id);
     redirect("/dashboard");
   }
 
+  // Parse privacy settings from JSON string
+  const parsedPrivacySettings = profile.privacySettings
+    ? (JSON.parse(profile.privacySettings) as PrivacySettings)
+    : null;
+
   // Validate and normalize privacy settings
-  const privacySettings = isValidPrivacySettings(profile.privacy_settings)
-    ? profile.privacy_settings
+  const privacySettings = isValidPrivacySettings(parsedPrivacySettings)
+    ? parsedPrivacySettings
     : { show_phone: false, show_address: false };
 
-  // Fetch resume data for management section
-  const { count: resumeCount } = await supabase
-    .from("resumes")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+  // Fetch resume count
+  const resumeCountResult = await db
+    .select({ count: count() })
+    .from(resumes)
+    .where(eq(resumes.userId, session.user.id));
+  const resumeCount = resumeCountResult[0]?.count ?? 0;
 
-  const { data: latestResume } = await supabase
-    .from("resumes")
-    .select("id, status, created_at, error_message")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+  // Fetch latest resume
+  const latestResume = await db.query.resumes.findFirst({
+    where: eq(resumes.userId, session.user.id),
+    orderBy: [desc(resumes.createdAt)],
+  });
 
   return (
     <div className="min-h-screen py-8">
@@ -95,12 +105,12 @@ export default async function SettingsPage() {
               </div>
             )}
 
-            {profile.avatar_url && (
+            {profile.image && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-700">Avatar</p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={profile.avatar_url}
+                  src={profile.image}
                   alt="Profile avatar"
                   className="w-16 h-16 rounded-full object-cover border-2 border-slate-200/60"
                 />
@@ -111,10 +121,10 @@ export default async function SettingsPage() {
 
         {/* Resume Management */}
         <ResumeManagementCard
-          resumeCount={resumeCount || 0}
-          latestResumeDate={latestResume?.created_at}
+          resumeCount={resumeCount}
+          latestResumeDate={latestResume?.createdAt ?? undefined}
           latestResumeStatus={latestResume?.status}
-          latestResumeError={latestResume?.error_message}
+          latestResumeError={latestResume?.errorMessage ?? undefined}
           latestResumeId={latestResume?.id}
         />
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface RealtimeStatusListenerProps {
   resumeId: string;
@@ -15,25 +14,32 @@ type DetectedState = {
   errorMessage?: string;
 };
 
+interface ResumeStatusResponse {
+  status: "pending_claim" | "processing" | "completed" | "failed";
+  progress_pct?: number;
+  error?: string | null;
+  can_retry?: boolean;
+}
+
+/**
+ * Status listener component that polls the API for resume status changes.
+ * Replaces the previous Supabase Realtime implementation with HTTP polling.
+ */
 export function RealtimeStatusListener({
   resumeId,
-  userId,
   currentStatus,
 }: RealtimeStatusListenerProps) {
-  // Memoize supabase client to prevent recreation on every render
-  const supabase = useMemo(() => createClient(), []);
-
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasRefreshedRef = useRef(false);
   const refreshDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [detected, setDetected] = useState<DetectedState>({
-    status: "processing",
+    status: currentStatus === "processing" ? "processing" : (currentStatus as DetectedState["status"]),
   });
 
   const handleStatusChange = useCallback((newStatus: string, errorMessage?: string) => {
     if (hasRefreshedRef.current) return;
     if (newStatus === "completed" || newStatus === "failed") {
-      // Debounce to prevent race condition between realtime and polling
+      // Debounce to prevent race condition
       if (refreshDebounceRef.current) {
         clearTimeout(refreshDebounceRef.current);
       }
@@ -52,39 +58,22 @@ export function RealtimeStatusListener({
   }, []);
 
   useEffect(() => {
-    // Set up Realtime subscription
-    const channel = supabase
-      .channel(`resume-status-${resumeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "resumes",
-          filter: `id=eq.${resumeId}`,
-        },
-        (payload) => {
-          const newStatus = payload.new?.status;
-          const errorMessage = payload.new?.error_message as string | undefined;
-          if (newStatus) {
-            handleStatusChange(newStatus, errorMessage);
-          }
-        },
-      )
-      .subscribe();
+    // Only poll if status is processing
+    if (currentStatus !== "processing") {
+      return;
+    }
 
-    // Polling fallback
+    // Poll status via API
     const pollStatus = async () => {
       if (hasRefreshedRef.current) return;
       try {
-        const { data } = await supabase
-          .from("resumes")
-          .select("status, error_message")
-          .eq("id", resumeId)
-          .single();
+        const response = await fetch(`/api/resume/status?resume_id=${resumeId}`);
+        if (!response.ok) return;
 
-        if (data?.status && data.status !== currentStatus) {
-          handleStatusChange(data.status, data.error_message ?? undefined);
+        const data = (await response.json()) as ResumeStatusResponse;
+
+        if (data.status && data.status !== currentStatus) {
+          handleStatusChange(data.status, data.error ?? undefined);
         }
       } catch {
         // Ignore polling errors
@@ -96,8 +85,6 @@ export function RealtimeStatusListener({
     pollIntervalRef.current = setInterval(pollStatus, 3000);
 
     return () => {
-      channel.unsubscribe();
-      supabase.removeChannel(channel);
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
@@ -105,7 +92,7 @@ export function RealtimeStatusListener({
         clearTimeout(refreshDebounceRef.current);
       }
     };
-  }, [resumeId, currentStatus, handleStatusChange, supabase]);
+  }, [resumeId, currentStatus, handleStatusChange]);
 
   if (detected.status === "completed") {
     return (

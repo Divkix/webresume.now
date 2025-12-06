@@ -5,7 +5,6 @@ import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { createClient } from "@/lib/supabase/client";
 import type { ResumeContent } from "@/lib/types/database";
 import { validatePDF } from "@/lib/utils/validation";
 
@@ -15,12 +14,36 @@ interface UploadStepProps {
 
 type UploadState = "idle" | "uploading" | "claiming" | "parsing" | "error";
 
+// API Response types
+interface SignResponse {
+  uploadUrl: string;
+  key: string;
+  error?: string;
+  message?: string;
+}
+
+interface ResumeStatusResponse {
+  status: "pending_claim" | "processing" | "completed" | "failed";
+  error?: string | null;
+}
+
+interface ClaimResponse {
+  resume_id: string;
+  cached?: boolean;
+  error?: string;
+}
+
+interface SiteDataResponse {
+  content?: ResumeContent;
+}
+
 /**
  * Step 0: Upload Resume Component
  * Allows users who logged in without uploading to upload their resume
  */
 export function UploadStep({ onContinue }: UploadStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>("idle");
@@ -77,12 +100,88 @@ export function UploadStep({ onContinue }: UploadStepProps) {
     uploadAndParse(selectedFile);
   };
 
+  // Poll for resume status
+  const pollResumeStatus = async (resumeId: string): Promise<ResumeContent | null> => {
+    return new Promise((resolve) => {
+      let attempts = 0;
+      const maxAttempts = 30; // 30 * 3 seconds = 90 seconds max
+
+      const checkStatus = async () => {
+        try {
+          const response = await fetch(`/api/resume/status?resume_id=${resumeId}`);
+          if (!response.ok) {
+            throw new Error("Failed to check status");
+          }
+
+          const data = (await response.json()) as ResumeStatusResponse;
+
+          if (data.status === "completed") {
+            // Clear polling interval
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+
+            // Fetch the parsed content
+            const siteDataResponse = await fetch("/api/site-data");
+            if (siteDataResponse.ok) {
+              const siteData = (await siteDataResponse.json()) as SiteDataResponse | null;
+              if (siteData?.content) {
+                resolve(siteData.content);
+                return;
+              }
+            }
+            resolve(null);
+            return;
+          }
+
+          if (data.status === "failed") {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            setError(data.error || "Resume parsing failed. Please try again.");
+            setUploadState("error");
+            resolve(null);
+            return;
+          }
+
+          attempts++;
+          if (attempts >= maxAttempts) {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            setError("Parsing is taking longer than expected. Please wait or try again.");
+            setUploadState("error");
+            resolve(null);
+          }
+        } catch (err) {
+          console.error("Error polling status:", err);
+          attempts++;
+          if (attempts >= maxAttempts) {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            setError("Failed to check parsing status. Please try again.");
+            setUploadState("error");
+            resolve(null);
+          }
+        }
+      };
+
+      // Start polling every 3 seconds
+      pollingIntervalRef.current = setInterval(checkStatus, 3000);
+      // Check immediately as well
+      checkStatus();
+    });
+  };
+
   const uploadAndParse = async (fileToUpload: File) => {
     setUploadState("uploading");
     setUploadProgress(0);
     setError(null);
-
-    const supabase = createClient();
 
     try {
       // Step 1: Get presigned URL (include file size for server-side validation)
@@ -96,7 +195,7 @@ export function UploadStep({ onContinue }: UploadStepProps) {
       });
 
       if (!signResponse.ok) {
-        const data = await signResponse.json();
+        const data = (await signResponse.json()) as SignResponse;
         // Handle rate limiting specifically
         if (signResponse.status === 429) {
           throw new Error(data.message || "Too many upload attempts. Please wait and try again.");
@@ -104,7 +203,8 @@ export function UploadStep({ onContinue }: UploadStepProps) {
         throw new Error(data.error || "Failed to get upload URL");
       }
 
-      const { uploadUrl, key } = await signResponse.json();
+      const signData = (await signResponse.json()) as SignResponse;
+      const { uploadUrl, key } = signData;
       setUploadProgress(20);
 
       // Step 2: Upload to R2
@@ -129,79 +229,34 @@ export function UploadStep({ onContinue }: UploadStepProps) {
       });
 
       if (!claimResponse.ok) {
-        const data = await claimResponse.json();
+        const data = (await claimResponse.json()) as ClaimResponse;
         throw new Error(data.error || "Failed to claim resume");
       }
 
-      const { resume_id: resumeId } = await claimResponse.json();
+      const claimData = (await claimResponse.json()) as ClaimResponse;
+      const resumeId = claimData.resume_id;
+      const cached = claimData.cached;
       setUploadProgress(70);
       setUploadState("parsing");
 
-      // Step 4: Subscribe to Realtime for parsing status
-      const parsingResult = await new Promise<ResumeContent | null>((resolve) => {
-        let timeoutId: NodeJS.Timeout | null = null;
+      // Step 4: If cached, we already have the content; otherwise poll for status
+      if (cached) {
+        // Fetch site_data directly since it's already populated
+        const siteDataResponse = await fetch("/api/site-data");
+        if (siteDataResponse.ok) {
+          const siteData = (await siteDataResponse.json()) as SiteDataResponse | null;
+          if (siteData?.content) {
+            setUploadProgress(100);
+            toast.success("Resume parsed successfully!");
+            onContinue(siteData.content);
+            return;
+          }
+        }
+        throw new Error("Failed to load cached resume data");
+      }
 
-        const channel = supabase
-          .channel(`wizard-upload-${resumeId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "UPDATE",
-              schema: "public",
-              table: "resumes",
-              filter: `id=eq.${resumeId}`,
-            },
-            async (payload) => {
-              const newStatus = payload.new?.status;
-
-              if (newStatus === "completed") {
-                if (timeoutId) clearTimeout(timeoutId);
-                channel.unsubscribe();
-                supabase.removeChannel(channel);
-
-                // Fetch the parsed content
-                const {
-                  data: { user },
-                } = await supabase.auth.getUser();
-                if (!user) {
-                  resolve(null);
-                  return;
-                }
-
-                const { data: siteData } = await supabase
-                  .from("site_data")
-                  .select("content")
-                  .eq("user_id", user.id)
-                  .single();
-
-                if (siteData?.content) {
-                  resolve(siteData.content as unknown as ResumeContent);
-                } else {
-                  resolve(null);
-                }
-              }
-
-              if (newStatus === "failed") {
-                if (timeoutId) clearTimeout(timeoutId);
-                channel.unsubscribe();
-                supabase.removeChannel(channel);
-                setError(payload.new?.error_message || "Resume parsing failed. Please try again.");
-                setUploadState("error");
-                resolve(null);
-              }
-            },
-          )
-          .subscribe();
-
-        // Timeout after 90 seconds
-        timeoutId = setTimeout(() => {
-          channel.unsubscribe();
-          supabase.removeChannel(channel);
-          setError("Parsing is taking longer than expected. Please wait or try again.");
-          setUploadState("error");
-          resolve(null);
-        }, 90000);
-      });
+      // Poll for parsing completion
+      const parsingResult = await pollResumeStatus(resumeId);
 
       if (parsingResult) {
         setUploadProgress(100);
@@ -230,6 +285,11 @@ export function UploadStep({ onContinue }: UploadStepProps) {
   };
 
   const handleRetry = () => {
+    // Clear any polling interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
     setError(null);
     setUploadState("idle");
     setUploadProgress(0);

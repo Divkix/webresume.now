@@ -1,5 +1,10 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { resumes, siteData } from "@/lib/db/schema";
 import { getParseStatus, normalizeResumeData } from "@/lib/replicate";
-import { createClient } from "@/lib/supabase/server";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -8,15 +13,15 @@ import {
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient();
+    // 1. Get D1 database binding
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    // 1. Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 2. Check authentication via Better Auth
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    if (authError || !user) {
+    if (!session?.user) {
       return createErrorResponse(
         "You must be logged in to check resume status",
         ERROR_CODES.UNAUTHORIZED,
@@ -24,7 +29,9 @@ export async function GET(request: Request) {
       );
     }
 
-    // 2. Get resume_id from query params
+    const userId = session.user.id;
+
+    // 3. Get resume_id from query params
     const { searchParams } = new URL(request.url);
     const resumeId = searchParams.get("resume_id");
 
@@ -32,19 +39,17 @@ export async function GET(request: Request) {
       return createErrorResponse("resume_id parameter is required", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    // 3. Fetch resume from database (include file_hash for fan-out)
-    const { data: resume, error: fetchError } = await supabase
-      .from("resumes")
-      .select("id, user_id, status, replicate_job_id, error_message, retry_count, file_hash")
-      .eq("id", resumeId)
-      .single();
+    // 4. Fetch resume from database (include fileHash for fan-out)
+    const resume = await db.query.resumes.findFirst({
+      where: eq(resumes.id, resumeId),
+    });
 
-    if (fetchError || !resume) {
+    if (!resume) {
       return createErrorResponse("Resume not found", ERROR_CODES.NOT_FOUND, 404);
     }
 
-    // 4. Verify ownership
-    if (resume.user_id !== user.id) {
+    // 5. Verify ownership
+    if (resume.userId !== userId) {
       return createErrorResponse(
         "You do not have permission to access this resume",
         ERROR_CODES.FORBIDDEN,
@@ -52,18 +57,18 @@ export async function GET(request: Request) {
       );
     }
 
-    // 5. If not processing, return current status
+    // 6. If not processing, return current status
     if (resume.status !== "processing") {
       return createSuccessResponse({
         status: resume.status,
         progress_pct: resume.status === "completed" ? 100 : 0,
-        error: resume.error_message,
-        can_retry: resume.status === "failed" && resume.retry_count < 2,
+        error: resume.errorMessage,
+        can_retry: resume.status === "failed" && resume.retryCount < 2,
       });
     }
 
-    // 6. Check if we have a replicate job ID
-    if (!resume.replicate_job_id) {
+    // 7. Check if we have a replicate job ID
+    if (!resume.replicateJobId) {
       return createSuccessResponse({
         status: "processing",
         progress_pct: 10,
@@ -72,10 +77,10 @@ export async function GET(request: Request) {
       });
     }
 
-    // 7. Poll Replicate for status
+    // 8. Poll Replicate for status
     let prediction;
     try {
-      prediction = await getParseStatus(resume.replicate_job_id);
+      prediction = await getParseStatus(resume.replicateJobId);
     } catch (error) {
       console.error("Replicate API error:", error);
       // Return processing status on network errors - client will retry
@@ -87,15 +92,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // 8. Handle Replicate status
+    // 9. Handle Replicate status
     if (prediction.status === "succeeded") {
       try {
         // IDEMPOTENCY: Re-check status to handle race condition with webhook
-        const { data: currentResume } = await supabase
-          .from("resumes")
-          .select("status")
-          .eq("id", resumeId)
-          .single();
+        const currentResume = await db.query.resumes.findFirst({
+          where: eq(resumes.id, resumeId),
+          columns: { status: true },
+        });
 
         if (currentResume?.status === "completed" || currentResume?.status === "failed") {
           // Already processed (likely by webhook), return current status
@@ -114,86 +118,104 @@ export async function GET(request: Request) {
 
         const normalizedContent = normalizeResumeData(prediction.output.extraction_schema_json);
         const contentAsJson = JSON.parse(JSON.stringify(normalizedContent));
+        const now = new Date().toISOString();
 
-        // Upsert to site_data (ON CONFLICT user_id DO UPDATE)
-        // Note: theme_id will be set by wizard completion, not here
-        const { error: upsertError } = await supabase.from("site_data").upsert(
-          {
-            user_id: user.id,
-            resume_id: resumeId,
-            content: contentAsJson,
-            last_published_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id",
-          },
-        );
+        // Check if site_data exists for this user
+        const existingSiteData = await db.query.siteData.findFirst({
+          where: eq(siteData.userId, userId),
+          columns: { id: true },
+        });
 
-        if (upsertError) {
-          console.error("Failed to save resume data to site_data:", upsertError);
-          throw new Error(`Database save failed: ${upsertError.message}`);
+        if (existingSiteData) {
+          // Update existing site_data
+          await db
+            .update(siteData)
+            .set({
+              resumeId: resumeId,
+              content: JSON.stringify(contentAsJson),
+              lastPublishedAt: now,
+              updatedAt: now,
+            })
+            .where(eq(siteData.userId, userId));
+        } else {
+          // Insert new site_data
+          await db.insert(siteData).values({
+            id: crypto.randomUUID(),
+            userId: userId,
+            resumeId: resumeId,
+            content: JSON.stringify(contentAsJson),
+            lastPublishedAt: now,
+            createdAt: now,
+            updatedAt: now,
+          });
         }
 
         // Update resume status to completed WITH parsed_content for cache lookup
         // Use optimistic locking (only update if still processing) to prevent race conditions
-        const { error: updateError } = await supabase
-          .from("resumes")
-          .update({
+        await db
+          .update(resumes)
+          .set({
             status: "completed",
-            parsed_at: new Date().toISOString(),
-            parsed_content: contentAsJson,
+            parsedAt: now,
+            parsedContent: JSON.stringify(contentAsJson),
           })
-          .eq("id", resumeId)
-          .eq("status", "processing");
-
-        if (updateError) {
-          console.error("Failed to update resume status to completed:", updateError);
-          // Don't throw - data is already saved, just log the issue
-        }
+          .where(and(eq(resumes.id, resumeId), eq(resumes.status, "processing")));
 
         // Fan out to all resumes waiting for this file hash (same pattern as webhook)
-        if (resume.file_hash) {
-          const { data: waitingResumes } = await supabase
-            .from("resumes")
-            .select("id, user_id")
-            .eq("file_hash", resume.file_hash)
-            .eq("status", "waiting_for_cache");
+        if (resume.fileHash) {
+          const waitingResumes = await db.query.resumes.findMany({
+            where: and(
+              eq(resumes.fileHash, resume.fileHash),
+              eq(resumes.status, "waiting_for_cache"),
+            ),
+            columns: { id: true, userId: true },
+          });
 
-          if (waitingResumes?.length) {
+          if (waitingResumes.length > 0) {
             const updatePromises = waitingResumes.map(async (waiting) => {
-              const { error: resumeError } = await supabase
-                .from("resumes")
-                .update({
-                  status: "completed",
-                  parsed_at: new Date().toISOString(),
-                  parsed_content: contentAsJson,
-                })
-                .eq("id", waiting.id);
+              try {
+                await db
+                  .update(resumes)
+                  .set({
+                    status: "completed",
+                    parsedAt: now,
+                    parsedContent: JSON.stringify(contentAsJson),
+                  })
+                  .where(eq(resumes.id, waiting.id));
 
-              if (resumeError) {
-                console.error(`Failed to update waiting resume ${waiting.id}:`, resumeError);
-                return { success: false, id: waiting.id, error: resumeError };
+                // Check if site_data exists for waiting user
+                const waitingSiteData = await db.query.siteData.findFirst({
+                  where: eq(siteData.userId, waiting.userId),
+                  columns: { id: true },
+                });
+
+                if (waitingSiteData) {
+                  await db
+                    .update(siteData)
+                    .set({
+                      resumeId: waiting.id,
+                      content: JSON.stringify(contentAsJson),
+                      lastPublishedAt: now,
+                      updatedAt: now,
+                    })
+                    .where(eq(siteData.userId, waiting.userId));
+                } else {
+                  await db.insert(siteData).values({
+                    id: crypto.randomUUID(),
+                    userId: waiting.userId,
+                    resumeId: waiting.id,
+                    content: JSON.stringify(contentAsJson),
+                    lastPublishedAt: now,
+                    createdAt: now,
+                    updatedAt: now,
+                  });
+                }
+
+                return { success: true, id: waiting.id };
+              } catch (error) {
+                console.error(`Failed to update waiting resume ${waiting.id}:`, error);
+                return { success: false, id: waiting.id, error };
               }
-
-              const { error: siteDataError } = await supabase.from("site_data").upsert(
-                {
-                  user_id: waiting.user_id,
-                  resume_id: waiting.id,
-                  content: contentAsJson,
-                  last_published_at: new Date().toISOString(),
-                },
-                { onConflict: "user_id" },
-              );
-
-              if (siteDataError) {
-                console.error(
-                  `Failed to upsert site_data for waiting resume ${waiting.id}:`,
-                  siteDataError,
-                );
-                return { success: false, id: waiting.id, error: siteDataError };
-              }
-
-              return { success: true, id: waiting.id };
             });
 
             const results = await Promise.allSettled(updatePromises);
@@ -202,11 +224,11 @@ export async function GET(request: Request) {
             );
             if (failed.length > 0) {
               console.error(
-                `Fan-out (polling): ${failed.length}/${waitingResumes.length} updates failed for hash ${resume.file_hash}`,
+                `Fan-out (polling): ${failed.length}/${waitingResumes.length} updates failed for hash ${resume.fileHash}`,
               );
             } else {
               console.log(
-                `Fan-out (polling): Updated ${waitingResumes.length} waiting resumes for hash ${resume.file_hash}`,
+                `Fan-out (polling): Updated ${waitingResumes.length} waiting resumes for hash ${resume.fileHash}`,
               );
             }
           }
@@ -227,20 +249,20 @@ export async function GET(request: Request) {
             : "Failed to process resume data";
 
         // Mark resume as failed
-        await supabase
-          .from("resumes")
-          .update({
+        await db
+          .update(resumes)
+          .set({
             status: "failed",
-            error_message: errorMessage,
+            errorMessage: errorMessage,
           })
-          .eq("id", resumeId);
+          .where(eq(resumes.id, resumeId));
 
         // Return failed status (not error - allows UI to show retry)
         return createSuccessResponse({
           status: "failed",
           progress_pct: 0,
           error: errorMessage,
-          can_retry: resume.retry_count < 2,
+          can_retry: resume.retryCount < 2,
         });
       }
     } else if (
@@ -251,23 +273,19 @@ export async function GET(request: Request) {
       // Mark as failed
       const errorMessage = prediction.error || "AI parsing failed";
 
-      const { error: updateError } = await supabase
-        .from("resumes")
-        .update({
+      await db
+        .update(resumes)
+        .set({
           status: "failed",
-          error_message: errorMessage,
+          errorMessage: errorMessage,
         })
-        .eq("id", resumeId);
-
-      if (updateError) {
-        console.error("Failed to update resume status:", updateError);
-      }
+        .where(eq(resumes.id, resumeId));
 
       return createSuccessResponse({
         status: "failed",
         progress_pct: 0,
         error: errorMessage,
-        can_retry: resume.retry_count < 2,
+        can_retry: resume.retryCount < 2,
       });
     } else {
       // Still processing or starting

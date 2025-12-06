@@ -1,8 +1,10 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getDb } from "@/lib/db";
+import { handleChanges, user } from "@/lib/db/schema";
 import { handleUpdateSchema } from "@/lib/schemas/profile";
-import { createClient } from "@/lib/supabase/server";
-import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -30,17 +32,34 @@ export async function PUT(request: Request) {
     // 2. Authenticate user
     const authResult = await requireAuthWithMessage("You must be logged in to update your handle");
     if (authResult.error) return authResult.error;
-    const { user } = authResult;
+    const { user: authUser } = authResult;
 
-    const supabase = await createClient();
+    // 3. Get database connection
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    // 3. Check rate limit (3 handle changes per 24 hours)
-    const rateLimitResponse = await enforceRateLimit(user.id, "handle_change");
-    if (rateLimitResponse) {
-      return rateLimitResponse;
+    // 4. Check rate limit (3 handle changes per 24 hours)
+    const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // Fetch all handle changes for the user and filter in JS
+    const changeCount = await db
+      .select({ id: handleChanges.id, createdAt: handleChanges.createdAt })
+      .from(handleChanges)
+      .where(eq(handleChanges.userId, authUser.id));
+
+    const changesIn24h = changeCount.filter(
+      (c) => new Date(c.createdAt) >= new Date(windowStart),
+    ).length;
+
+    if (changesIn24h >= 3) {
+      return createErrorResponse(
+        "Rate limit exceeded. Maximum 3 handle changes per 24 hours.",
+        ERROR_CODES.RATE_LIMIT_EXCEEDED,
+        429,
+      );
     }
 
-    // 4. Parse and validate request body
+    // 5. Parse and validate request body
     let body;
     try {
       body = await request.json();
@@ -61,14 +80,14 @@ export async function PUT(request: Request) {
 
     const { handle: newHandle } = validation.data;
 
-    // 5. Fetch current profile to get old handle
-    const { data: currentProfile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("handle")
-      .eq("id", user.id)
-      .single();
+    // 6. Fetch current profile to get old handle
+    const currentUser = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, authUser.id))
+      .limit(1);
 
-    if (fetchError || !currentProfile) {
+    if (!currentUser.length) {
       return createErrorResponse(
         "Failed to fetch current profile",
         ERROR_CODES.DATABASE_ERROR,
@@ -76,9 +95,9 @@ export async function PUT(request: Request) {
       );
     }
 
-    const oldHandle = currentProfile.handle;
+    const oldHandle = currentUser[0].handle;
 
-    // 6. Check if handle is already the same
+    // 7. Check if handle is already the same
     if (oldHandle === newHandle) {
       return createErrorResponse(
         "Handle is already set to this value",
@@ -87,23 +106,14 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 7. Check if new handle is already taken by another user
-    const { data: existingProfile, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("handle", newHandle)
-      .maybeSingle();
+    // 8. Check if new handle is already taken by another user
+    const existingUser = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.handle, newHandle), ne(user.id, authUser.id)))
+      .limit(1);
 
-    if (checkError) {
-      console.error("Handle uniqueness check error:", checkError);
-      return createErrorResponse(
-        "Failed to check handle availability",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
-    }
-
-    if (existingProfile && existingProfile.id !== user.id) {
+    if (existingUser.length > 0) {
       return createErrorResponse(
         "This handle is already taken. Please choose a different one.",
         ERROR_CODES.CONFLICT,
@@ -111,29 +121,25 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 8. Update handle in profiles table
-    const { data, error: updateError } = await supabase
-      .from("profiles")
-      .update({
+    // 9. Update handle in user table
+    await db
+      .update(user)
+      .set({
         handle: newHandle,
-        updated_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
-      .eq("id", user.id)
-      .select("handle")
-      .single();
+      .where(eq(user.id, authUser.id));
 
-    if (updateError) {
-      console.error("Handle update error:", updateError);
-      return createErrorResponse(
-        "Failed to update handle. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
-    }
+    // 10. Record the handle change for rate limiting
+    await db.insert(handleChanges).values({
+      id: crypto.randomUUID(),
+      userId: authUser.id,
+      oldHandle: oldHandle,
+      newHandle: newHandle,
+      createdAt: new Date().toISOString(),
+    });
 
-    // 9. Invalidate cache for both old and new handles
-    // Old handle: Clear cached 404 page
-    // New handle: Ensure fresh data on first visit
+    // 11. Invalidate cache for both old and new handles
     if (oldHandle) {
       revalidatePath(`/${oldHandle}`);
     }
@@ -141,7 +147,7 @@ export async function PUT(request: Request) {
 
     return createSuccessResponse({
       success: true,
-      handle: data.handle,
+      handle: newHandle,
       old_handle: oldHandle,
     });
   } catch (err) {

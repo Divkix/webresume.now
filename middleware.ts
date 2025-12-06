@@ -1,65 +1,32 @@
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "./lib/supabase/middleware";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+// Protected routes that require authentication
+const protectedRoutes = ["/dashboard", "/edit", "/settings", "/waiting", "/wizard"];
 
 export async function middleware(request: NextRequest) {
-  const { supabaseResponse, user } = await updateSession(request);
-
-  // Protected routes that require authentication
-  const protectedRoutes = ["/dashboard", "/edit", "/settings", "/waiting", "/wizard"];
-
-  // Routes that don't require onboarding completion check
-  const onboardingExemptRoutes = ["/wizard", "/auth/callback"];
+  const { pathname } = request.nextUrl;
 
   // Check if current path starts with any protected route
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    request.nextUrl.pathname.startsWith(route),
-  );
+  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  // Redirect to home if accessing protected route without auth
-  if (isProtectedRoute && !user) {
+  if (!isProtectedRoute) {
+    return NextResponse.next();
+  }
+
+  // Check for Better Auth session cookie
+  // Better Auth uses "better-auth.session_token" as the default cookie name
+  const sessionCookie = request.cookies.get("better-auth.session_token");
+
+  if (!sessionCookie) {
+    // No session, redirect to home
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Check onboarding completion for authenticated users on protected routes
-  if (user && isProtectedRoute) {
-    // Skip onboarding check for exempt routes
-    const isExemptRoute = onboardingExemptRoutes.some((route) =>
-      request.nextUrl.pathname.startsWith(route),
-    );
-
-    if (!isExemptRoute) {
-      // Create supabase client to check onboarding status
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return request.cookies.getAll();
-            },
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            setAll(_cookiesToSet) {
-              // No-op for middleware (cookies already set by updateSession)
-            },
-          },
-        },
-      );
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", user.id)
-        .single();
-
-      // Redirect to wizard if onboarding not completed
-      if (profile && !profile.onboarding_completed) {
-        return NextResponse.redirect(new URL("/wizard", request.url));
-      }
-    }
-  }
-
-  return supabaseResponse;
+  // Session cookie exists, allow access
+  // Note: Onboarding completion check is now handled in page components
+  // since we cannot make DB calls from Edge middleware
+  return NextResponse.next();
 }
 
 export const config = {

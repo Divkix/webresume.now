@@ -1,34 +1,38 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { EditResumeFormWrapper } from "@/components/forms/EditResumeFormWrapper";
-import { createClient } from "@/lib/supabase/server";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { siteData } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
 
 export default async function EditPage() {
-  const supabase = await createClient();
+  const auth = await getAuth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  // Get authenticated user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     redirect("/");
   }
 
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
+
   // Fetch user's site data
-  const { data: siteData, error } = await supabase
-    .from("site_data")
-    .select("id, content")
-    .eq("user_id", user.id)
-    .single();
+  const siteDataResult = await db.query.siteData.findFirst({
+    where: eq(siteData.userId, session.user.id),
+  });
 
   // If no site data exists, redirect to dashboard
-  if (error || !siteData) {
+  if (!siteDataResult) {
     redirect("/dashboard");
   }
 
-  // Type assertion for content (safe because we control the schema)
-  const content = siteData.content as unknown as ResumeContent;
+  // Parse content JSON (stored as text in D1)
+  const content = JSON.parse(siteDataResult.content) as ResumeContent;
 
   return (
     <div className="min-h-screen py-8">

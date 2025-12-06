@@ -5,9 +5,14 @@ import {
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { resumes, siteData } from "@/lib/db/schema";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
 import { parseResume } from "@/lib/replicate";
-import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
@@ -15,6 +20,11 @@ import {
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
 import { MAX_FILE_SIZE, validatePDFMagicNumber, validateRequestSize } from "@/lib/utils/validation";
+
+interface ClaimRequestBody {
+  key?: string;
+  file_hash?: string;
+}
 
 /**
  * POST /api/resume/claim
@@ -37,15 +47,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // 2. Check authentication using Better Auth
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    // 2. Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!session?.user) {
       return createErrorResponse(
         "You must be logged in to claim a resume",
         ERROR_CODES.UNAUTHORIZED,
@@ -53,10 +59,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const userId = session.user.id;
+
+    // Get D1 database connection
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
+
     // 3. Parse request body
-    let body;
+    let body: ClaimRequestBody;
     try {
-      body = await request.json();
+      body = (await request.json()) as ClaimRequestBody;
     } catch {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
@@ -77,7 +89,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Rate limiting check (5 uploads per 24 hours)
-    const rateLimitResponse = await enforceRateLimit(user.id, "resume_upload");
+    const rateLimitResponse = await enforceRateLimit(userId, "resume_upload");
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -86,19 +98,19 @@ export async function POST(request: Request) {
     // This ensures we always have a record for tracking, even if R2 operations fail
     const timestamp = Date.now();
     const filename = key.split("/").pop();
-    const newKey = `users/${user.id}/${timestamp}/${filename}`;
+    const newKey = `users/${userId}/${timestamp}/${filename}`;
+    const resumeId = crypto.randomUUID();
+    const now = new Date().toISOString();
 
-    const { data: resume, error: insertError } = await supabase
-      .from("resumes")
-      .insert({
-        user_id: user.id,
-        r2_key: newKey, // Planned key, R2 move will happen next
+    try {
+      await db.insert(resumes).values({
+        id: resumeId,
+        userId,
+        r2Key: newKey,
         status: "pending_claim",
-      })
-      .select()
-      .single();
-
-    if (insertError) {
+        createdAt: now,
+      });
+    } catch (insertError) {
       console.error("Database insert error:", insertError);
       return createErrorResponse(
         "Failed to create resume record. Please try again.",
@@ -108,90 +120,102 @@ export async function POST(request: Request) {
     }
 
     // 5b. Check for cached parse result (same file uploaded before BY THIS USER)
-    // NOTE: We read parsed_content from resumes table, NOT site_data
-    // because site_data gets overwritten on each new upload (onConflict: "user_id")
     // SECURITY: Only look up cache for current user's own resumes to prevent cross-user data access
     if (file_hash) {
-      const { data: cached } = await supabase
-        .from("resumes")
-        .select("id, parsed_content")
-        .eq("user_id", user.id) // CRITICAL: Only access current user's cached resumes
-        .eq("file_hash", file_hash)
-        .eq("status", "completed")
-        .not("parsed_content", "is", null) // Must have cached content
-        .neq("id", resume.id) // Exclude current resume
-        .limit(1)
-        .maybeSingle();
+      const cached = await db
+        .select({ id: resumes.id, parsedContent: resumes.parsedContent })
+        .from(resumes)
+        .where(
+          and(
+            eq(resumes.userId, userId),
+            eq(resumes.fileHash, file_hash),
+            eq(resumes.status, "completed"),
+            isNotNull(resumes.parsedContent),
+            ne(resumes.id, resumeId),
+          ),
+        )
+        .limit(1);
 
-      if (cached?.parsed_content) {
+      if (cached[0]?.parsedContent) {
         // Update new resume to completed with cached content (skip Replicate entirely)
-        const { error: resumeUpdateError } = await supabase
-          .from("resumes")
-          .update({
-            status: "completed",
-            file_hash,
-            parsed_at: new Date().toISOString(),
-            parsed_content: cached.parsed_content, // Copy cached content
-          })
-          .eq("id", resume.id);
+        try {
+          await db
+            .update(resumes)
+            .set({
+              status: "completed",
+              fileHash: file_hash,
+              parsedAt: now,
+              parsedContent: cached[0].parsedContent,
+            })
+            .where(eq(resumes.id, resumeId));
 
-        if (resumeUpdateError) {
-          console.error("Failed to update resume with cached content:", resumeUpdateError);
-          // Fall through to normal parsing path
-        } else {
-          // Copy content to user's site_data for publishing
-          const { error: siteDataError } = await supabase.from("site_data").upsert(
-            {
-              user_id: user.id,
-              resume_id: resume.id,
-              content: cached.parsed_content,
-              last_published_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id" },
-          );
+          // Parse the cached content for site_data
+          const parsedContent = JSON.parse(cached[0].parsedContent);
 
-          if (siteDataError) {
-            console.error("Failed to upsert site_data with cached content:", siteDataError);
-            // Fall through to normal parsing path - reset resume status
-            await supabase
-              .from("resumes")
-              .update({ status: "pending_claim", parsed_at: null, parsed_content: null })
-              .eq("id", resume.id);
+          // Copy content to user's site_data for publishing (upsert)
+          const existingSiteData = await db
+            .select({ id: siteData.id })
+            .from(siteData)
+            .where(eq(siteData.userId, userId))
+            .limit(1);
+
+          if (existingSiteData[0]) {
+            await db
+              .update(siteData)
+              .set({
+                resumeId,
+                content: JSON.stringify(parsedContent),
+                lastPublishedAt: now,
+                updatedAt: now,
+              })
+              .where(eq(siteData.userId, userId));
           } else {
-            // Still need to move the file from temp to user folder
-            // (but we skip the expensive Replicate API call)
-            try {
-              await r2Client.send(
-                new CopyObjectCommand({
-                  Bucket: R2_BUCKET,
-                  CopySource: `${R2_BUCKET}/${key}`,
-                  Key: newKey,
-                }),
-              );
-              await r2Client.send(
-                new DeleteObjectCommand({
-                  Bucket: R2_BUCKET,
-                  Key: key,
-                }),
-              );
-
-              // R2 operations succeeded - return cached result
-              return createSuccessResponse({
-                resume_id: resume.id,
-                status: "completed",
-                cached: true,
-              });
-            } catch (error) {
-              console.error("R2 operations failed for cached resume:", error);
-              // SECURITY FIX: R2 failure means file isn't properly moved
-              // Reset status and fall through to normal processing instead of returning success
-              await supabase
-                .from("resumes")
-                .update({ status: "pending_claim", parsed_at: null, parsed_content: null })
-                .eq("id", resume.id);
-              // Fall through to normal processing path
-            }
+            await db.insert(siteData).values({
+              id: crypto.randomUUID(),
+              userId,
+              resumeId,
+              content: JSON.stringify(parsedContent),
+              lastPublishedAt: now,
+              createdAt: now,
+              updatedAt: now,
+            });
           }
+
+          // Still need to move the file from temp to user folder
+          try {
+            await r2Client.send(
+              new CopyObjectCommand({
+                Bucket: R2_BUCKET,
+                CopySource: `${R2_BUCKET}/${key}`,
+                Key: newKey,
+              }),
+            );
+            await r2Client.send(
+              new DeleteObjectCommand({
+                Bucket: R2_BUCKET,
+                Key: key,
+              }),
+            );
+
+            // R2 operations succeeded - return cached result
+            return createSuccessResponse({
+              resume_id: resumeId,
+              status: "completed",
+              cached: true,
+            });
+          } catch (error) {
+            console.error("R2 operations failed for cached resume:", error);
+            // SECURITY FIX: R2 failure means file isn't properly moved
+            // Reset status and fall through to normal processing
+            await db
+              .update(resumes)
+              .set({ status: "pending_claim", parsedAt: null, parsedContent: null })
+              .where(eq(resumes.id, resumeId));
+            // Fall through to normal processing path
+          }
+        } catch (updateError) {
+          console.error("Failed to update resume with cached content:", updateError);
+          // Fall through to normal parsing path
         }
       }
     }
@@ -200,30 +224,30 @@ export async function POST(request: Request) {
     // If so, wait for it instead of triggering duplicate parsing
     // SECURITY: Only look for processing resumes from the same user
     if (file_hash) {
-      const { data: processing } = await supabase
-        .from("resumes")
-        .select("id")
-        .eq("user_id", user.id) // CRITICAL: Only access current user's resumes
-        .eq("file_hash", file_hash)
-        .eq("status", "processing")
-        .neq("id", resume.id)
-        .limit(1)
-        .maybeSingle();
+      const processing = await db
+        .select({ id: resumes.id })
+        .from(resumes)
+        .where(
+          and(
+            eq(resumes.userId, userId),
+            eq(resumes.fileHash, file_hash),
+            eq(resumes.status, "processing"),
+            ne(resumes.id, resumeId),
+          ),
+        )
+        .limit(1);
 
-      if (processing) {
+      if (processing[0]) {
         // This user is already parsing this file - wait for that result
-        const { error: waitError } = await supabase
-          .from("resumes")
-          .update({
-            status: "waiting_for_cache",
-            file_hash,
-          })
-          .eq("id", resume.id);
+        try {
+          await db
+            .update(resumes)
+            .set({
+              status: "waiting_for_cache",
+              fileHash: file_hash,
+            })
+            .where(eq(resumes.id, resumeId));
 
-        if (waitError) {
-          console.error("Failed to set waiting_for_cache status:", waitError);
-          // Fall through to normal processing
-        } else {
           // Move file to user's folder
           try {
             await r2Client.send(
@@ -244,20 +268,23 @@ export async function POST(request: Request) {
           }
 
           return createSuccessResponse({
-            resume_id: resume.id,
+            resume_id: resumeId,
             status: "processing", // Client sees "processing" and subscribes to realtime
             waiting_for_cache: true,
           });
+        } catch (waitError) {
+          console.error("Failed to set waiting_for_cache status:", waitError);
+          // Fall through to normal processing
         }
       }
     }
 
     // Helper to mark resume as failed and return error
     const failResume = async (errorMessage: string, errorCode: string, statusCode: number) => {
-      await supabase
-        .from("resumes")
-        .update({ status: "failed", error_message: errorMessage })
-        .eq("id", resume.id);
+      await db
+        .update(resumes)
+        .set({ status: "failed", errorMessage })
+        .where(eq(resumes.id, resumeId));
 
       return createErrorResponse(errorMessage, errorCode, statusCode);
     };
@@ -403,32 +430,29 @@ export async function POST(request: Request) {
     // 12. Update resume with replicate job ID or error (include file_hash for future caching)
     const updatePayload: {
       status: "processing" | "failed";
-      replicate_job_id?: string;
-      error_message?: string;
-      file_hash?: string;
+      replicateJobId?: string;
+      errorMessage?: string;
+      fileHash?: string;
     } = replicateJobId
       ? {
           status: "processing",
-          replicate_job_id: replicateJobId,
-          ...(file_hash && { file_hash }),
+          replicateJobId,
+          ...(file_hash && { fileHash: file_hash }),
         }
       : {
           status: "failed",
-          error_message: parseError || "Unknown error",
+          errorMessage: parseError || "Unknown error",
         };
 
-    const { error: updateError } = await supabase
-      .from("resumes")
-      .update(updatePayload)
-      .eq("id", resume.id);
-
-    if (updateError) {
+    try {
+      await db.update(resumes).set(updatePayload).where(eq(resumes.id, resumeId));
+    } catch (updateError) {
       console.error("Failed to update resume with replicate job:", updateError);
       // Continue anyway - status endpoint will handle it
     }
 
     return createSuccessResponse({
-      resume_id: resume.id,
+      resume_id: resumeId,
       status: updatePayload.status,
     });
   } catch (error) {

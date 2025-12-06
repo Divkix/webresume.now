@@ -1,25 +1,34 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { resumes } from "@/lib/db/schema";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
 import { parseResume } from "@/lib/replicate";
-import { createClient } from "@/lib/supabase/server";
 import {
   createErrorResponse,
   createSuccessResponse,
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
 
+interface RetryRequestBody {
+  resume_id?: string;
+}
+
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    // 1. Get D1 database binding
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
-    // 1. Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 2. Check authentication via Better Auth
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
 
-    if (authError || !user) {
+    if (!session?.user) {
       return createErrorResponse(
         "You must be logged in to retry resume parsing",
         ERROR_CODES.UNAUTHORIZED,
@@ -27,7 +36,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const { resume_id } = await request.json();
+    const userId = session.user.id;
+
+    const body = (await request.json()) as RetryRequestBody;
+    const { resume_id } = body;
 
     if (!resume_id) {
       return createErrorResponse(
@@ -37,19 +49,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Fetch resume from database
-    const { data: resume, error: fetchError } = await supabase
-      .from("resumes")
-      .select("id, user_id, r2_key, status, retry_count")
-      .eq("id", resume_id)
-      .single();
+    // 3. Fetch resume from database
+    const resume = await db.query.resumes.findFirst({
+      where: eq(resumes.id, resume_id),
+      columns: {
+        id: true,
+        userId: true,
+        r2Key: true,
+        status: true,
+        retryCount: true,
+      },
+    });
 
-    if (fetchError || !resume) {
+    if (!resume) {
       return createErrorResponse("Resume not found", ERROR_CODES.NOT_FOUND, 404);
     }
 
-    // 3. Verify ownership
-    if (resume.user_id !== user.id) {
+    // 4. Verify ownership
+    if (resume.userId !== userId) {
       return createErrorResponse(
         "You do not have permission to retry this resume",
         ERROR_CODES.FORBIDDEN,
@@ -57,7 +74,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Verify retry eligibility
+    // 5. Verify retry eligibility
     if (resume.status !== "failed") {
       return createErrorResponse(
         "Can only retry failed resumes",
@@ -67,29 +84,29 @@ export async function POST(request: Request) {
       );
     }
 
-    if (resume.retry_count >= 2) {
+    if (resume.retryCount >= 2) {
       return createErrorResponse(
         "Maximum retry limit reached. Please upload a new resume.",
         ERROR_CODES.RATE_LIMIT_EXCEEDED,
         429,
-        { max_retries: 2, current_retry_count: resume.retry_count },
+        { max_retries: 2, current_retry_count: resume.retryCount },
       );
     }
 
-    // 5. Generate presigned URL for existing R2 file
+    // 6. Generate presigned URL for existing R2 file
     const r2Client = getR2Client();
     const R2_BUCKET = getR2Bucket();
 
     const getCommand = new GetObjectCommand({
       Bucket: R2_BUCKET,
-      Key: resume.r2_key,
+      Key: resume.r2Key,
     });
 
     const presignedUrl = await getSignedUrl(r2Client, getCommand, {
       expiresIn: 7 * 24 * 60 * 60, // 7 days
     });
 
-    // 6. Trigger new Replicate parsing job WITH webhook URL
+    // 7. Trigger new Replicate parsing job WITH webhook URL
     // Without webhook, if user closes browser the resume stays stuck "processing" forever
     let prediction;
     try {
@@ -105,19 +122,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Update resume with new job ID and incremented retry count
-    const { error: updateError } = await supabase
-      .from("resumes")
-      .update({
+    // 8. Update resume with new job ID and incremented retry count
+    const updateResult = await db
+      .update(resumes)
+      .set({
         status: "processing",
-        replicate_job_id: prediction.id,
-        error_message: null,
-        retry_count: resume.retry_count + 1,
+        replicateJobId: prediction.id,
+        errorMessage: null,
+        retryCount: resume.retryCount + 1,
       })
-      .eq("id", resume_id);
+      .where(eq(resumes.id, resume_id))
+      .returning({ id: resumes.id });
 
-    if (updateError) {
-      console.error("Failed to update resume for retry:", updateError);
+    if (updateResult.length === 0) {
+      console.error("Failed to update resume for retry");
       return createErrorResponse("Failed to update resume status", ERROR_CODES.DATABASE_ERROR, 500);
     }
 
@@ -125,7 +143,7 @@ export async function POST(request: Request) {
       resume_id: resume.id,
       status: "processing",
       prediction_id: prediction.id,
-      retry_count: resume.retry_count + 1,
+      retry_count: resume.retryCount + 1,
     });
   } catch (error) {
     console.error("Error retrying resume parsing:", error);

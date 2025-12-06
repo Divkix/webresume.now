@@ -1,4 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { and, eq, gte, sql } from "drizzle-orm";
+import { getDb } from "@/lib/db";
+import { handleChanges, resumes, siteData, user } from "@/lib/db/schema";
 import { featureFlags } from "./config";
 import { SECURITY_HEADERS } from "./security-headers";
 
@@ -23,7 +26,7 @@ interface RateLimitResult {
 
 /**
  * Checks if a user has exceeded the rate limit for a specific action
- * Uses Supabase to count actions in the time window
+ * Uses Drizzle/D1 to count actions in the time window
  */
 async function checkRateLimit(userId: string, action: RateLimitAction): Promise<RateLimitResult> {
   const config = RATE_LIMITS[action];
@@ -31,62 +34,57 @@ async function checkRateLimit(userId: string, action: RateLimitAction): Promise<
   const windowStart = new Date(Date.now() - windowMs);
   const resetAt = new Date(Date.now() + windowMs);
 
-  const supabase = await createClient();
-
   try {
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
+
     // Determine which table and column to query based on action
     let count = 0;
 
     switch (action) {
       case "resume_update": {
-        const { count: updateCount, error } = await supabase
-          .from("site_data")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .gte("updated_at", windowStart.toISOString());
-
-        if (error) throw error;
-        count = updateCount || 0;
+        const result = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(siteData)
+          .where(
+            and(eq(siteData.userId, userId), gte(siteData.updatedAt, windowStart.toISOString())),
+          );
+        count = result[0]?.count ?? 0;
         break;
       }
 
       case "privacy_update": {
-        const { count: updateCount, error } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("id", userId)
-          .gte("updated_at", windowStart.toISOString());
-
-        if (error) throw error;
-        count = updateCount || 0;
+        const result = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(user)
+          .where(and(eq(user.id, userId), gte(user.updatedAt, windowStart.toISOString())));
+        count = result[0]?.count ?? 0;
         break;
       }
 
       case "handle_change": {
-        // Use profiles.updated_at to track handle changes
-        // This is less precise than a dedicated audit table, but sufficient for rate limiting
-        // Note: This will also count privacy_settings updates, but that's acceptable
-        // since the limit is generous (3 per 24h)
-        const { count: changeCount, error } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("id", userId)
-          .gte("updated_at", windowStart.toISOString());
-
-        if (error) throw error;
-        count = changeCount || 0;
+        // Use handle_changes table for tracking handle changes
+        const result = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(handleChanges)
+          .where(
+            and(
+              eq(handleChanges.userId, userId),
+              gte(handleChanges.createdAt, windowStart.toISOString()),
+            ),
+          );
+        count = result[0]?.count ?? 0;
         break;
       }
 
       case "resume_upload": {
-        const { count: uploadCount, error } = await supabase
-          .from("resumes")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .gte("created_at", windowStart.toISOString());
-
-        if (error) throw error;
-        count = uploadCount || 0;
+        const result = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(resumes)
+          .where(
+            and(eq(resumes.userId, userId), gte(resumes.createdAt, windowStart.toISOString())),
+          );
+        count = result[0]?.count ?? 0;
         break;
       }
 

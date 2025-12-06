@@ -1,8 +1,10 @@
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/db";
+import { user } from "@/lib/db/schema";
 import { validateEnvironment } from "@/lib/env";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const checks = {
     environment: false,
-    supabase: false,
+    database: false,
     r2: false,
     timestamp: new Date().toISOString(),
   };
@@ -29,14 +31,16 @@ export async function GET() {
     );
   }
 
-  // Check Supabase connection
+  // Check D1 database connection
   try {
-    const supabase = await createClient();
-    await supabase.from("profiles").select("id").limit(1).single();
-    // Error is okay if no profiles exist, we just want to verify connection
-    checks.supabase = true;
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
+    // Try to query the user table
+    await db.select({ id: user.id }).from(user).limit(1);
+    // Error is okay if no users exist, we just want to verify connection
+    checks.database = true;
   } catch (err) {
-    console.error("Supabase health check failed:", err);
+    console.error("Database health check failed:", err);
   }
 
   // Check R2 connection
@@ -49,7 +53,7 @@ export async function GET() {
     console.error("R2 health check failed:", err);
   }
 
-  const allHealthy = checks.environment && checks.supabase && checks.r2;
+  const allHealthy = checks.environment && checks.database && checks.r2;
 
   return NextResponse.json(
     {

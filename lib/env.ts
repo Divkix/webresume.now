@@ -51,20 +51,27 @@ function getEnvVar(key: string, required: boolean = true): string | undefined {
  */
 export function validateEnvironment(): void {
   const requiredVars: EnvVar[] = [
-    // Supabase
+    // Better Auth
     {
-      key: "NEXT_PUBLIC_SUPABASE_URL",
-      value: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      key: "BETTER_AUTH_SECRET",
+      value: process.env.BETTER_AUTH_SECRET,
       required: true,
     },
     {
-      key: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      value: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      key: "BETTER_AUTH_URL",
+      value: process.env.BETTER_AUTH_URL,
+      required: true,
+    },
+
+    // Google OAuth
+    {
+      key: "GOOGLE_CLIENT_ID",
+      value: process.env.GOOGLE_CLIENT_ID,
       required: true,
     },
     {
-      key: "SUPABASE_SERVICE_ROLE_KEY",
-      value: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      key: "GOOGLE_CLIENT_SECRET",
+      value: process.env.GOOGLE_CLIENT_SECRET,
       required: true,
     },
 
@@ -117,10 +124,13 @@ export function validateEnvironment(): void {
 
 // Export typed environment variables
 export const ENV = {
-  // Supabase
-  SUPABASE_URL: () => getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
-  SUPABASE_ANON_KEY: () => getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
-  SUPABASE_SERVICE_ROLE_KEY: () => getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  // Better Auth
+  BETTER_AUTH_SECRET: () => getRequiredEnv("BETTER_AUTH_SECRET"),
+  BETTER_AUTH_URL: () => getRequiredEnv("BETTER_AUTH_URL"),
+
+  // Google OAuth
+  GOOGLE_CLIENT_ID: () => getRequiredEnv("GOOGLE_CLIENT_ID"),
+  GOOGLE_CLIENT_SECRET: () => getRequiredEnv("GOOGLE_CLIENT_SECRET"),
 
   // R2
   R2_ENDPOINT: () => getRequiredEnv("R2_ENDPOINT"),

@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { WizardProgress } from "@/components/wizard";
@@ -11,9 +11,40 @@ import { PrivacyStep } from "@/components/wizard/PrivacyStep";
 import { ReviewStep } from "@/components/wizard/ReviewStep";
 import { ThemeStep } from "@/components/wizard/ThemeStep";
 import { UploadStep } from "@/components/wizard/UploadStep";
-import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/lib/auth/client";
 import type { ThemeId } from "@/lib/templates/theme-registry";
 import type { ResumeContent } from "@/lib/types/database";
+
+// Type definitions for API responses
+interface ResumeStatusResponse {
+  status: "pending_claim" | "processing" | "completed" | "failed";
+  progress_pct?: number;
+  error?: string | null;
+  can_retry?: boolean;
+}
+
+interface ClaimResponse {
+  resume_id: string;
+  cached?: boolean;
+  error?: string;
+}
+
+interface SiteDataResponse {
+  id?: string;
+  content?: ResumeContent;
+  themeId?: string;
+}
+
+interface LatestResumeResponse {
+  id?: string;
+  status?: string;
+  error?: string;
+}
+
+interface WizardCompleteResponse {
+  success?: boolean;
+  error?: string;
+}
 
 interface WizardState {
   currentStep: number;
@@ -45,9 +76,11 @@ interface WizardState {
  */
 export default function WizardPage() {
   const router = useRouter();
+  const { data: session, isPending: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsUpload, setNeedsUpload] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [state, setState] = useState<WizardState>({
     currentStep: 1,
@@ -63,24 +96,90 @@ export default function WizardPage() {
   // Compute total steps based on whether upload is needed
   const totalSteps = needsUpload ? 5 : 4;
 
+  // Function to poll resume status
+  const pollResumeStatus = useCallback(
+    async (resumeId: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = 30; // 30 attempts * 3 seconds = 90 seconds max
+
+        const checkStatus = async () => {
+          try {
+            const response = await fetch(`/api/resume/status?resume_id=${resumeId}`);
+            if (!response.ok) {
+              throw new Error("Failed to check status");
+            }
+
+            const data = (await response.json()) as ResumeStatusResponse;
+
+            if (data.status === "completed") {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              resolve(true);
+              return;
+            }
+
+            if (data.status === "failed") {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              setError(data.error || "Resume parsing failed. Please try again.");
+              setTimeout(() => router.push("/dashboard"), 3000);
+              resolve(false);
+              return;
+            }
+
+            attempts++;
+            if (attempts >= maxAttempts) {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              router.push(`/waiting?resume_id=${resumeId}`);
+              resolve(false);
+            }
+          } catch (err) {
+            console.error("Error polling status:", err);
+            attempts++;
+            if (attempts >= maxAttempts) {
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+              router.push(`/waiting?resume_id=${resumeId}`);
+              resolve(false);
+            }
+          }
+        };
+
+        // Start polling every 3 seconds
+        pollingIntervalRef.current = setInterval(checkStatus, 3000);
+        // Check immediately as well
+        checkStatus();
+      });
+    },
+    [router],
+  );
+
   // Fetch resume data on mount + handle upload claiming
   useEffect(() => {
     const initializeWizard = async () => {
+      // Wait for session to load
+      if (sessionLoading) return;
+
+      // Check authentication
+      if (!session?.user) {
+        router.push("/");
+        return;
+      }
+
       try {
         setLoading(true);
-        const supabase = createClient();
 
-        // 1. Check authentication
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!user) {
-          router.push("/");
-          return;
-        }
-
-        // 2. Check for pending upload claim
+        // Check for pending upload claim
         const tempKey = localStorage.getItem("temp_upload_key");
         if (tempKey) {
           // Claim the upload (include file_hash for deduplication caching)
@@ -94,14 +193,14 @@ export default function WizardPage() {
               body: JSON.stringify({ key: tempKey, file_hash: fileHash }),
             });
 
-            const claimData = await claimResponse.json();
+            const claimData = (await claimResponse.json()) as ClaimResponse;
 
             if (!claimResponse.ok) {
               throw new Error(claimData.error || "Failed to claim resume");
             }
 
             // Validate that resume_id was returned
-            if (!claimData?.resume_id) {
+            if (!claimData.resume_id) {
               throw new Error("Server error: No resume ID returned");
             }
 
@@ -112,56 +211,9 @@ export default function WizardPage() {
             localStorage.removeItem("temp_upload_key");
             sessionStorage.removeItem("temp_file_hash");
 
-            // If not cached, wait for Realtime updates (parsing in progress)
+            // If not cached, poll for status updates (parsing in progress)
             if (!claimData.cached) {
-              // Subscribe to Realtime updates for this resume
-              const parsingComplete = await new Promise<boolean>((resolve) => {
-                const timeoutId: { current: NodeJS.Timeout | null } = {
-                  current: null,
-                };
-
-                const channel = supabase
-                  .channel(`wizard-resume-${resumeId}`)
-                  .on(
-                    "postgres_changes",
-                    {
-                      event: "UPDATE",
-                      schema: "public",
-                      table: "resumes",
-                      filter: `id=eq.${resumeId}`,
-                    },
-                    (payload) => {
-                      const newStatus = payload.new?.status;
-
-                      if (newStatus === "completed") {
-                        if (timeoutId.current) clearTimeout(timeoutId.current);
-                        channel.unsubscribe();
-                        supabase.removeChannel(channel);
-                        resolve(true);
-                      }
-
-                      if (newStatus === "failed") {
-                        if (timeoutId.current) clearTimeout(timeoutId.current);
-                        channel.unsubscribe();
-                        supabase.removeChannel(channel);
-                        setError(
-                          payload.new?.error_message || "Resume parsing failed. Please try again.",
-                        );
-                        setTimeout(() => router.push("/dashboard"), 3000);
-                        resolve(false);
-                      }
-                    },
-                  )
-                  .subscribe();
-
-                // Timeout after 90 seconds
-                timeoutId.current = setTimeout(() => {
-                  channel.unsubscribe();
-                  supabase.removeChannel(channel);
-                  router.push(`/waiting?resume_id=${resumeId}`);
-                  resolve(false);
-                }, 90000);
-              });
+              const parsingComplete = await pollResumeStatus(resumeId);
 
               if (!parsingComplete) {
                 return;
@@ -178,50 +230,55 @@ export default function WizardPage() {
           }
         }
 
-        // 3. Fetch site_data (contains parsed resume content)
-        const { data: siteData } = await supabase
-          .from("site_data")
-          .select("content")
-          .eq("user_id", user.id)
-          .maybeSingle();
+        // Fetch site_data via API
+        const siteDataResponse = await fetch("/api/site-data");
+        if (siteDataResponse.ok) {
+          const siteData = (await siteDataResponse.json()) as SiteDataResponse | null;
 
-        if (!siteData) {
-          const { data: resume } = await supabase
-            .from("resumes")
-            .select("id, status")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          if (siteData?.content) {
+            const content = siteData.content as ResumeContent;
 
-          if (resume?.status === "processing") {
+            // Load resume data into state
+            setState((prev) => ({
+              ...prev,
+              resumeData: content,
+            }));
+            setLoading(false);
+            return;
+          }
+        }
+
+        // No site_data found - check for processing resume
+        const statusResponse = await fetch("/api/resume/latest-status");
+        if (statusResponse.ok) {
+          const resume = (await statusResponse.json()) as LatestResumeResponse | null;
+
+          if (resume?.status === "processing" && resume.id) {
             router.push(`/waiting?resume_id=${resume.id}`);
             return;
           }
-
-          // No resume OR failed status → show upload step
-          setNeedsUpload(true);
-          setLoading(false);
-          return;
         }
 
-        const content = siteData.content as unknown as ResumeContent;
-
-        // 4. Load resume data into state
-        setState((prev) => ({
-          ...prev,
-          resumeData: content,
-        }));
+        // No resume OR failed status -> show upload step
+        setNeedsUpload(true);
+        setLoading(false);
       } catch (err) {
         console.error("Error initializing wizard:", err);
         setError("Failed to load resume data. Please try again.");
-      } finally {
         setLoading(false);
       }
     };
 
     initializeWizard();
-  }, [router]);
+
+    // Cleanup polling on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [router, session, sessionLoading, pollResumeStatus]);
 
   // Handler for upload completion (Step 1 for login-first users)
   // Note: We keep needsUpload=true to maintain correct step numbering throughout the session
@@ -276,7 +333,7 @@ export default function WizardPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as WizardCompleteResponse;
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to complete setup");
@@ -296,8 +353,8 @@ export default function WizardPage() {
   // Calculate progress percentage
   const progress = (state.currentStep / totalSteps) * 100;
 
-  // Loading state
-  if (loading) {
+  // Loading state (including session loading)
+  if (loading || sessionLoading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center">
         <div className="text-center">

@@ -1,7 +1,9 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getDb } from "@/lib/db";
+import { user } from "@/lib/db/schema";
 import { privacySettingsSchema } from "@/lib/schemas/profile";
-import { createClient } from "@/lib/supabase/server";
-import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -20,15 +22,11 @@ export async function PUT(request: Request) {
       "You must be logged in to update privacy settings",
     );
     if (authResult.error) return authResult.error;
-    const { user } = authResult;
+    const { user: authUser } = authResult;
 
-    const supabase = await createClient();
-
-    // 2. Check rate limit (20 updates per hour)
-    const rateLimitResponse = await enforceRateLimit(user.id, "privacy_update");
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
+    // 2. Get database connection
+    const { env } = await getCloudflareContext({ async: true });
+    const db = getDb(env.DB);
 
     // 3. Parse and validate request body
     let body;
@@ -51,32 +49,26 @@ export async function PUT(request: Request) {
 
     const { show_phone, show_address } = validation.data;
 
-    // 4. Update privacy_settings JSONB column
-    const { data, error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        privacy_settings: {
-          show_phone,
-          show_address,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id)
-      .select("privacy_settings")
-      .single();
+    // 4. Update privacy_settings (stored as JSON string in D1)
+    const privacySettings = JSON.stringify({
+      show_phone,
+      show_address,
+    });
 
-    if (updateError) {
-      console.error("Privacy settings update error:", updateError);
-      return createErrorResponse(
-        "Failed to update privacy settings. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
-    }
+    await db
+      .update(user)
+      .set({
+        privacySettings,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(user.id, authUser.id));
 
     return createSuccessResponse({
       success: true,
-      privacy_settings: data.privacy_settings,
+      privacy_settings: {
+        show_phone,
+        show_address,
+      },
     });
   } catch (err) {
     console.error("Unexpected error in privacy update:", err);

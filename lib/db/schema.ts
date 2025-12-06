@@ -11,8 +11,8 @@ export const user = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("email_verified", { mode: "boolean" }),
   image: text("image"),
-  createdAt: text("created_at"),
-  updatedAt: text("updated_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
   // Custom fields
   handle: text("handle").unique(),
   headline: text("headline"),
@@ -43,8 +43,8 @@ export const session = sqliteTable("session", {
   expiresAt: text("expires_at").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  createdAt: text("created_at"),
-  updatedAt: text("updated_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 export const account = sqliteTable("account", {
@@ -61,8 +61,8 @@ export const account = sqliteTable("account", {
   scope: text("scope"),
   idToken: text("id_token"),
   password: text("password"),
-  createdAt: text("created_at"),
-  updatedAt: text("updated_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 export const verification = sqliteTable("verification", {
@@ -70,8 +70,8 @@ export const verification = sqliteTable("verification", {
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: text("expires_at").notNull(),
-  createdAt: text("created_at"),
-  updatedAt: text("updated_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 // =============================================================================
@@ -97,7 +97,7 @@ export const resumes = sqliteTable(
     retryCount: integer("retry_count").notNull().default(0),
     fileHash: text("file_hash"),
     parsedContent: text("parsed_content"),
-    createdAt: text("created_at"),
+    createdAt: text("created_at").notNull(),
   },
   (table) => [index("resumes_user_id_idx").on(table.userId)],
 );
@@ -115,9 +115,9 @@ export const siteData = sqliteTable(
     }),
     content: text("content").notNull(),
     themeId: text("theme_id").default("minimalist_editorial"),
-    lastPublishedAt: text("last_published_at"),
-    createdAt: text("created_at"),
-    updatedAt: text("updated_at"),
+    lastPublishedAt: text("last_published_at"), // Nullable - represents "never published"
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
   },
   (table) => [index("site_data_resume_id_idx").on(table.resumeId)],
 );

@@ -4,13 +4,36 @@
  * IMPORTANT: The auth instance must be created inside request handlers because
  * the D1 database binding is only available within the Cloudflare Workers
  * request context. Attempting to create the instance at module scope will fail.
+ *
+ * Environment variables are loaded from:
+ * - Production: Cloudflare Workers env bindings (via wrangler secret put)
+ * - Development: process.env (via .env.local)
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
+import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import * as schema from "@/lib/db/schema";
+
+/**
+ * Get env value with Cloudflare binding fallback to process.env
+ */
+function getEnvValue(env: Partial<CloudflareEnv>, key: keyof CloudflareEnv): string {
+  const cfValue = env[key];
+  if (typeof cfValue === "string" && cfValue.trim() !== "") {
+    return cfValue;
+  }
+  const processValue = process.env[key];
+  if (processValue && processValue.trim() !== "") {
+    return processValue;
+  }
+  throw new Error(
+    `Missing required environment variable: ${key}. ` +
+      `Set it via .env.local (dev) or 'wrangler secret put ${key}' (prod).`,
+  );
+}
 
 /**
  * Creates a Better Auth instance with D1 binding from the current request context
@@ -31,7 +54,14 @@ import * as schema from "@/lib/db/schema";
  */
 export async function getAuth() {
   const { env } = await getCloudflareContext({ async: true });
+  const typedEnv = env as Partial<CloudflareEnv>;
   const db = drizzle(env.DB, { schema });
+
+  // Get secrets from Cloudflare env with fallback to process.env
+  const baseURL = getEnvValue(typedEnv, "BETTER_AUTH_URL");
+  const secret = getEnvValue(typedEnv, "BETTER_AUTH_SECRET");
+  const googleClientId = getEnvValue(typedEnv, "GOOGLE_CLIENT_ID");
+  const googleClientSecret = getEnvValue(typedEnv, "GOOGLE_CLIENT_SECRET");
 
   return betterAuth({
     database: drizzleAdapter(db, {
@@ -43,12 +73,12 @@ export async function getAuth() {
         verification: schema.verification,
       },
     }),
-    baseURL: process.env.BETTER_AUTH_URL,
-    secret: process.env.BETTER_AUTH_SECRET,
+    baseURL,
+    secret,
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
       },
     },
     user: {
@@ -90,10 +120,7 @@ export async function getAuth() {
         maxAge: 60 * 5, // 5 minutes cache
       },
     },
-    trustedOrigins: [
-      process.env.BETTER_AUTH_URL || "http://localhost:3000",
-      // Add production URL when deployed
-    ].filter(Boolean),
+    trustedOrigins: [baseURL].filter(Boolean),
   });
 }
 

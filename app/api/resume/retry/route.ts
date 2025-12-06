@@ -4,6 +4,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getDb } from "@/lib/db";
 import { resumes } from "@/lib/db/schema";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
@@ -20,8 +21,9 @@ interface RetryRequestBody {
 
 export async function POST(request: Request) {
   try {
-    // 1. Get D1 database binding
+    // 1. Get D1 database binding and typed env for R2/Replicate
     const { env } = await getCloudflareContext({ async: true });
+    const typedEnv = env as Partial<CloudflareEnv>;
     const db = getDb(env.DB);
 
     // 2. Check authentication via Better Auth
@@ -94,8 +96,8 @@ export async function POST(request: Request) {
     }
 
     // 6. Generate presigned URL for existing R2 file
-    const r2Client = getR2Client();
-    const R2_BUCKET = getR2Bucket();
+    const r2Client = getR2Client(typedEnv);
+    const R2_BUCKET = getR2Bucket(typedEnv);
 
     const getCommand = new GetObjectCommand({
       Bucket: R2_BUCKET,
@@ -112,7 +114,7 @@ export async function POST(request: Request) {
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL;
       const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined;
-      prediction = await parseResume(presignedUrl, webhookUrl);
+      prediction = await parseResume(presignedUrl, webhookUrl, typedEnv);
     } catch (error) {
       console.error("Failed to trigger retry parsing:", error);
       return createErrorResponse(

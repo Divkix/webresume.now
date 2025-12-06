@@ -9,6 +9,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getDb } from "@/lib/db";
 import { resumes, siteData } from "@/lib/db/schema";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
@@ -33,9 +34,13 @@ interface ClaimRequestBody {
  */
 export async function POST(request: Request) {
   try {
-    // Initialize R2 client and bucket
-    const r2Client = getR2Client();
-    const R2_BUCKET = getR2Bucket();
+    // Get Cloudflare env bindings for R2/Replicate secrets
+    const { env } = await getCloudflareContext({ async: true });
+    const typedEnv = env as Partial<CloudflareEnv>;
+
+    // Initialize R2 client and bucket with env
+    const r2Client = getR2Client(typedEnv);
+    const R2_BUCKET = getR2Bucket(typedEnv);
 
     // 1. Validate request size before parsing (prevent DoS)
     const sizeCheck = validateRequestSize(request);
@@ -61,8 +66,7 @@ export async function POST(request: Request) {
 
     const userId = session.user.id;
 
-    // Get D1 database connection
-    const { env } = await getCloudflareContext({ async: true });
+    // Get D1 database connection (env already retrieved above)
     const db = getDb(env.DB);
 
     // 3. Parse request body
@@ -420,7 +424,7 @@ export async function POST(request: Request) {
     const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined;
 
     try {
-      const prediction = await parseResume(presignedUrl, webhookUrl);
+      const prediction = await parseResume(presignedUrl, webhookUrl, typedEnv);
       replicateJobId = prediction.id;
     } catch (error) {
       console.error("Failed to trigger Replicate parsing:", error);

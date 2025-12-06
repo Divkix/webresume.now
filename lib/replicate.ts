@@ -1,10 +1,29 @@
 import Replicate from "replicate";
 import { z } from "zod";
 import type { ResumeContent } from "@/lib/types/database";
+import type { CloudflareEnv } from "./cloudflare-env";
 import { ENV } from "./env";
 
-// Initialize Replicate client lazily
+// Singleton client cache
 let _replicate: Replicate | null = null;
+let _lastGatewayId: string | null = null;
+
+/**
+ * Get env value with Cloudflare binding fallback to ENV helpers
+ */
+function getEnvValue(
+  env: Partial<CloudflareEnv> | undefined,
+  key: "CF_AI_GATEWAY_ACCOUNT_ID" | "CF_AI_GATEWAY_ID" | "CF_AIG_AUTH_TOKEN",
+): string {
+  if (env) {
+    const cfValue = env[key];
+    if (typeof cfValue === "string" && cfValue.trim() !== "") {
+      return cfValue;
+    }
+  }
+  // Fall back to ENV helper (which uses process.env)
+  return ENV[key]();
+}
 
 /**
  * Creates a custom fetch function for Cloudflare AI Gateway with BYOK.
@@ -25,19 +44,40 @@ function createGatewayFetch(cfAuthToken: string) {
   };
 }
 
-function getReplicate(): Replicate {
-  if (!_replicate) {
-    const accountId = ENV.CF_AI_GATEWAY_ACCOUNT_ID();
-    const gatewayId = ENV.CF_AI_GATEWAY_ID();
-    const cfAuthToken = ENV.CF_AIG_AUTH_TOKEN();
+/**
+ * Get Replicate client instance
+ *
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
+ * @returns Configured Replicate client routed through AI Gateway
+ */
+function getReplicate(env?: Partial<CloudflareEnv>): Replicate {
+  const accountId = getEnvValue(env, "CF_AI_GATEWAY_ACCOUNT_ID");
+  const gatewayId = getEnvValue(env, "CF_AI_GATEWAY_ID");
+  const cfAuthToken = getEnvValue(env, "CF_AIG_AUTH_TOKEN");
 
+  // Invalidate cache if gateway changed
+  if (_replicate && _lastGatewayId !== gatewayId) {
+    _replicate = null;
+  }
+
+  if (!_replicate) {
     _replicate = new Replicate({
       auth: "unused", // SDK requires auth, but we strip the header via custom fetch
       baseUrl: `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/replicate`,
       fetch: createGatewayFetch(cfAuthToken),
     });
+    _lastGatewayId = gatewayId;
   }
+
   return _replicate;
+}
+
+/**
+ * Clear cached Replicate client (useful for testing)
+ */
+export function clearReplicateClient(): void {
+  _replicate = null;
+  _lastGatewayId = null;
 }
 
 /**
@@ -333,16 +373,26 @@ interface ParseStatusResult {
 
 /**
  * Trigger AI parsing of a resume PDF
+ *
  * @param presignedUrl - R2 presigned GET URL for the PDF file
  * @param webhookUrl - Optional webhook URL for completion notifications
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
  * @returns Prediction object with ID and initial status
+ *
+ * @example
+ * ```ts
+ * // In API route with Cloudflare context
+ * const { env } = await getCloudflareContext({ async: true });
+ * const result = await parseResume(presignedUrl, webhookUrl, env);
+ * ```
  */
 export async function parseResume(
   presignedUrl: string,
   webhookUrl?: string,
+  env?: Partial<CloudflareEnv>,
 ): Promise<ParseResumeResult> {
   try {
-    const replicate = getReplicate();
+    const replicate = getReplicate(env);
     const prediction = await replicate.predictions.create({
       model: "datalab-to/marker",
       input: {
@@ -370,12 +420,24 @@ export async function parseResume(
 
 /**
  * Check status of a Replicate parsing job
+ *
  * @param predictionId - Replicate prediction ID
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
  * @returns Status result with output if completed
+ *
+ * @example
+ * ```ts
+ * // In API route with Cloudflare context
+ * const { env } = await getCloudflareContext({ async: true });
+ * const status = await getParseStatus(predictionId, env);
+ * ```
  */
-export async function getParseStatus(predictionId: string): Promise<ParseStatusResult> {
+export async function getParseStatus(
+  predictionId: string,
+  env?: Partial<CloudflareEnv>,
+): Promise<ParseStatusResult> {
   try {
-    const replicate = getReplicate();
+    const replicate = getReplicate(env);
     const prediction = await replicate.predictions.get(predictionId);
 
     return {

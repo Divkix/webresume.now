@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getDb } from "@/lib/db";
 import { resumes, siteData } from "@/lib/db/schema";
 import { getParseStatus, normalizeResumeData } from "@/lib/replicate";
@@ -13,8 +14,9 @@ import {
 
 export async function GET(request: Request) {
   try {
-    // 1. Get D1 database binding
+    // 1. Get D1 database binding and typed env for Replicate
     const { env } = await getCloudflareContext({ async: true });
+    const typedEnv = env as Partial<CloudflareEnv>;
     const db = getDb(env.DB);
 
     // 2. Check authentication via Better Auth
@@ -77,10 +79,10 @@ export async function GET(request: Request) {
       });
     }
 
-    // 8. Poll Replicate for status
+    // 8. Poll Replicate for status (pass env for AI Gateway credentials)
     let prediction;
     try {
-      prediction = await getParseStatus(resume.replicateJobId);
+      prediction = await getParseStatus(resume.replicateJobId, typedEnv);
     } catch (error) {
       console.error("Replicate API error:", error);
       // Return processing status on network errors - client will retry

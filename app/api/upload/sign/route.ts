@@ -1,6 +1,8 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
+import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
 import { checkIPRateLimit, getClientIP } from "@/lib/utils/ip-rate-limit";
 import { generateTempKey, MAX_FILE_SIZE } from "@/lib/utils/validation";
@@ -10,6 +12,10 @@ const MIN_PDF_SIZE = 100;
 
 export async function POST(request: Request) {
   try {
+    // 0. Get Cloudflare env bindings for R2 secrets
+    const { env } = await getCloudflareContext({ async: true });
+    const typedEnv = env as Partial<CloudflareEnv>;
+
     // 1. Extract client IP for rate limiting
     const clientIP = getClientIP(request);
 
@@ -67,10 +73,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "File appears to be empty or corrupted" }, { status: 400 });
     }
 
-    // 6. Generate temp key and presigned URL
+    // 6. Generate temp key and presigned URL (pass env for R2 credentials)
     const key = generateTempKey(filename);
-    const r2Client = getR2Client();
-    const R2_BUCKET = getR2Bucket();
+    const r2Client = getR2Client(typedEnv);
+    const R2_BUCKET = getR2Bucket(typedEnv);
 
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET,

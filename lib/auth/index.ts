@@ -155,7 +155,7 @@ export async function getAuth() {
       updateAge: 60 * 60 * 24, // Update session if older than 1 day
       cookieCache: {
         enabled: true,
-        maxAge: 60 * 5, // 5 minutes cache
+        maxAge: 60 * 30, // 30 minutes cache
       },
     },
     trustedOrigins: [baseURL].filter(Boolean),

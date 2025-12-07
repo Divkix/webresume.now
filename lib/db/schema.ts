@@ -99,7 +99,11 @@ export const resumes = sqliteTable(
     parsedContent: text("parsed_content"),
     createdAt: text("created_at").notNull(),
   },
-  (table) => [index("resumes_user_id_idx").on(table.userId)],
+  (table) => [
+    index("resumes_user_id_idx").on(table.userId),
+    index("resumes_file_hash_idx").on(table.fileHash),
+    index("resumes_replicate_job_id_idx").on(table.replicateJobId),
+  ],
 );
 
 export const siteData = sqliteTable(

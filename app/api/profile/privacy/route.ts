@@ -1,9 +1,12 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
 import { privacySettingsSchema } from "@/lib/schemas/profile";
+import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -24,11 +27,26 @@ export async function PUT(request: Request) {
     if (authResult.error) return authResult.error;
     const { user: authUser } = authResult;
 
-    // 2. Get database connection
+    // 2. Rate limit check (20 updates per hour)
+    const rateLimitResponse = await enforceRateLimit(authUser.id, "privacy_update");
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    // 3. Get database connection
     const { env } = await getCloudflareContext({ async: true });
     const { db, captureBookmark } = await getSessionDb(env.DB);
 
-    // 3. Parse and validate request body
+    // 4. Fetch user's handle for cache invalidation
+    const userRecord = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, authUser.id))
+      .limit(1);
+
+    const userHandle = userRecord[0]?.handle;
+
+    // 5. Parse and validate request body
     let body;
     try {
       body = await request.json();
@@ -49,7 +67,7 @@ export async function PUT(request: Request) {
 
     const { show_phone, show_address } = validation.data;
 
-    // 4. Update privacy_settings (stored as JSON string in D1)
+    // 6. Update privacy_settings (stored as JSON string in D1)
     const privacySettings = JSON.stringify({
       show_phone,
       show_address,
@@ -62,6 +80,13 @@ export async function PUT(request: Request) {
         updatedAt: new Date().toISOString(),
       })
       .where(eq(user.id, authUser.id));
+
+    // 7. Invalidate cache for public page so privacy changes reflect immediately
+    // This prevents PII exposure through stale ISR cache
+    if (userHandle) {
+      revalidateTag(getResumeCacheTag(userHandle));
+      revalidatePath(`/${userHandle}`);
+    }
 
     await captureBookmark();
     return createSuccessResponse({

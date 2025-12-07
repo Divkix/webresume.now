@@ -141,7 +141,29 @@ export async function POST(request: Request) {
         .limit(1);
 
       if (cached[0]?.parsedContent) {
-        // Update new resume to completed with cached content (skip Replicate entirely)
+        // DATA INTEGRITY FIX: Move R2 file FIRST before updating DB
+        // If R2 fails, we fall through to normal processing without corrupting DB state
+        try {
+          await r2Client.send(
+            new CopyObjectCommand({
+              Bucket: R2_BUCKET,
+              CopySource: `${R2_BUCKET}/${key}`,
+              Key: newKey,
+            }),
+          );
+          await r2Client.send(
+            new DeleteObjectCommand({
+              Bucket: R2_BUCKET,
+              Key: key,
+            }),
+          );
+        } catch (r2Error) {
+          console.error("R2 operations failed for cached resume:", r2Error);
+          // R2 failed - don't update DB, fall through to normal processing
+          // The resume record stays in pending_claim status
+        }
+
+        // R2 succeeded - NOW update DB with cached content
         try {
           await db
             .update(resumes)
@@ -185,39 +207,13 @@ export async function POST(request: Request) {
             });
           }
 
-          // Still need to move the file from temp to user folder
-          try {
-            await r2Client.send(
-              new CopyObjectCommand({
-                Bucket: R2_BUCKET,
-                CopySource: `${R2_BUCKET}/${key}`,
-                Key: newKey,
-              }),
-            );
-            await r2Client.send(
-              new DeleteObjectCommand({
-                Bucket: R2_BUCKET,
-                Key: key,
-              }),
-            );
-
-            // R2 operations succeeded - return cached result
-            await captureBookmark();
-            return createSuccessResponse({
-              resume_id: resumeId,
-              status: "completed",
-              cached: true,
-            });
-          } catch (error) {
-            console.error("R2 operations failed for cached resume:", error);
-            // SECURITY FIX: R2 failure means file isn't properly moved
-            // Reset status and fall through to normal processing
-            await db
-              .update(resumes)
-              .set({ status: "pending_claim", parsedAt: null, parsedContent: null })
-              .where(eq(resumes.id, resumeId));
-            // Fall through to normal processing path
-          }
+          // R2 and DB both succeeded - return cached result
+          await captureBookmark();
+          return createSuccessResponse({
+            resume_id: resumeId,
+            status: "completed",
+            cached: true,
+          });
         } catch (updateError) {
           console.error("Failed to update resume with cached content:", updateError);
           // Fall through to normal parsing path

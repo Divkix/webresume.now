@@ -1,7 +1,8 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, ne } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { handleChanges, user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
 import { handleUpdateSchema } from "@/lib/schemas/profile";
@@ -121,14 +122,26 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 9. Update handle in user table
-    await db
-      .update(user)
-      .set({
-        handle: newHandle,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(user.id, authUser.id));
+    // 9. Update handle in user table (with race condition protection)
+    try {
+      await db
+        .update(user)
+        .set({
+          handle: newHandle,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(user.id, authUser.id));
+    } catch (error) {
+      // Check if it's a unique constraint violation (race condition)
+      if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+        return createErrorResponse(
+          "This handle was just taken. Please choose a different one.",
+          ERROR_CODES.CONFLICT,
+          409,
+        );
+      }
+      throw error; // Re-throw other errors
+    }
 
     // 10. Record the handle change for rate limiting
     await db.insert(handleChanges).values({
@@ -139,10 +152,12 @@ export async function PUT(request: Request) {
       createdAt: new Date().toISOString(),
     });
 
-    // 11. Invalidate cache for both old and new handles
+    // 11. Invalidate cache for both old and new handles (path + tag)
     if (oldHandle) {
+      revalidateTag(getResumeCacheTag(oldHandle));
       revalidatePath(`/${oldHandle}`);
     }
+    revalidateTag(getResumeCacheTag(newHandle));
     revalidatePath(`/${newHandle}`);
 
     await captureBookmark();

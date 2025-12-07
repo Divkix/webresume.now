@@ -124,19 +124,33 @@ export async function POST(request: Request) {
     }
 
     // 6. Update user table with handle, privacy settings, and mark onboarding as completed
+    // Wrapped in try-catch to handle race condition on unique constraint
     const privacySettings = JSON.stringify(body.privacy_settings);
 
-    await db
-      .update(user)
-      .set({
-        handle: body.handle,
-        privacySettings,
-        onboardingCompleted: true,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(user.id, authUser.id));
+    try {
+      await db
+        .update(user)
+        .set({
+          handle: body.handle,
+          privacySettings,
+          onboardingCompleted: true,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(user.id, authUser.id));
+    } catch (error) {
+      // Check if it's a unique constraint violation (race condition)
+      if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+        return createErrorResponse(
+          "This handle was just taken. Please choose a different one.",
+          ERROR_CODES.CONFLICT,
+          409,
+        );
+      }
+      throw error; // Re-throw other errors
+    }
 
-    // 7. Update site_data with theme_id
+    // 7. Upsert site_data with theme_id
+    // Handle race condition where webhook may insert siteData between our SELECT and INSERT
     const existingSiteData = await db
       .select({ id: siteData.id })
       .from(siteData)
@@ -153,8 +167,32 @@ export async function POST(request: Request) {
         })
         .where(eq(siteData.userId, authUser.id));
     } else {
-      // Site data doesn't exist yet - it will be created when resume is parsed
-      console.warn("Site data does not exist yet, skipping theme update");
+      // No existing siteData - try to insert, but handle race condition
+      // where webhook may insert between our SELECT and INSERT
+      try {
+        await db.insert(siteData).values({
+          id: crypto.randomUUID(),
+          userId: authUser.id,
+          content: "{}", // Will be populated by webhook when parsing completes
+          themeId: body.theme_id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        // Race condition: webhook inserted first, just update the theme instead
+        if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
+          await db
+            .update(siteData)
+            .set({
+              themeId: body.theme_id,
+              lastPublishedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(siteData.userId, authUser.id));
+        } else {
+          throw error;
+        }
+      }
     }
 
     // 8. Revalidate public page cache with new handle

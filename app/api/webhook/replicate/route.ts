@@ -1,5 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidateTag } from "next/cache";
 import { getResumeCacheTag } from "@/lib/data/resume";
 import { resumes, siteData, user } from "@/lib/db/schema";
@@ -154,7 +154,9 @@ export async function POST(request: Request) {
         });
       }
 
-      // Update resume status and store parsed content for caching
+      // Update resume status with optimistic lock to prevent race conditions
+      // Only update if status is still "processing" - another process may have completed it
+      // D1 doesn't return affected rows, but if status wasn't "processing", this is a no-op
       await db
         .update(resumes)
         .set({
@@ -162,7 +164,7 @@ export async function POST(request: Request) {
           parsedAt: new Date().toISOString(),
           parsedContent: contentJson,
         })
-        .where(eq(resumes.id, resume.id));
+        .where(and(eq(resumes.id, resume.id), eq(resumes.status, "processing")));
 
       // Fan out to all resumes waiting for this file hash
       if (resume.fileHash) {

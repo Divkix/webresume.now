@@ -5,6 +5,23 @@
 
 import { ENV } from "@/lib/env";
 
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ * Unlike regular === which may short-circuit on first mismatch,
+ * this function always compares all characters in constant time.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 export async function verifyReplicateWebhook(
   request: Request,
 ): Promise<{ isValid: boolean; body: string }> {
@@ -57,8 +74,8 @@ export async function verifyReplicateWebhook(
     return { version, sig };
   });
 
-  // Compare signatures (constant-time would be better but this works)
-  const isValid = signatures.some(({ sig }) => sig === computedSignature);
+  // Compare signatures using timing-safe comparison to prevent timing attacks
+  const isValid = signatures.some(({ sig }) => timingSafeEqual(sig, computedSignature));
 
   return { isValid, body };
 }

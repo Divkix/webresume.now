@@ -12,6 +12,9 @@ import {
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
 
+// 10 minute timeout for waiting_for_cache status
+const WAITING_FOR_CACHE_TIMEOUT_MS = 10 * 60 * 1000;
+
 export async function GET(request: Request) {
   try {
     // 1. Get D1 database binding and typed env for Replicate
@@ -59,7 +62,42 @@ export async function GET(request: Request) {
       );
     }
 
-    // 6. If not processing, return current status
+    // 6. Handle waiting_for_cache status with timeout check
+    if (resume.status === "waiting_for_cache") {
+      const createdAt = new Date(resume.createdAt);
+      const waitingTime = Date.now() - createdAt.getTime();
+
+      if (waitingTime > WAITING_FOR_CACHE_TIMEOUT_MS) {
+        // Timeout reached - transition to failed status
+        await db
+          .update(resumes)
+          .set({
+            status: "failed",
+            errorMessage:
+              "Parsing timed out while waiting for cached result. Please try uploading again.",
+          })
+          .where(eq(resumes.id, resumeId));
+
+        await captureBookmark();
+        return createSuccessResponse({
+          status: "failed",
+          progress_pct: 0,
+          error: "Parsing timed out while waiting for cached result. Please try uploading again.",
+          can_retry: resume.retryCount < 2,
+        });
+      }
+
+      // Still within timeout - return processing status to keep polling
+      return createSuccessResponse({
+        status: "processing",
+        progress_pct: 30,
+        error: null,
+        can_retry: false,
+        waiting_for_cache: true,
+      });
+    }
+
+    // 7. If not processing, return current status
     if (resume.status !== "processing") {
       return createSuccessResponse({
         status: resume.status,
@@ -69,7 +107,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // 7. Check if we have a replicate job ID
+    // 8. Check if we have a replicate job ID
     if (!resume.replicateJobId) {
       return createSuccessResponse({
         status: "processing",
@@ -79,7 +117,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // 8. Poll Replicate for status (pass env for AI Gateway credentials)
+    // 9. Poll Replicate for status (pass env for AI Gateway credentials)
     let prediction;
     try {
       prediction = await getParseStatus(resume.replicateJobId, typedEnv);
@@ -94,7 +132,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // 9. Handle Replicate status
+    // 10. Handle Replicate status
     if (prediction.status === "succeeded") {
       try {
         // IDEMPOTENCY: Re-check status to handle race condition with webhook

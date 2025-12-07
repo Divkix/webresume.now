@@ -1,6 +1,6 @@
-import type { Config } from "drizzle-kit";
 import fs from "node:fs";
 import path from "node:path";
+import type { Config } from "drizzle-kit";
 
 // Find the local D1 SQLite file dynamically
 function getLocalD1Path(): string {

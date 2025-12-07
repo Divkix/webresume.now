@@ -72,6 +72,7 @@ export async function getAuth() {
         account: schema.account,
         verification: schema.verification,
       },
+      supportsDates: false, // D1/SQLite doesn't accept Date objects directly
     }),
     baseURL,
     secret,

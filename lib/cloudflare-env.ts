@@ -39,6 +39,9 @@ export interface CloudflareEnv {
   REPLICATE_API_TOKEN: string;
   REPLICATE_WEBHOOK_SECRET?: string;
 
+  // Resend email API
+  RESEND_API_KEY?: string;
+
   // Public app URL (optional)
   NEXT_PUBLIC_APP_URL?: string;
 }
@@ -63,6 +66,7 @@ export function isCloudflareEnvKey(key: string): key is keyof CloudflareEnv {
     "CF_AIG_AUTH_TOKEN",
     "REPLICATE_API_TOKEN",
     "REPLICATE_WEBHOOK_SECRET",
+    "RESEND_API_KEY",
     "NEXT_PUBLIC_APP_URL",
   ];
   return envKeys.includes(key as keyof CloudflareEnv);

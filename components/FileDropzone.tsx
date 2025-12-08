@@ -20,6 +20,34 @@ async function computeFileHash(file: File): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Set pending upload cookie via API (primary storage)
+ * Falls back silently if API call fails - sessionStorage remains as backup
+ */
+async function setPendingUploadCookie(key: string, fileHash: string | null): Promise<void> {
+  try {
+    await fetch("/api/upload/pending", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, file_hash: fileHash }),
+    });
+  } catch (error) {
+    console.warn("Failed to set pending upload cookie, using sessionStorage fallback:", error);
+  }
+}
+
+/**
+ * Clear pending upload cookie via API
+ * Best effort - silent failure is acceptable
+ */
+async function clearPendingUploadCookie(): Promise<void> {
+  try {
+    await fetch("/api/upload/pending", { method: "DELETE" });
+  } catch (error) {
+    console.warn("Failed to clear pending upload cookie:", error);
+  }
+}
+
 interface FileDropzoneProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -111,7 +139,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       let fileHash: string | undefined;
       try {
         fileHash = await computeFileHash(fileToUpload);
-        // Use sessionStorage for file hash to avoid multi-tab race conditions
+        // Use sessionStorage for file hash as fallback (migration period)
         sessionStorage.setItem("temp_file_hash", fileHash);
       } catch {
         // Fallback: proceed without hash (older browsers without crypto.subtle)
@@ -160,7 +188,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       setUploadProgress(100);
 
-      // Step 3: Save key to sessionStorage with expiry (30 min window)
+      // Step 4a: Save key to sessionStorage with expiry (30 min window) - FALLBACK
+      // Kept for migration period - remove after 30 days
       sessionStorage.setItem(
         "temp_upload",
         JSON.stringify({
@@ -170,10 +199,14 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }),
       );
 
+      // Step 4b: Set HTTP-only cookie via API - PRIMARY storage
+      // This is the preferred method as it works across tabs and survives browser restart
+      await setPendingUploadCookie(key, fileHash || null);
+
       setUploadComplete(true);
       toast.success("File uploaded successfully!");
 
-      // Step 4: If user is authenticated, auto-claim the upload
+      // Step 5: If user is authenticated, auto-claim the upload
       if (user) {
         await claimUpload(key);
       }
@@ -200,9 +233,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }
       }
 
-      // Clean up temp storage on error
+      // Clean up temp storage on error (both sessionStorage and cookie)
       sessionStorage.removeItem("temp_upload");
       sessionStorage.removeItem("temp_file_hash");
+      await clearPendingUploadCookie();
 
       setError(errorMessage);
       toast.error(errorMessage);
@@ -216,7 +250,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
-      // Include file hash for deduplication caching (from sessionStorage)
+      // Include file hash for deduplication caching (from sessionStorage as fallback)
       const fileHash = sessionStorage.getItem("temp_file_hash");
 
       const claimResponse = await fetch("/api/resume/claim", {
@@ -235,6 +269,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       // Clear temp data from sessionStorage
       sessionStorage.removeItem("temp_upload");
       sessionStorage.removeItem("temp_file_hash");
+
+      // Clear HTTP-only cookie
+      await clearPendingUploadCookie();
 
       toast.success("Resume claimed successfully! Processing...");
 
@@ -269,9 +306,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }
       }
 
-      // Clean up temp storage on error
+      // Clean up temp storage on error (both sessionStorage and cookie)
       sessionStorage.removeItem("temp_upload");
       sessionStorage.removeItem("temp_file_hash");
+      await clearPendingUploadCookie();
 
       setError(errorMessage);
       toast.error(errorMessage);

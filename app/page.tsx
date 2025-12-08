@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { Brand } from "@/components/Brand";
 import { FileDropzone } from "@/components/FileDropzone";
+import { Footer } from "@/components/Footer";
 import { TemplatePreviewModal } from "@/components/templates/TemplatePreviewModal";
 import { Toaster } from "@/components/ui/sonner";
 import { DEMO_PROFILES } from "@/lib/templates/demo-data";
@@ -11,7 +12,7 @@ import { DEMO_PROFILES } from "@/lib/templates/demo-data";
 export default function Home() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Toaster />
       <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md shadow-depth-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -24,7 +25,7 @@ export default function Home() {
 
       <main
         id="main-content"
-        className="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-20 pb-20"
+        className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-20 pb-20"
       >
         {/* Hero Section */}
         <div className="max-w-4xl mx-auto text-center animate-fade-in-up">
@@ -181,13 +182,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/60 bg-white/80 backdrop-blur-sm shadow-depth-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-center text-slate-600 text-sm font-medium">
-            Built with Next.js | Powered by Cloudflare | Privacy-first design
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Template Preview Modal */}
       <TemplatePreviewModal

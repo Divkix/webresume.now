@@ -46,6 +46,11 @@ interface WizardCompleteResponse {
   error?: string;
 }
 
+interface PendingUploadResponse {
+  key: string | null;
+  file_hash: string | null;
+}
+
 interface WizardState {
   currentStep: number;
   resumeData: ResumeContent | null;
@@ -55,6 +60,18 @@ interface WizardState {
     show_address: boolean;
   };
   themeId: ThemeId;
+}
+
+/**
+ * Clear pending upload cookie via API
+ * Best effort - silent failure is acceptable
+ */
+async function clearPendingUploadCookie(): Promise<void> {
+  try {
+    await fetch("/api/upload/pending", { method: "DELETE" });
+  } catch (error) {
+    console.warn("Failed to clear pending upload cookie:", error);
+  }
 }
 
 /**
@@ -179,34 +196,55 @@ export default function WizardPage() {
       try {
         setLoading(true);
 
-        // Check for pending upload claim (with expiry validation)
+        // PRIMARY: Try reading pending upload from HTTP-only cookie via API
+        // This is more reliable than sessionStorage (works across tabs, survives browser restart)
         let tempKey: string | null = null;
-        const tempUploadStr = sessionStorage.getItem("temp_upload");
-        if (tempUploadStr) {
-          try {
-            const tempUpload = JSON.parse(tempUploadStr) as {
-              key: string;
-              timestamp: number;
-              expiresAt: number;
-            };
-            // Only use if not expired (30 min window)
-            if (tempUpload.expiresAt > Date.now()) {
-              tempKey = tempUpload.key;
-            } else {
-              // Expired - clean up stale data
-              sessionStorage.removeItem("temp_upload");
-              sessionStorage.removeItem("temp_file_hash");
-              console.log("Cleared expired temp upload data");
+        let fileHash: string | null = null;
+
+        try {
+          const pendingResponse = await fetch("/api/upload/pending");
+          if (pendingResponse.ok) {
+            const pending = (await pendingResponse.json()) as PendingUploadResponse;
+            if (pending.key) {
+              tempKey = pending.key;
+              fileHash = pending.file_hash;
             }
-          } catch {
-            // Invalid JSON - clean up
-            sessionStorage.removeItem("temp_upload");
+          }
+        } catch (cookieError) {
+          console.warn("Failed to read pending upload cookie:", cookieError);
+        }
+
+        // FALLBACK: Try sessionStorage (migration period - remove after 30 days)
+        // This handles users who uploaded before the cookie implementation
+        if (!tempKey) {
+          const tempUploadStr = sessionStorage.getItem("temp_upload");
+          if (tempUploadStr) {
+            try {
+              const tempUpload = JSON.parse(tempUploadStr) as {
+                key: string;
+                timestamp: number;
+                expiresAt: number;
+              };
+              // Only use if not expired (30 min window)
+              if (tempUpload.expiresAt > Date.now()) {
+                tempKey = tempUpload.key;
+                fileHash = sessionStorage.getItem("temp_file_hash");
+                console.log("[Migration] Using sessionStorage fallback for pending upload");
+              } else {
+                // Expired - clean up stale data
+                sessionStorage.removeItem("temp_upload");
+                sessionStorage.removeItem("temp_file_hash");
+                console.log("Cleared expired temp upload data");
+              }
+            } catch {
+              // Invalid JSON - clean up
+              sessionStorage.removeItem("temp_upload");
+            }
           }
         }
 
         if (tempKey) {
           // Claim the upload (include file_hash for deduplication caching)
-          const fileHash = sessionStorage.getItem("temp_file_hash");
           setLoading(true);
           try {
             const claimResponse = await fetch("/api/resume/claim", {
@@ -229,9 +267,12 @@ export default function WizardPage() {
             // Get resume_id from claim response
             const resumeId = claimData.resume_id;
 
-            // Clear sessionStorage after successful claim
+            // Clear sessionStorage after successful claim (migration cleanup)
             sessionStorage.removeItem("temp_upload");
             sessionStorage.removeItem("temp_file_hash");
+
+            // Clear HTTP-only cookie after successful claim
+            await clearPendingUploadCookie();
 
             // If not cached, poll for status updates (parsing in progress)
             if (!claimData.cached) {
@@ -245,8 +286,12 @@ export default function WizardPage() {
           } catch (claimError) {
             console.error("Claim error:", claimError);
             setError(claimError instanceof Error ? claimError.message : "Failed to claim resume");
+
+            // Clean up both storage mechanisms on error
             sessionStorage.removeItem("temp_upload");
             sessionStorage.removeItem("temp_file_hash");
+            await clearPendingUploadCookie();
+
             setTimeout(() => router.push("/dashboard"), 3000);
             return;
           }

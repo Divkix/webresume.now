@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HandleForm } from "@/components/forms/HandleForm";
 import { PrivacySettingsForm } from "@/components/forms/PrivacySettings";
+import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { ResumeManagementCard } from "@/components/settings/ResumeManagementCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAuth } from "@/lib/auth";
@@ -134,22 +135,8 @@ export default async function SettingsPage() {
         {/* Privacy Settings */}
         <PrivacySettingsForm initialSettings={privacySettings} userHandle={profile.handle} />
 
-        {/* Danger Zone */}
-        <Card className="shadow-depth-sm border-red-200 hover:shadow-depth-md transition-all duration-300">
-          <CardHeader>
-            <CardTitle className="text-red-900">Danger Zone</CardTitle>
-            <CardDescription className="text-red-700">
-              Irreversible actions for your account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-              <p className="text-sm text-red-900">
-                Account deletion and data export features coming soon.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Danger Zone - Account Deletion */}
+        <DeleteAccountCard userEmail={profile.email} />
       </div>
     </div>
   );

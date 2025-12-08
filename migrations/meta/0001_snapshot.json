@@ -105,12 +105,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -161,9 +157,7 @@
       "indexes": {
         "handle_changes_user_id_idx": {
           "name": "handle_changes_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -172,12 +166,8 @@
           "name": "handle_changes_user_id_user_id_fk",
           "tableFrom": "handle_changes",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -272,23 +262,17 @@
       "indexes": {
         "resumes_user_id_idx": {
           "name": "resumes_user_id_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         },
         "resumes_file_hash_idx": {
           "name": "resumes_file_hash_idx",
-          "columns": [
-            "file_hash"
-          ],
+          "columns": ["file_hash"],
           "isUnique": false
         },
         "resumes_replicate_job_id_idx": {
           "name": "resumes_replicate_job_id_idx",
-          "columns": [
-            "replicate_job_id"
-          ],
+          "columns": ["replicate_job_id"],
           "isUnique": false
         }
       },
@@ -297,12 +281,8 @@
           "name": "resumes_user_id_user_id_fk",
           "tableFrom": "resumes",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -374,9 +354,7 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         }
       },
@@ -385,12 +363,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -463,16 +437,12 @@
       "indexes": {
         "site_data_user_id_unique": {
           "name": "site_data_user_id_unique",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": true
         },
         "site_data_resume_id_idx": {
           "name": "site_data_resume_id_idx",
-          "columns": [
-            "resume_id"
-          ],
+          "columns": ["resume_id"],
           "isUnique": false
         }
       },
@@ -481,12 +451,8 @@
           "name": "site_data_user_id_user_id_fk",
           "tableFrom": "site_data",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -494,12 +460,8 @@
           "name": "site_data_resume_id_resumes_id_fk",
           "tableFrom": "site_data",
           "tableTo": "resumes",
-          "columnsFrom": [
-            "resume_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["resume_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -536,9 +498,7 @@
       "indexes": {
         "upload_rate_limits_ip_hash_idx": {
           "name": "upload_rate_limits_ip_hash_idx",
-          "columns": [
-            "ip_hash"
-          ],
+          "columns": ["ip_hash"],
           "isUnique": false
         }
       },
@@ -640,16 +600,12 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         },
         "user_handle_unique": {
           "name": "user_handle_unique",
-          "columns": [
-            "handle"
-          ],
+          "columns": ["handle"],
           "isUnique": true
         }
       },

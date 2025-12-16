@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Identity
 
-**Vision**: The fastest way to turn a static résumé into a hosted, shareable web portfolio. "Drop a PDF, get a link."
+**Vision**: The fastest way to turn a static resume into a hosted, shareable web portfolio. "Drop a PDF, get a link."
 
 **Core Loop**: Upload (PDF) → Parse (AI) → Polish (Survey) → Publish (Next.js Edge)
 
@@ -28,7 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Framework**: Next.js 15 (App Router) deployed via `@opennextjs/cloudflare`
 - **Runtime**: Cloudflare Workers with Node.js Compatibility Mode
-- **Database**: Supabase (Postgres + Auth) — NO Supabase Edge Functions
+- **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
+- **Auth**: Better Auth with Google OAuth
 - **Storage**: Cloudflare R2 (S3-compatible)
 - **AI Parsing**: Replicate (datalab-to/marker with structured extraction)
 - **Package Manager**: **bun** (NOT npm/yarn/pnpm)
@@ -36,25 +37,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Deployment Architecture
 
 ```
-User → Cloudflare Workers (Next.js 15) → Supabase (Postgres + Auth)
+User → Cloudflare Workers (Next.js 15) → Cloudflare D1 (SQLite)
                 ↓                              ↓
          Cloudflare R2                  Replicate API
+                ↓
+         Better Auth (Google OAuth)
 ```
 
 ### Critical Constraints (MUST FOLLOW)
 
 1. **Cloudflare Worker Limitations**:
-   - ❌ NO filesystem access (`fs` module unavailable)
-   - ❌ NO Next.js `<Image />` component (optimization requires server)
-   - ✅ USE presigned URLs for R2 uploads
-   - ✅ USE CSS `aspect-ratio` + `object-fit` for images
-   - ✅ USE `@aws-sdk/client-s3` for R2 operations
+   - No filesystem access (`fs` module unavailable)
+   - No Next.js `<Image />` component (optimization requires server)
+   - USE presigned URLs for R2 uploads
+   - USE CSS `aspect-ratio` + `object-fit` for images
+   - USE `@aws-sdk/client-s3` for R2 operations
 
-2. **Rendering Strategy**:
+2. **D1/SQLite Constraints**:
+   - No native JSONB type — use TEXT and parse/stringify JSON
+   - No native UUID type — generate UUIDs in application code (use `crypto.randomUUID()`)
+   - No array types — use JSON strings or separate tables
+   - Use Drizzle ORM for type-safe queries
+
+3. **Rendering Strategy**:
    - `/dashboard`: Server-rendered (SSR), protected
    - `/[handle]`: Server-rendered, highly cached (ISR-like via Cache-Control)
 
-3. **Privacy Defaults**:
+4. **Privacy Defaults**:
    - Phone numbers: HIDDEN by default
    - Street addresses: HIDDEN by default (only City/State shown)
    - Email: PUBLIC (uses `mailto:` links)
@@ -72,7 +81,7 @@ Anonymous users can upload files before authentication. The handoff works like t
 POST /api/upload/sign → { uploadUrl, key: "temp/{uuid}/{filename}" }
 // Client uploads to R2, stores key in localStorage
 
-// 2. User logs in with Google OAuth
+// 2. User logs in with Google OAuth (Better Auth)
 
 // 3. Claim the upload
 POST /api/resume/claim with { key }
@@ -92,8 +101,9 @@ POST /api/resume/claim with { key }
 After successful authentication, users are guided through a multi-step wizard to complete their profile:
 
 ```typescript
-// Middleware checks onboarding_completed flag
-if (user && isProtectedRoute && !profile.onboarding_completed) {
+// Page component checks onboardingCompleted flag
+// (Note: Moved from middleware to page components because Edge middleware cannot make D1 database calls)
+if (user && !user.onboardingCompleted) {
   redirect("/wizard");
 }
 ```
@@ -107,13 +117,13 @@ if (user && isProtectedRoute && !profile.onboarding_completed) {
 
 **Onboarding Completion**:
 
-- Sets `profiles.onboarding_completed = true`
+- Sets `user.onboardingCompleted = 1`
 - Creates `site_data` record with chosen theme
 - Redirects to `/dashboard`
 
 **Exempt Routes** (skip onboarding check):
 
-- `/wizard`, `/auth/callback`
+- `/wizard`, `/api/auth/*`
 
 ### 2. Structured AI Extraction
 
@@ -151,52 +161,207 @@ We use Replicate's `datalab-to/marker` with a **custom JSON schema** to enforce 
 Before rendering public pages (`/[handle]`):
 
 ```typescript
-if (!profile.privacy_settings.show_phone) {
+const privacySettings = JSON.parse(user.privacySettings || "{}");
+if (!privacySettings.show_phone) {
   delete content.contact.phone; // Remove from DOM entirely
 }
-if (!profile.privacy_settings.show_address) {
+if (!privacySettings.show_address) {
   content.contact.location = extractCityState(content.contact.location);
 }
 ```
 
 ---
 
-## Data Model (Supabase)
+## Data Model (Cloudflare D1 + Drizzle ORM)
 
 ### Schema Overview
 
-**profiles**
+All tables defined in `lib/db/schema.ts` using Drizzle ORM.
 
-- `id` (uuid, FK to auth.users)
-- `handle` (text, unique, min 3 chars, alphanumeric + hyphens)
-- `email`, `avatar_url`, `headline`
-- `privacy_settings` (jsonb): `{ show_phone: bool, show_address: bool }`
-- `onboarding_completed` (bool): Tracks wizard completion
-- `created_at`, `updated_at`
+**Important D1/SQLite Notes**:
+
+- JSON fields stored as TEXT (use `JSON.parse()`/`JSON.stringify()`)
+- UUIDs generated in application code (`crypto.randomUUID()`)
+- Timestamps stored as TEXT (ISO string format)
+- No row-level security — authorization enforced in application code
+
+**user** (Better Auth managed + custom profile fields)
+
+- `id` (text, primary key) — generated UUID
+- `email` (text, unique)
+- `name` (text)
+- `image` (text) — avatar URL
+- `emailVerified` (integer) — boolean as 0/1
+- `handle` (text, unique) — user's public username (3+ chars, alphanumeric + hyphens)
+- `headline` (text) — profile headline
+- `privacySettings` (text) — JSON string `{"show_phone":false,"show_address":false}`
+- `onboardingCompleted` (integer) — 0/1 boolean
+- `role` (text) — user role
+- `createdAt`, `updatedAt` (text) — ISO timestamps
+
+**session** (Better Auth managed)
+
+- `id` (text, primary key)
+- `userId` (text, FK to user)
+- `token` (text, unique)
+- `expiresAt` (text) — ISO timestamp
+- `ipAddress`, `userAgent` (text)
+- `createdAt`, `updatedAt` (text) — ISO timestamps
+
+**account** (Better Auth managed)
+
+- `id` (text, primary key)
+- `userId` (text, FK to user)
+- `providerId` (text) — e.g., "google"
+- `accountId` (text) — provider's user ID
+- `accessToken`, `refreshToken` (text)
+- `accessTokenExpiresAt`, `refreshTokenExpiresAt` (text) — ISO timestamps
+
+**verification** (Better Auth managed)
+
+- `id` (text, primary key)
+- `identifier` (text)
+- `value` (text)
+- `expiresAt` (text) — ISO timestamp
 
 **resumes**
 
-- `id`, `user_id` (FK to profiles)
-- `r2_key` (path in bucket)
-- `status`: `pending_claim`, `processing`, `completed`, `failed`
-- `error_message` (text): Stores parsing error details
-- `replicate_job_id` (text): Prediction ID for tracking
-- `retry_count` (int, default 0): Max 2 retries allowed
-- `parsed_at` (timestamp): When AI parsing completed
-- `created_at`
+- `id` (text, primary key)
+- `user_id` (text, FK to user)
+- `r2_key` (text) — path in bucket
+- `status` (text): `pending_claim`, `processing`, `completed`, `failed`
+- `error_message` (text) — stores parsing error details
+- `replicate_job_id` (text) — prediction ID for tracking
+- `retry_count` (integer, default 0) — max 2 retries allowed
+- `parsed_at` (text) — ISO timestamp when AI parsing completed
+- `created_at` (text) — ISO timestamp
 
 **site_data**
 
-- `id`, `user_id` (FK to profiles), `resume_id`
-- `content` (jsonb): Render-ready resume JSON
+- `id` (text, primary key)
+- `user_id` (text, FK to user)
+- `resume_id` (text, FK to resumes)
+- `content` (text): JSON string of render-ready resume data
 - `theme_id` (text): Template identifier (see Available Templates below)
-- `last_published_at`, `created_at`, `updated_at`
+- `last_published_at`, `created_at`, `updated_at` (text) — ISO timestamps
 
-### RLS Policies (Required)
+### Authorization (Application-Level)
 
-- `profiles`: Public read (handle lookup), user update own
-- `resumes`: User read/create own only
-- `site_data`: Public read, user update own
+Since D1 does not support row-level security, enforce authorization in application code:
+
+```typescript
+// Example: Ensure user can only access their own data
+async function getUserResumes(userId: string) {
+  const db = getDb();
+  return await db
+    .select()
+    .from(resumes)
+    .where(eq(resumes.user_id, userId));
+}
+
+// Example: Verify ownership before update
+async function updateSiteData(userId: string, siteDataId: string, data: Partial<SiteData>) {
+  const db = getDb();
+  const existing = await db
+    .select()
+    .from(siteData)
+    .where(and(eq(siteData.id, siteDataId), eq(siteData.user_id, userId)))
+    .get();
+
+  if (!existing) throw new Error("Not found or unauthorized");
+
+  return await db
+    .update(siteData)
+    .set(data)
+    .where(eq(siteData.id, siteDataId));
+}
+```
+
+---
+
+## Authentication (Better Auth)
+
+### Setup
+
+Better Auth handles OAuth flow, session management, and user creation automatically.
+
+**Server-side (API routes, Server Components)**:
+
+```typescript
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+// In API route or Server Component
+export async function GET() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+  // ... use userId
+}
+```
+
+**Client-side**:
+
+```typescript
+import { useSession, signIn, signOut } from "@/lib/auth/client";
+
+function LoginButton() {
+  const { data: session, isPending } = useSession();
+
+  if (isPending) return <div>Loading...</div>;
+
+  if (session) {
+    return <button onClick={() => signOut()}>Sign out</button>;
+  }
+
+  return (
+    <button onClick={() => signIn.social({ provider: "google" })}>
+      Sign in with Google
+    </button>
+  );
+}
+```
+
+### Auth Configuration
+
+Located in `lib/auth/index.ts`:
+
+```typescript
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "@/lib/db";
+
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "sqlite",
+  }),
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days
+    updateAge: 60 * 60 * 24, // 1 day
+  },
+});
+```
+
+### Auth API Routes
+
+Better Auth mounts at `/api/auth/[...all]`:
+
+- `GET /api/auth/session` — Get current session
+- `POST /api/auth/sign-in/social` — Initiate OAuth flow
+- `POST /api/auth/sign-out` — Sign out
+- `GET /api/auth/callback/google` — OAuth callback
 
 ---
 
@@ -226,9 +391,10 @@ if (!profile.privacy_settings.show_address) {
 **Phase 1: Skeleton & Plumbing** (Days 1-3)
 
 - Initialize Next.js 15 + OpenNext Cloudflare adapter
-- Configure Supabase (tables + RLS + Google OAuth)
+- Configure D1 database + Drizzle ORM schema
+- Set up Better Auth with Google OAuth
 - Deploy to Cloudflare Workers
-- ✅ Checkpoint: Login/Logout works on live URL
+- Checkpoint: Login/Logout works on live URL
 
 **Phase 2: Drop & Claim Loop** (Days 4-6)
 
@@ -236,14 +402,14 @@ if (!profile.privacy_settings.show_address) {
 - Implement presigned upload API
 - Build FileDropzone component + localStorage logic
 - Create claim API (links upload to user)
-- ✅ Checkpoint: Anonymous upload → Auth → DB row created
+- Checkpoint: Anonymous upload → Auth → DB row created
 
 **Phase 3: The Viewer (Mocked)** (Days 7-9)
 
 - Create `[handle]/page.tsx` dynamic route
 - Manually seed `site_data` with test JSON
-- Build "Minimalist Crème" template component
-- ✅ Checkpoint: `webresume.now/testhandle` renders mock data
+- Build "Minimalist Creme" template component
+- Checkpoint: `webresume.now/testhandle` renders mock data
 
 **Phase 4: The Brain (AI Integration)** (Days 10-13)
 
@@ -251,7 +417,7 @@ if (!profile.privacy_settings.show_address) {
 - Update claim API to trigger parsing job
 - Build polling UI ("Waiting Room")
 - Implement normalization layer (Replicate → site_data)
-- ✅ Checkpoint: Real PDF → AI parse → Dashboard
+- Checkpoint: Real PDF → AI parse → Dashboard
 
 **Phase 5: Polish & Launch** (Days 14-15)
 
@@ -259,7 +425,7 @@ if (!profile.privacy_settings.show_address) {
 - Add privacy toggles (show_phone, show_address)
 - Implement rate limiting (5/24h)
 - Add SEO metadata (dynamic titles, OG images)
-- ✅ Checkpoint: Full E2E flow works flawlessly
+- Checkpoint: Full E2E flow works flawlessly
 
 ---
 
@@ -312,15 +478,27 @@ const resumeSchema = z.object({
 
 - Upload: 5 resumes per user per 24 hours (enforced in `/api/resume/claim`)
 - Update: 10 content updates per user per hour (enforced in `/api/resume/update`)
-- Check via SQL: `SELECT count(*) FROM resumes WHERE user_id = $1 AND created_at > now() - interval '1 day'`
+- Check via Drizzle:
+
+```typescript
+const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+const count = await db
+  .select({ count: sql<number>`count(*)` })
+  .from(resumes)
+  .where(and(
+    eq(resumes.user_id, userId),
+    gt(resumes.created_at, oneDayAgo)
+  ))
+  .get();
+```
 
 ### Image Handling
 
 ```tsx
-// ❌ NEVER use Next.js Image component
+// NEVER use Next.js Image component
 <Image src="..." alt="..." /> // WRONG - breaks on Cloudflare
 
-// ✅ ALWAYS use standard HTML with CSS
+// ALWAYS use standard HTML with CSS
 <img
   src={avatarUrl}
   alt="Profile"
@@ -339,14 +517,20 @@ users / { user_id } / { timestamp } / { filename }; // Claimed uploads
 fs.writeFileSync("..."); // WRONG - not available on Workers
 ```
 
-### Rate Limiting
+### JSON Field Handling (D1/SQLite)
 
-```sql
--- Check upload quota in API
-SELECT count(*) FROM resumes
-WHERE user_id = $1
-AND created_at > now() - interval '1 day'
-LIMIT 5;
+```typescript
+// Reading JSON fields
+const user = await db.select().from(users).where(eq(users.id, userId)).get();
+const privacySettings = JSON.parse(user.privacySettings || "{}");
+
+// Writing JSON fields
+await db.update(users)
+  .set({
+    privacySettings: JSON.stringify({ show_phone: false, show_address: false }),
+    updatedAt: new Date().toISOString(),
+  })
+  .where(eq(users.id, userId));
 ```
 
 ---
@@ -356,7 +540,7 @@ LIMIT 5;
 ```
 app/
 ├── (auth)/                          # Route group: Authentication
-│   └── auth/callback/route.ts       # Google OAuth callback handler
+│   └── api/auth/[...all]/route.ts   # Better Auth API handler
 ├── (public)/                        # Route group: Public pages (no auth)
 │   ├── [handle]/page.tsx            # Dynamic resume viewer (/username)
 │   └── page.tsx                     # Homepage with file upload
@@ -387,14 +571,14 @@ app/
 │   └── health/route.ts              # Health check endpoint
 ├── error.tsx                        # Global error boundary
 ├── not-found.tsx                    # 404 page (matches Soft Depth theme)
-├── layout.tsx                       # Root layout with Supabase provider
+├── layout.tsx                       # Root layout with auth provider
 └── globals.css                      # Global styles + custom animations
 
 components/
 ├── FileDropzone.tsx                 # Drag-and-drop PDF uploader
 ├── AttributionWidget.tsx            # Footer attribution link
 ├── auth/                            # Auth-related components
-│   ├── LoginButton.tsx              # Google OAuth button
+│   ├── LoginButton.tsx              # Google OAuth button (Better Auth)
 │   └── UserMenu.tsx                 # User dropdown menu
 ├── dashboard/                       # Dashboard-specific components
 │   ├── Sidebar.tsx                  # Navigation sidebar
@@ -419,11 +603,13 @@ components/
     ├── button.tsx, input.tsx, etc.
 
 lib/
-├── supabase/
-│   ├── client.ts                    # Browser client (uses cookies)
-│   ├── server.ts                    # Server client (async, for Server Components)
-│   ├── middleware.ts                # updateSession() for middleware
-│   └── types.ts                     # Generated TypeScript types (from CLI)
+├── db/
+│   ├── schema.ts                    # Drizzle ORM schema definitions
+│   ├── index.ts                     # Database client initialization
+│   └── migrations/                  # D1 migration files
+├── auth/
+│   ├── index.ts                     # Better Auth server configuration
+│   └── client.ts                    # Better Auth client hooks (useSession, signIn, signOut)
 ├── types/
 │   ├── database.ts                  # Manual types (ResumeContent, ProfileData, etc.)
 │   └── template.ts                  # Template type definitions
@@ -441,16 +627,14 @@ lib/
 ├── env.ts                           # Environment variable validation (Zod)
 └── utils.ts                         # cn() utility (clsx + tailwind-merge)
 
-supabase/
-├── migrations/                      # Database migrations (source of truth)
-│   ├── 20231118000000_initial_schema.sql
-│   ├── 20231119000000_add_retry_count.sql
-│   └── [timestamped migrations...]
-├── config.toml                      # Supabase local config
-└── seed.sql                         # Test data seeding script
+drizzle/
+├── migrations/                      # Generated Drizzle migrations
+│   ├── 0000_initial.sql
+│   └── meta/
+└── drizzle.config.ts                # Drizzle configuration
 
-middleware.ts                        # Next.js middleware (auth + onboarding check)
-wrangler.toml                        # Cloudflare Workers config
+middleware.ts                        # Next.js middleware (auth only - no D1 access in Edge)
+wrangler.toml                        # Cloudflare Workers config (includes D1 binding)
 open-next.config.ts                  # OpenNext Cloudflare adapter config
 ```
 
@@ -458,14 +642,14 @@ open-next.config.ts                  # OpenNext Cloudflare adapter config
 
 **Route Groups** (folders with parentheses don't affect URL structure):
 
-- `(auth)` → `/auth/callback`
+- `(auth)` → `/api/auth/*`
 - `(public)` → `/` and `/[handle]`
 - `(protected)` → `/dashboard`, `/edit`, `/settings`, `/wizard`
 
 **Dynamic Routes**:
 
 - `/[handle]` → Public resume viewer (e.g., `/johnsmith`)
-- Server-side rendered with Supabase data fetch
+- Server-side rendered with D1 data fetch
 - Applies privacy filtering before rendering
 
 **API Routes**:
@@ -473,17 +657,26 @@ open-next.config.ts                  # OpenNext Cloudflare adapter config
 - All in `/api` directory
 - Use Next.js Route Handlers (App Router)
 - Return JSON responses with proper error handling
-- Protected endpoints check authentication via Supabase session
+- Protected endpoints check authentication via Better Auth session
+
+**Important: Middleware Limitations**:
+
+- Edge middleware cannot make D1 database calls
+- Onboarding check moved from middleware to page components
+- Middleware handles auth session refresh only
 
 ---
 
 ## Environment Variables (Required)
 
 ```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=         # For server-side operations
+# Better Auth
+BETTER_AUTH_SECRET=                  # Secret for signing sessions (generate with openssl rand -base64 32)
+BETTER_AUTH_URL=https://your-domain.com  # Production URL
+
+# Google OAuth
+GOOGLE_CLIENT_ID=                    # From Google Cloud Console
+GOOGLE_CLIENT_SECRET=                # From Google Cloud Console
 
 # Cloudflare R2
 R2_ENDPOINT=https://...
@@ -494,8 +687,8 @@ R2_BUCKET_NAME=webresume-uploads
 # AI Parsing
 REPLICATE_API_TOKEN=
 
-# Cloudflare Workers (set in dashboard)
-NODE_ENV=production
+# Cloudflare D1 (configured in wrangler.toml, accessed via binding)
+# D1 database is bound as `DB` in wrangler.toml
 ```
 
 ---
@@ -518,21 +711,19 @@ bun run start                    # Start production server (not for Workers depl
 bun run deploy                   # Build and deploy to Cloudflare Workers (single command)
 bunx wrangler deploy             # Deploy manually with wrangler
 
-# Database (Supabase)
-bun run db:start                 # Start local Supabase instance
-bun run db:stop                  # Stop local Supabase instance
-bun run db:reset                 # Reset local database to initial state
-bun run db:migrate               # Run pending migrations
-bun run db:migration:new         # Create new migration file (use: bun run db:migration:new <name>)
-bun run db:migration:list        # List all migrations (local)
-bun run db:push                  # Push local schema changes to remote
-bun run db:pull                  # Pull remote schema to local
-bun run db:types                 # Generate TypeScript types from linked project
-bun run db:types:local           # Generate TypeScript types from local database
-bun run db:studio                # Open Supabase Studio (database UI)
+# Database (Cloudflare D1 + Drizzle)
+bun run db:generate              # Generate Drizzle migrations from schema changes
+bun run db:migrate               # Apply migrations to local D1 database
+bun run db:migrate:prod          # Apply migrations to production D1 database
+bun run db:studio                # Open Drizzle Studio (database UI)
+bun run db:push                  # Push schema changes directly (dev only, skips migrations)
 
-# Note: Use supabase CLI commands directly for migrations
-# Example: supabase migration new add_column_to_profiles
+# Wrangler D1 Commands (direct)
+bunx wrangler d1 execute DB --local --command "SELECT * FROM user"  # Query local D1
+bunx wrangler d1 execute DB --command "SELECT * FROM user"          # Query production D1
+bunx wrangler d1 migrations list DB                                  # List migrations
+bunx wrangler d1 migrations apply DB --local                         # Apply migrations locally
+bunx wrangler d1 migrations apply DB                                 # Apply migrations to prod
 ```
 
 ---
@@ -546,8 +737,8 @@ bun run db:studio                # Open Supabase Studio (database UI)
    - Use `<img>` tags with CSS. Image optimization requires a server.
 
 3. **Auth redirect loop**
-   - Check `NEXT_PUBLIC_SUPABASE_URL` includes protocol (`https://`)
-   - Verify redirect URL in Supabase dashboard matches production domain
+   - Check `BETTER_AUTH_URL` matches your deployment URL exactly
+   - Verify Google OAuth redirect URIs in Google Cloud Console include `/api/auth/callback/google`
 
 4. **R2 CORS errors**
    - Add both `localhost:3000` AND production URL to R2 CORS config
@@ -557,6 +748,23 @@ bun run db:studio                # Open Supabase Studio (database UI)
    - Typical parse time: 20-40s for 2-page resume
    - Implement client-side polling (3s intervals)
    - Add timeout UI after 90s with retry option
+
+6. **D1 JSON fields returning strings**
+   - D1/SQLite stores JSON as TEXT. Always `JSON.parse()` when reading
+   - Always `JSON.stringify()` when writing
+
+7. **D1 boolean fields**
+   - SQLite has no native boolean. Use INTEGER (0 or 1)
+   - Drizzle handles this automatically with `integer({ mode: 'boolean' })`
+
+8. **Better Auth session not found**
+   - Ensure cookies are being sent (check `credentials: 'include'` on fetch)
+   - Verify `BETTER_AUTH_SECRET` is set in production
+
+9. **Middleware cannot access D1**
+   - Edge middleware runs in a different runtime than Workers
+   - D1 bindings are not available in Edge middleware
+   - Move database checks to page components or API routes
 
 ---
 
@@ -605,8 +813,8 @@ The application includes multiple professionally designed resume templates, each
 
 ### Template Development Guidelines
 
-- Each template receives `content` (ResumeContent) and `profile` (ProfileData) props
-- Must respect privacy settings (check `profile.privacy_settings`)
+- Each template receives `content` (ResumeContent) and `user` (UserData) props
+- Must respect privacy settings (check `user.privacySettings`)
 - Should handle missing/optional fields gracefully
 - Use consistent spacing: Tailwind's spacing scale (p-4, p-6, p-8, etc.)
 - Avoid Next.js `<Image />` component (use `<img>` with CSS)
@@ -803,17 +1011,17 @@ Follow Tailwind defaults:
 
 **DO NOT** make landing page look like existing templates:
 
-- ❌ Editorial serif typography (MinimalistEditorial)
-- ❌ Dark backgrounds with noise overlays (GlassMorphic)
-- ❌ Thick black borders with hard shadows (NeoBrutalist)
-- ❌ Bento grid mosaic layouts (BentoGrid)
+- Editorial serif typography (MinimalistEditorial)
+- Dark backgrounds with noise overlays (GlassMorphic)
+- Thick black borders with hard shadows (NeoBrutalist)
+- Bento grid mosaic layouts (BentoGrid)
 
 **Landing page should:**
 
-- ✅ Use light backgrounds (slate-50, not dark)
-- ✅ Use soft shadows (not hard drops or glassmorphism)
-- ✅ Use indigo/blue gradients (not template-specific colors)
-- ✅ Use standard layouts (not editorial or mosaic grids)
+- Use light backgrounds (slate-50, not dark)
+- Use soft shadows (not hard drops or glassmorphism)
+- Use indigo/blue gradients (not template-specific colors)
+- Use standard layouts (not editorial or mosaic grids)
 
 ---
 
@@ -843,9 +1051,10 @@ Understanding the full user experience is critical for debugging and feature dev
 ### 2. Authentication
 
 - User clicks "Sign in with Google"
+- Better Auth initiates OAuth flow via `signIn.social({ provider: "google" })`
 - Redirects to Google OAuth consent screen
-- On success, callback to `/auth/callback`
-- Supabase creates `auth.users` row and `profiles` row (via database trigger)
+- On success, callback to `/api/auth/callback/google`
+- Better Auth creates `user` row (with profile fields), `account` row, and `session`
 - User redirected based on state:
   - If `temp_upload_id` exists → `/wizard` (claim upload)
   - If no upload → `/dashboard`
@@ -857,7 +1066,7 @@ Located at `/wizard`, managed by `components/wizard/*`:
 **Step 1: Handle** (`HandleStep.tsx`)
 
 - User enters desired username (3+ chars, alphanumeric + hyphens)
-- Real-time availability check against `profiles.handle`
+- Real-time availability check against `user.handle`
 - Validation: Must be unique, no special chars
 
 **Step 2: Review** (`ReviewStep.tsx`)
@@ -870,7 +1079,7 @@ Located at `/wizard`, managed by `components/wizard/*`:
 
 - Toggle: "Show phone number" (default OFF)
 - Toggle: "Show full address" (default OFF)
-- Updates `profiles.privacy_settings` jsonb
+- Updates `user.privacySettings` JSON
 
 **Step 4: Theme** (`ThemeStep.tsx`)
 
@@ -880,7 +1089,7 @@ Located at `/wizard`, managed by `components/wizard/*`:
 
 On completion:
 
-- `POST /api/wizard/complete` sets `onboarding_completed = true`
+- `POST /api/wizard/complete` sets `user.onboardingCompleted = 1`
 - User redirected to `/dashboard`
 
 ### 4. AI Parsing (Background)
@@ -927,7 +1136,7 @@ Privacy and profile management:
 The actual published resume:
 
 - Server-side rendered (SSR)
-- Fetches `profiles` + `site_data` by handle
+- Fetches `user` + `site_data` by handle from D1
 - Applies privacy filtering before render
 - Renders chosen template with user content
 - SEO metadata: title, description, OG tags
@@ -938,8 +1147,8 @@ The actual published resume:
 - **Upload fails**: Show error message, allow retry
 - **Parsing fails**: Redirect to `/waiting` with retry button
 - **Handle taken**: Inline validation error in wizard
-- **Not authenticated**: Middleware redirects to `/`
-- **Onboarding incomplete**: Middleware redirects to `/wizard`
+- **Not authenticated**: Redirect to `/`
+- **Onboarding incomplete**: Page component redirects to `/wizard`
 - **404 handle**: Custom 404 page matching Soft Depth theme
 
 ---
@@ -949,10 +1158,11 @@ The actual published resume:
 When using context7 MCP, these are the library IDs to fetch docs:
 
 - Next.js: `/vercel/next.js`
-- Supabase Auth: `/supabase/auth-helpers`
+- Better Auth: `/better-auth/better-auth`
+- Drizzle ORM: `/drizzle-team/drizzle-orm`
 - Cloudflare Workers: `/cloudflare/workers-sdk`
 - AWS SDK S3: `/aws/aws-sdk-js-v3`
 
 ---
 
-**Last Updated**: 2025-11-20 (via /init command)
+**Last Updated**: 2025-12-06 (Schema and auth documentation fixes)

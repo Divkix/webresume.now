@@ -1,32 +1,31 @@
 "use client";
 
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "@/lib/auth/client";
 
 export function LoginButton() {
   const handleLogin = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "/wizard",
+      });
+    } catch (error) {
       console.error("Error logging in:", error);
 
       // Show user-friendly error message
       let message = "Sign in failed. Please try again.";
-      if (error.message?.toLowerCase().includes("popup")) {
-        message = "Popup blocked. Please allow popups for this site.";
-      } else if (
-        error.message?.toLowerCase().includes("network") ||
-        error.message?.toLowerCase().includes("fetch")
-      ) {
-        message = "Network error. Check your connection.";
-      } else if (error.message?.toLowerCase().includes("cancel")) {
-        message = "Sign in was cancelled.";
+      if (error instanceof Error) {
+        if (error.message?.toLowerCase().includes("popup")) {
+          message = "Popup blocked. Please allow popups for this site.";
+        } else if (
+          error.message?.toLowerCase().includes("network") ||
+          error.message?.toLowerCase().includes("fetch")
+        ) {
+          message = "Network error. Check your connection.";
+        } else if (error.message?.toLowerCase().includes("cancel")) {
+          message = "Sign in was cancelled.";
+        }
       }
 
       toast.error(message);

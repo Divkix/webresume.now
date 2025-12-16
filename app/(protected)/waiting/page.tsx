@@ -22,6 +22,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useResumeStatus } from "@/hooks/useResumeStatus";
 
+interface RetryResponse {
+  success?: boolean;
+  error?: string;
+}
+
 function WaitingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +64,7 @@ function WaitingContent() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as RetryResponse;
         throw new Error(data.error || "Failed to retry");
       }
 

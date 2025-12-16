@@ -1,3 +1,5 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { desc, eq } from "drizzle-orm";
 import {
   AlertCircle,
   Award,
@@ -14,6 +16,7 @@ import {
   Upload,
   Wrench,
 } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
@@ -23,8 +26,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getAuth } from "@/lib/auth";
 import { siteConfig } from "@/lib/config/site";
-import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/db";
+import { resumes, siteData, user } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
 
 /**
@@ -140,39 +145,40 @@ function truncateText(text: string, maxLength: number): string {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const auth = await getAuth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session) {
     redirect("/");
   }
 
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
+
   // Fetch user profile with onboarding status
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const profile = await db.query.user.findFirst({
+    where: eq(user.id, session.user.id),
+  });
 
   // Fetch most recent resume
-  const { data: resume } = await supabase
-    .from("resumes")
-    .select("id, status, error_message, created_at, replicate_job_id")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const resume = await db.query.resumes.findFirst({
+    where: eq(resumes.userId, session.user.id),
+    orderBy: [desc(resumes.createdAt)],
+  });
 
-  // Fetch site data if available - include theme_id
-  const { data: siteData } = await supabase
-    .from("site_data")
-    .select("id, content, theme_id, last_published_at, created_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Fetch site data if available
+  const siteDataResult = await db.query.siteData.findFirst({
+    where: eq(siteData.userId, session.user.id),
+  });
 
   // Determine resume state
   const hasResume = !!resume;
-  const hasPublishedSite = !!siteData;
-  const content = siteData?.content as ResumeContent | null;
+  const hasPublishedSite = !!siteDataResult;
+  const content = siteDataResult?.content
+    ? (JSON.parse(siteDataResult.content) as ResumeContent)
+    : null;
 
   // Calculate profile metrics
   const completeness = content ? calculateCompleteness(content) : 0;
@@ -214,7 +220,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <main className="max-w-[1400px] mx-auto px-4 lg:px-6 py-8">
         {/* Onboarding Incomplete Banner */}
-        {profile && !profile.onboarding_completed && (
+        {profile && !profile.onboardingCompleted && (
           <Alert className="mb-6 border-amber-200 bg-amber-50">
             <AlertCircle className="w-4 h-4 text-amber-600" aria-hidden="true" />
             <AlertDescription className="flex items-center justify-between">
@@ -365,7 +371,7 @@ export default async function DashboardPage() {
               )}
 
               {/* Last Updated Mini Card */}
-              {hasPublishedSite && siteData?.last_published_at && (
+              {hasPublishedSite && siteDataResult?.lastPublishedAt && (
                 <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-4 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
@@ -377,7 +383,7 @@ export default async function DashboardPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-slate-600 mb-1">Last Updated</p>
                       <p className="text-sm font-semibold text-slate-900 truncate">
-                        {formatRelativeTime(siteData.last_published_at)}
+                        {formatRelativeTime(siteDataResult.lastPublishedAt)}
                       </p>
                     </div>
                   </div>
@@ -436,7 +442,7 @@ export default async function DashboardPage() {
                 <div className="col-span-full">
                   <RealtimeStatusListener
                     resumeId={resume.id}
-                    userId={user.id}
+                    userId={session.user.id}
                     currentStatus={resume.status}
                   />
                 </div>
@@ -454,8 +460,7 @@ export default async function DashboardPage() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-red-900">Processing Failed</h3>
                         <p className="mt-1 text-sm text-red-700">
-                          {resume.error_message ||
-                            "An error occurred while processing your resume."}
+                          {resume.errorMessage || "An error occurred while processing your resume."}
                         </p>
                         <div className="mt-3 flex gap-2">
                           <Button
@@ -608,7 +613,7 @@ export default async function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-600 mb-1">Email</p>
-                        <p className="text-sm text-slate-900 truncate">{user.email}</p>
+                        <p className="text-sm text-slate-900 truncate">{session.user.email}</p>
                       </div>
                     </div>
 
@@ -642,7 +647,7 @@ export default async function DashboardPage() {
                     )}
 
                     {/* Member Since */}
-                    {profile?.created_at && (
+                    {profile?.createdAt && (
                       <>
                         <Separator />
                         <div className="flex items-start gap-3">
@@ -655,7 +660,7 @@ export default async function DashboardPage() {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-slate-600 mb-1">Member since</p>
                             <p className="text-sm text-slate-900">
-                              {formatRelativeTime(profile.created_at)}
+                              {formatRelativeTime(profile.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -673,7 +678,7 @@ export default async function DashboardPage() {
                   <div>
                     <RealtimeStatusListener
                       resumeId={resume.id}
-                      userId={user.id}
+                      userId={session.user.id}
                       currentStatus={resume.status}
                     />
                   </div>
@@ -686,7 +691,7 @@ export default async function DashboardPage() {
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-red-900 mb-1">Processing failed</h3>
                         <p className="text-red-700">
-                          {resume.error_message ||
+                          {resume.errorMessage ||
                             "Unknown error occurred. Please try uploading again."}
                         </p>
                       </div>

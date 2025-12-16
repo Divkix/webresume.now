@@ -1,36 +1,30 @@
 {
   "main": ".open-next/worker.js",
   "name": "webresume-now",
-  // Fix __name is not defined error with next-themes and other libraries
-  // See: https://opennext.js.org/cloudflare/howtos/keep_names
-  "build": {
-    "keep_names": false,
-  },
-  "compatibility_date": "2025-10-21",
+  "compatibility_date": "2024-12-01",
   "compatibility_flags": [
     // Enable Node.js API
     // see https://developers.cloudflare.com/workers/configuration/compatibility-flags/#nodejs-compatibility-flag
     "nodejs_compat",
     // Allow to fetch URLs in your app
     // see https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public
-    "global_fetch_strictly_public",
+    "global_fetch_strictly_public"
   ],
   "assets": {
     "directory": ".open-next/assets",
-    "binding": "ASSETS",
+    "binding": "ASSETS"
   },
   "placement": {
-    "mode": "smart",
+    "mode": "smart"
   },
-  // "routes": [
-  //     {
-  //         "pattern": "pickmyclass.app",
-  //         "custom_domain": true
-  //     }
-  // ],
-  // IMPORTANT: Cron triggers require explicit deployment via 'wrangler triggers deploy'
-  // This is automatically included in 'bun run deploy' script
-  // Schedule: Every 30 minutes at :00 (even class numbers) and :30 (odd class numbers)
+  // D1 Database binding
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webresume-db",
+      "database_id": "069a2b89-6c0a-4016-8795-790a916e2c7b"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
@@ -38,15 +32,29 @@
       "enabled": true,
       "head_sampling_rate": 1,
       "persist": true,
-      "invocation_logs": true,
-    },
+      "invocation_logs": true
+    }
   },
   "vars": {
-    "MAX_WATCHES_PER_USER": "10",
-    "SCRAPER_BATCH_SIZE": "3",
-    "NOTIFICATION_FROM_EMAIL": "notifications@webresume.now",
-    "NEXT_PUBLIC_SITE_URL": "https://webresume.now",
-    "NEXT_PUBLIC_SUPABASE_URL": "https://civmyypbwgycsctodywc.supabase.co",
-    "NODE_ENV": "production",
-  },
+    // Environment variables are set via 'wrangler secret put' for production
+    // and in .env.local for local development (Next.js loads these automatically)
+    //
+    // Required secrets (run these commands for production deployment):
+    //   wrangler secret put BETTER_AUTH_SECRET
+    //   wrangler secret put BETTER_AUTH_URL
+    //   wrangler secret put GOOGLE_CLIENT_ID
+    //   wrangler secret put GOOGLE_CLIENT_SECRET
+    //   wrangler secret put R2_ENDPOINT
+    //   wrangler secret put R2_ACCESS_KEY_ID
+    //   wrangler secret put R2_SECRET_ACCESS_KEY
+    //   wrangler secret put R2_BUCKET_NAME
+    //   wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
+    //   wrangler secret put CF_AI_GATEWAY_ID
+    //   wrangler secret put CF_AIG_AUTH_TOKEN
+    //   wrangler secret put REPLICATE_WEBHOOK_SECRET
+    //   wrangler secret put NEXT_PUBLIC_APP_URL
+    //
+    // Optional secrets:
+    //   (none currently)
+  }
 }

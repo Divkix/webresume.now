@@ -1,77 +1,82 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
 import { Edit3, ExternalLink, Home, LogOut, Palette, Settings, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { signOut, useSession } from "@/lib/auth/client";
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-interface Profile {
+interface UserProfile {
   handle: string | null;
+}
+
+interface ProfileResponse {
+  handle?: string | null;
 }
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
 
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, isPending } = useSession();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
-    async function loadUserData() {
+    async function loadProfile() {
+      if (!session?.user?.id) {
+        setProfileLoading(false);
+        return;
+      }
+
       try {
-        const {
-          data: { user: userData },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !userData) {
-          setLoading(false);
-          return;
+        // The session already contains the user's handle from Better Auth
+        // Cast to access custom fields
+        const user = session.user as typeof session.user & { handle?: string };
+        if (user.handle) {
+          setProfile({ handle: user.handle });
+        } else {
+          // Fallback: fetch from API if not in session
+          const response = await fetch("/api/profile/me");
+          if (response.ok) {
+            const data = (await response.json()) as ProfileResponse;
+            setProfile({ handle: data.handle ?? null });
+          }
         }
-
-        setUser(userData);
-
-        // Fetch profile to get handle
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("handle")
-          .eq("id", userData.id)
-          .single();
-
-        setProfile(profileData);
       } catch (error) {
-        console.error("Error loading user data:", error);
+        console.error("Error loading profile:", error);
       } finally {
-        setLoading(false);
+        setProfileLoading(false);
       }
     }
 
-    loadUserData();
-  }, [supabase]);
+    if (!isPending) {
+      loadProfile();
+    }
+  }, [session?.user, isPending]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/");
     router.refresh();
   };
 
   // Get user initials for avatar fallback
   const getInitials = () => {
-    if (!user?.user_metadata?.full_name) return "?";
-    const names = user.user_metadata.full_name.split(" ");
+    if (!session?.user?.name) return "?";
+    const names = session.user.name.split(" ");
     if (names.length >= 2) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
     return names[0][0].toUpperCase();
   };
+
+  const loading = isPending || profileLoading;
+  const user = session?.user;
 
   const navItems = [
     {
@@ -149,15 +154,15 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             </div>
           ) : user ? (
             <div className="flex items-center gap-3">
-              {user.user_metadata?.avatar_url ? (
+              {user.image ? (
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 p-0.5">
                     <div className="w-full h-full rounded-full bg-white" />
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={user.user_metadata.avatar_url}
-                    alt={user.user_metadata?.full_name || "User avatar"}
+                    src={user.image}
+                    alt={user.name || "User avatar"}
                     className="relative w-10 h-10 rounded-full object-cover"
                   />
                 </div>
@@ -168,7 +173,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 truncate">
-                  {user.user_metadata?.full_name || "User"}
+                  {user.name || "User"}
                 </p>
               </div>
             </div>

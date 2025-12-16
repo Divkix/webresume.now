@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { siteConfig } from "@/lib/config/site";
-import { createClient } from "@/lib/supabase/client";
 
 interface HandleStepProps {
   initialHandle?: string;
   onContinue: (handle: string) => void;
+}
+
+interface HandleCheckResponse {
+  available: boolean;
+  reason?: string;
+  error?: string;
 }
 
 /**
@@ -23,7 +28,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Debounced availability check
+  // Debounced availability check via API route
   const checkAvailability = useCallback(async (value: string) => {
     if (!value || value.length < 3) {
       setIsAvailable(null);
@@ -34,16 +39,14 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: dbError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("handle", value)
-        .maybeSingle();
+      const response = await fetch(`/api/handle/check?handle=${encodeURIComponent(value)}`);
+      const data = (await response.json()) as HandleCheckResponse;
 
-      if (dbError) throw dbError;
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to check availability");
+      }
 
-      setIsAvailable(!data); // Available if no existing profile found
+      setIsAvailable(data.available);
     } catch (err) {
       console.error("Error checking handle availability:", err);
       setError("Failed to check availability");

@@ -1,26 +1,76 @@
 "use client";
 
-import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { createClient } from "@/lib/supabase/client";
+import { signIn, useSession } from "@/lib/auth/client";
 import { validatePDF } from "@/lib/utils/validation";
+
+/**
+ * Compute SHA-256 hash of a file for deduplication caching.
+ * Uses Web Crypto API (available in all modern browsers).
+ */
+async function computeFileHash(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Set pending upload cookie via API (primary storage)
+ * Falls back silently if API call fails - sessionStorage remains as backup
+ */
+async function setPendingUploadCookie(key: string, fileHash: string | null): Promise<void> {
+  try {
+    await fetch("/api/upload/pending", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, file_hash: fileHash }),
+    });
+  } catch (error) {
+    console.warn("Failed to set pending upload cookie, using sessionStorage fallback:", error);
+  }
+}
+
+/**
+ * Clear pending upload cookie via API
+ * Best effort - silent failure is acceptable
+ */
+async function clearPendingUploadCookie(): Promise<void> {
+  try {
+    await fetch("/api/upload/pending", { method: "DELETE" });
+  } catch (error) {
+    console.warn("Failed to clear pending upload cookie:", error);
+  }
+}
 
 interface FileDropzoneProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
 
+interface UploadSignResponse {
+  uploadUrl: string;
+  key: string;
+  error?: string;
+  message?: string;
+}
+
+interface ClaimResponse {
+  error?: string;
+}
+
 export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const isModal = open !== undefined && onOpenChange !== undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user ?? null;
 
-  const [user, setUser] = useState<User | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -28,18 +78,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      const supabase = createClient();
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-      setUser(currentUser);
-    };
-    checkAuth();
-  }, []);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -96,22 +134,43 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
-      // Step 1: Get presigned URL
+      // Step 1: Compute file hash for deduplication caching
+      setUploadProgress(10);
+      let fileHash: string | undefined;
+      try {
+        fileHash = await computeFileHash(fileToUpload);
+        // Use sessionStorage for file hash as fallback (migration period)
+        sessionStorage.setItem("temp_file_hash", fileHash);
+      } catch {
+        // Fallback: proceed without hash (older browsers without crypto.subtle)
+        sessionStorage.removeItem("temp_file_hash");
+        console.warn("Could not compute file hash, proceeding without cache");
+      }
+      setUploadProgress(20);
+
+      // Step 2: Get presigned URL (include file size for server-side validation)
       const signResponse = await fetch("/api/upload/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: fileToUpload.name }),
+        body: JSON.stringify({
+          filename: fileToUpload.name,
+          contentLength: fileToUpload.size,
+        }),
       });
 
       if (!signResponse.ok) {
-        const data = await signResponse.json();
+        const data = (await signResponse.json()) as UploadSignResponse;
+        // Handle rate limiting specifically
+        if (signResponse.status === 429) {
+          throw new Error(data.message || "Too many upload attempts. Please wait and try again.");
+        }
         throw new Error(data.error || "Failed to get upload URL");
       }
 
-      const { uploadUrl, key } = await signResponse.json();
+      const { uploadUrl, key } = (await signResponse.json()) as UploadSignResponse;
 
-      // Step 2: Upload to R2 - progress reflects actual stages
-      setUploadProgress(40); // Got presigned URL, ready to upload
+      // Step 3: Upload to R2 - progress reflects actual stages
+      setUploadProgress(50); // Got presigned URL, ready to upload
 
       const uploadResponse = await fetch(uploadUrl, {
         method: "PUT",
@@ -129,13 +188,25 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       setUploadProgress(100);
 
-      // Step 3: Save key to localStorage
-      localStorage.setItem("temp_upload_key", key);
+      // Step 4a: Save key to sessionStorage with expiry (30 min window) - FALLBACK
+      // Kept for migration period - remove after 30 days
+      sessionStorage.setItem(
+        "temp_upload",
+        JSON.stringify({
+          key,
+          timestamp: Date.now(),
+          expiresAt: Date.now() + 30 * 60 * 1000, // 30 minute expiry
+        }),
+      );
+
+      // Step 4b: Set HTTP-only cookie via API - PRIMARY storage
+      // This is the preferred method as it works across tabs and survives browser restart
+      await setPendingUploadCookie(key, fileHash || null);
 
       setUploadComplete(true);
       toast.success("File uploaded successfully!");
 
-      // Step 4: If user is authenticated, auto-claim the upload
+      // Step 5: If user is authenticated, auto-claim the upload
       if (user) {
         await claimUpload(key);
       }
@@ -162,6 +233,11 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }
       }
 
+      // Clean up temp storage on error (both sessionStorage and cookie)
+      sessionStorage.removeItem("temp_upload");
+      sessionStorage.removeItem("temp_file_hash");
+      await clearPendingUploadCookie();
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -174,21 +250,28 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
+      // Include file hash for deduplication caching (from sessionStorage as fallback)
+      const fileHash = sessionStorage.getItem("temp_file_hash");
+
       const claimResponse = await fetch("/api/resume/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
+        body: JSON.stringify({ key, file_hash: fileHash }),
       });
 
       if (!claimResponse.ok) {
-        const data = await claimResponse.json();
+        const data = (await claimResponse.json()) as ClaimResponse;
         throw new Error(data.error || "Failed to claim resume");
       }
 
       await claimResponse.json();
 
-      // Clear temp key from localStorage
-      localStorage.removeItem("temp_upload_key");
+      // Clear temp data from sessionStorage
+      sessionStorage.removeItem("temp_upload");
+      sessionStorage.removeItem("temp_file_hash");
+
+      // Clear HTTP-only cookie
+      await clearPendingUploadCookie();
 
       toast.success("Resume claimed successfully! Processing...");
 
@@ -223,6 +306,11 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }
       }
 
+      // Clean up temp storage on error (both sessionStorage and cookie)
+      sessionStorage.removeItem("temp_upload");
+      sessionStorage.removeItem("temp_file_hash");
+      await clearPendingUploadCookie();
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -231,13 +319,15 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   };
 
   const handleLoginRedirect = async () => {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "/wizard",
+      });
+    } catch (err) {
+      console.error("Error signing in:", err);
+      toast.error("Failed to sign in. Please try again.");
+    }
   };
 
   const handleReset = () => {

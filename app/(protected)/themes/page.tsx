@@ -1,7 +1,12 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ThemeSelector } from "@/components/dashboard/ThemeSelector";
+import { getAuth } from "@/lib/auth";
 import { siteConfig } from "@/lib/config/site";
-import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/db";
+import { siteData } from "@/lib/db/schema";
 
 export const metadata = {
   title: `Themes | ${siteConfig.fullName}`,
@@ -9,25 +14,25 @@ export const metadata = {
 };
 
 export default async function ThemesPage() {
-  const supabase = await createClient();
+  // 1. Check authentication via Better Auth
+  const auth = await getAuth();
+  const session = await auth.api.getSession({ headers: await headers() });
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/auth/login");
+  if (!session?.user) {
+    redirect("/");
   }
 
-  // Fetch user's current theme
-  const { data: siteData } = await supabase
-    .from("site_data")
-    .select("theme_id")
-    .eq("user_id", user.id)
-    .single();
+  // 2. Get database connection
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
 
-  const currentThemeId = siteData?.theme_id || "minimalist_editorial";
+  // 3. Fetch user's current theme
+  const userSiteData = await db.query.siteData.findFirst({
+    where: eq(siteData.userId, session.user.id),
+    columns: { themeId: true },
+  });
+
+  const currentThemeId = userSiteData?.themeId || "minimalist_editorial";
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">

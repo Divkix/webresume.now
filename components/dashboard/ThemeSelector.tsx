@@ -11,6 +11,10 @@ interface ThemeSelectorProps {
   initialThemeId: string;
 }
 
+interface ErrorResponse {
+  error?: string;
+}
+
 export function ThemeSelector({ initialThemeId }: ThemeSelectorProps) {
   const router = useRouter();
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>(
@@ -35,7 +39,7 @@ export function ThemeSelector({ initialThemeId }: ThemeSelectorProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = (await response.json()) as ErrorResponse;
         throw new Error(errorData.error || "Failed to update theme");
       }
 

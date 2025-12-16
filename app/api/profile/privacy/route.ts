@@ -1,6 +1,11 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { eq } from "drizzle-orm";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { getResumeCacheTag } from "@/lib/data/resume";
+import { user } from "@/lib/db/schema";
+import { getSessionDb } from "@/lib/db/session";
 import { privacySettingsSchema } from "@/lib/schemas/profile";
-import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
@@ -20,17 +25,28 @@ export async function PUT(request: Request) {
       "You must be logged in to update privacy settings",
     );
     if (authResult.error) return authResult.error;
-    const { user } = authResult;
+    const { user: authUser } = authResult;
 
-    const supabase = await createClient();
-
-    // 2. Check rate limit (20 updates per hour)
-    const rateLimitResponse = await enforceRateLimit(user.id, "privacy_update");
+    // 2. Rate limit check (20 updates per hour)
+    const rateLimitResponse = await enforceRateLimit(authUser.id, "privacy_update");
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // 3. Parse and validate request body
+    // 3. Get database connection
+    const { env } = await getCloudflareContext({ async: true });
+    const { db, captureBookmark } = await getSessionDb(env.DB);
+
+    // 4. Fetch user's handle for cache invalidation
+    const userRecord = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, authUser.id))
+      .limit(1);
+
+    const userHandle = userRecord[0]?.handle;
+
+    // 5. Parse and validate request body
     let body;
     try {
       body = await request.json();
@@ -51,32 +67,34 @@ export async function PUT(request: Request) {
 
     const { show_phone, show_address } = validation.data;
 
-    // 4. Update privacy_settings JSONB column
-    const { data, error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        privacy_settings: {
-          show_phone,
-          show_address,
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id)
-      .select("privacy_settings")
-      .single();
+    // 6. Update privacy_settings (stored as JSON string in D1)
+    const privacySettings = JSON.stringify({
+      show_phone,
+      show_address,
+    });
 
-    if (updateError) {
-      console.error("Privacy settings update error:", updateError);
-      return createErrorResponse(
-        "Failed to update privacy settings. Please try again.",
-        ERROR_CODES.DATABASE_ERROR,
-        500,
-      );
+    await db
+      .update(user)
+      .set({
+        privacySettings,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(user.id, authUser.id));
+
+    // 7. Invalidate cache for public page so privacy changes reflect immediately
+    // This prevents PII exposure through stale ISR cache
+    if (userHandle) {
+      revalidateTag(getResumeCacheTag(userHandle));
+      revalidatePath(`/${userHandle}`);
     }
 
+    await captureBookmark();
     return createSuccessResponse({
       success: true,
-      privacy_settings: data.privacy_settings,
+      privacy_settings: {
+        show_phone,
+        show_address,
+      },
     });
   } catch (err) {
     console.error("Unexpected error in privacy update:", err);

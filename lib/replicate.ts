@@ -1,51 +1,98 @@
 import Replicate from "replicate";
 import { z } from "zod";
 import type { ResumeContent } from "@/lib/types/database";
+import type { CloudflareEnv } from "./cloudflare-env";
 import { ENV } from "./env";
 
-// Initialize Replicate client lazily
+// Singleton client cache
 let _replicate: Replicate | null = null;
 
 /**
- * Creates a custom fetch function for Cloudflare AI Gateway with BYOK.
- * - Strips the SDK's Authorization header (BYOK injects Replicate token)
- * - Adds cf-aig-authorization header for gateway authentication
+ * Get Replicate API token from Cloudflare env bindings or process.env
  */
-function createGatewayFetch(cfAuthToken: string) {
-  return async (
-    url: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> => {
-    const headers = new Headers(init?.headers);
-
-    // Remove SDK's Authorization header (BYOK injects Replicate token from Secrets Store)
-    headers.delete("Authorization");
-
-    // Add Cloudflare AI Gateway auth
-    headers.set("cf-aig-authorization", `Bearer ${cfAuthToken}`);
-
-    return fetch(url, { ...init, headers });
-  };
+function getReplicateToken(env?: Partial<CloudflareEnv>): string {
+  if (env?.REPLICATE_API_TOKEN) {
+    const token = env.REPLICATE_API_TOKEN;
+    if (typeof token === "string" && token.trim() !== "") {
+      return token;
+    }
+  }
+  return ENV.REPLICATE_API_TOKEN();
 }
 
-function getReplicate(): Replicate {
+/**
+ * Get Replicate client instance
+ *
+ * Note: We bypass Cloudflare AI Gateway and call Replicate directly.
+ * AI Gateway has known issues with Replicate GET requests (status polling)
+ * that cause 500 errors (code 2002). Direct API calls are more reliable.
+ * See: https://community.cloudflare.com/t/cloudflare-ai-gateway-is-broken/749831
+ *
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
+ * @returns Configured Replicate client
+ */
+function getReplicate(env?: Partial<CloudflareEnv>): Replicate {
   if (!_replicate) {
-    const accountId = ENV.CF_AI_GATEWAY_ACCOUNT_ID();
-    const gatewayId = ENV.CF_AI_GATEWAY_ID();
-    const cfAuthToken = ENV.CF_AIG_AUTH_TOKEN();
-
     _replicate = new Replicate({
-      auth: "unused", // SDK requires auth, but we strip the header via custom fetch
-      baseUrl: `https://gateway.ai.cloudflare.com/v1/${accountId}/${gatewayId}/replicate`,
-      fetch: createGatewayFetch(cfAuthToken),
+      auth: getReplicateToken(env),
     });
   }
   return _replicate;
 }
 
+/**
+ * Clear cached Replicate client (useful for testing)
+ */
+export function clearReplicateClient(): void {
+  _replicate = null;
+}
+
+/**
+ * Clean email extracted from AI parsing
+ * Handles common OCR artifacts and formatting issues
+ */
+function cleanExtractedEmail(email: string | null | undefined): string {
+  if (!email) return "";
+
+  const cleaned = email
+    .trim()
+    .toLowerCase()
+    // Remove common OCR artifacts
+    .replace(/\s+/g, "") // Remove all whitespace
+    .replace(/[<>[\]{}()]/g, "") // Remove brackets
+    .replace(/^mailto:/i, "") // Remove mailto: prefix
+    .replace(/[,;:]+$/, "") // Remove trailing punctuation
+    .replace(/\.{2,}/g, ".") // Collapse multiple dots
+    .replace(/^\.+|\.+$/g, ""); // Remove leading/trailing dots
+
+  // Basic structural validation - must have @ and .
+  if (!cleaned.includes("@") || !cleaned.includes(".")) {
+    return "";
+  }
+
+  return cleaned;
+}
+
 // Zod schemas for runtime validation
+// NOTE: Email validation here is intentionally lenient compared to lib/schemas/resume.ts
+// AI-extracted emails from PDFs often have OCR artifacts (extra spaces, brackets, etc.)
+// that would fail strict RFC 5322 validation. We clean and validate loosely here,
+// allowing users to fix any issues in the dashboard edit form which uses strict validation.
+// See: https://github.com/colinhacks/zod/issues/2961 (Zod email regex strictness)
 const ContactSchema = z.object({
-  email: z.email({ message: "Invalid email address" }),
+  email: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => cleanExtractedEmail(val))
+    .refine(
+      (val) => {
+        if (!val) return true; // Allow empty after cleaning (user can add in dashboard)
+        // Basic email regex - more lenient than RFC 5322
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      },
+      { message: "Invalid email address" },
+    ),
   phone: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
   linkedin: z.string().optional().nullable(),
@@ -293,16 +340,26 @@ interface ParseStatusResult {
 
 /**
  * Trigger AI parsing of a resume PDF
+ *
  * @param presignedUrl - R2 presigned GET URL for the PDF file
  * @param webhookUrl - Optional webhook URL for completion notifications
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
  * @returns Prediction object with ID and initial status
+ *
+ * @example
+ * ```ts
+ * // In API route with Cloudflare context
+ * const { env } = await getCloudflareContext({ async: true });
+ * const result = await parseResume(presignedUrl, webhookUrl, env);
+ * ```
  */
 export async function parseResume(
   presignedUrl: string,
   webhookUrl?: string,
+  env?: Partial<CloudflareEnv>,
 ): Promise<ParseResumeResult> {
   try {
-    const replicate = getReplicate();
+    const replicate = getReplicate(env);
     const prediction = await replicate.predictions.create({
       model: "datalab-to/marker",
       input: {
@@ -330,12 +387,24 @@ export async function parseResume(
 
 /**
  * Check status of a Replicate parsing job
+ *
  * @param predictionId - Replicate prediction ID
+ * @param env - Optional Cloudflare env bindings (from getCloudflareContext)
  * @returns Status result with output if completed
+ *
+ * @example
+ * ```ts
+ * // In API route with Cloudflare context
+ * const { env } = await getCloudflareContext({ async: true });
+ * const status = await getParseStatus(predictionId, env);
+ * ```
  */
-export async function getParseStatus(predictionId: string): Promise<ParseStatusResult> {
+export async function getParseStatus(
+  predictionId: string,
+  env?: Partial<CloudflareEnv>,
+): Promise<ParseStatusResult> {
   try {
-    const replicate = getReplicate();
+    const replicate = getReplicate(env);
     const prediction = await replicate.predictions.get(predictionId);
 
     return {
@@ -415,13 +484,18 @@ export function normalizeResumeData(extractionJson: string): ResumeContent {
     console.warn("AI parsing returned null values - defaults applied to experience entries");
   }
 
+  // Log if email extraction failed
+  if (!data.contact.email) {
+    console.warn("AI parsing: email extraction failed or was invalid - user can add in dashboard");
+  }
+
   // Apply defaults for nullable fields and sanitize URLs
   const normalized: ResumeContent = {
     full_name: data.full_name,
     headline: data.headline ?? "",
     summary: data.summary ?? "",
     contact: {
-      email: data.contact.email,
+      email: data.contact.email || "", // May be empty if AI extraction failed
       phone: data.contact.phone ?? undefined,
       location: data.contact.location ?? undefined,
       linkedin: sanitizeUrl(data.contact.linkedin),

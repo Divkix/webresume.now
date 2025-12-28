@@ -15,7 +15,7 @@ import {
   verification,
 } from "@/lib/db/schema";
 import { DEFAULT_FROM_EMAIL, getResendClient } from "@/lib/email/resend";
-import { AccountDeletedEmail } from "@/lib/email/templates/account-deleted";
+import { accountDeletedEmailHtml } from "@/lib/email/templates/account-deleted";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
 import { deleteAccountSchema } from "@/lib/schemas/account";
 import {
@@ -180,7 +180,7 @@ export async function POST(request: Request) {
         from: DEFAULT_FROM_EMAIL,
         to: userEmail,
         subject: "Your webresume.now account has been deleted",
-        react: AccountDeletedEmail({ email: userEmail }),
+        html: accountDeletedEmailHtml({ email: userEmail }),
       });
     } catch (emailError) {
       console.error("Failed to send deletion confirmation email:", emailError);

@@ -43,13 +43,13 @@ function WaitingContent() {
 
   // Auto-redirect on completion with delay for user feedback
   useEffect(() => {
-    if (status === "completed") {
-      const timeout = setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+    if (status !== "completed") return;
 
-      return () => clearTimeout(timeout);
-    }
+    const timeout = setTimeout(() => {
+      router.push("/dashboard");
+    }, 2000);
+
+    return () => clearTimeout(timeout);
   }, [status, router]);
 
   // Handle retry

@@ -9,16 +9,16 @@ export function SidebarLayoutClient({ children }: { children: React.ReactNode })
 
   // Close sidebar on Escape key
   useEffect(() => {
+    if (!sidebarOpen) return;
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSidebarOpen(false);
       }
     };
 
-    if (sidebarOpen) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
   }, [sidebarOpen]);
 
   // Prevent body scroll when mobile sidebar is open

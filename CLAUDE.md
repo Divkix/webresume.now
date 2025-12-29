@@ -2,1167 +2,159 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
----
+## Project Overview
 
-# webresume.now — AI Development Context
+**webresume.now** — Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.
 
-## Project Identity
+**Stack**: Next.js 15 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, Replicate AI parsing.
 
-**Vision**: The fastest way to turn a static resume into a hosted, shareable web portfolio. "Drop a PDF, get a link."
+## Commands
 
-**Core Loop**: Upload (PDF) → Parse (AI) → Polish (Survey) → Publish (Next.js Edge)
+```bash
+# Development
+bun run dev              # Start dev server at localhost:3000
+bun run lint             # Biome linting
+bun run fix              # Biome auto-fix
+bun run type-check       # TypeScript check without emit
 
-**Target Audience**: Job seekers, students, and career switchers who need a clean URL but hate building websites.
+# Build & Deploy
+bun run build            # Next.js production build
+bun run build:worker     # OpenNext Cloudflare bundle
+bun run preview          # Local Cloudflare preview
+bun run deploy           # Build and deploy to Cloudflare Workers
 
-**Success Metrics (MVP)**:
+# Database (D1 + Drizzle)
+bun run db:generate      # Generate migrations from schema changes
+bun run db:migrate       # Apply migrations locally
+bun run db:migrate:prod  # Apply migrations to production
+bun run db:studio        # Drizzle Studio UI (port 4984)
+bun run db:reset         # Wipe local D1 and re-migrate
 
-- Conversion: >60% of users who upload complete Google Auth
-- Activation: >80% of authenticated users publish a live handle
-- TTFIS (Time to First Interactive Site): <60 seconds
+# Direct D1 queries
+bunx wrangler d1 execute webresume-db --local --command "SELECT * FROM user"
+bunx wrangler d1 execute webresume-db --command "SELECT * FROM user"  # prod
 
----
-
-## Tech Stack & Infrastructure
-
-### Core Technologies
-
-- **Framework**: Next.js 15 (App Router) deployed via `@opennextjs/cloudflare`
-- **Runtime**: Cloudflare Workers with Node.js Compatibility Mode
-- **Database**: Cloudflare D1 (SQLite) with Drizzle ORM
-- **Auth**: Better Auth with Google OAuth
-- **Storage**: Cloudflare R2 (S3-compatible)
-- **AI Parsing**: Replicate (datalab-to/marker with structured extraction)
-- **Package Manager**: **bun** (NOT npm/yarn/pnpm)
-
-### Deployment Architecture
-
-```
-User → Cloudflare Workers (Next.js 15) → Cloudflare D1 (SQLite)
-                ↓                              ↓
-         Cloudflare R2                  Replicate API
-                ↓
-         Better Auth (Google OAuth)
+# CI
+bun run ci               # type-check + lint + build
 ```
 
-### Critical Constraints (MUST FOLLOW)
+## Critical Constraints
 
-1. **Cloudflare Worker Limitations**:
-   - No filesystem access (`fs` module unavailable)
-   - No Next.js `<Image />` component (optimization requires server)
-   - USE presigned URLs for R2 uploads
-   - USE CSS `aspect-ratio` + `object-fit` for images
-   - USE `@aws-sdk/client-s3` for R2 operations
+### Cloudflare Workers Limitations
+- **No `fs` module** — use R2 presigned URLs for file operations
+- **No Next.js `<Image />`** — use `<img>` with CSS (`aspect-ratio`, `object-fit`)
+- **No middleware D1 access** — Edge middleware can't call D1; move DB checks to page components/API routes
 
-2. **D1/SQLite Constraints**:
-   - No native JSONB type — use TEXT and parse/stringify JSON
-   - No native UUID type — generate UUIDs in application code (use `crypto.randomUUID()`)
-   - No array types — use JSON strings or separate tables
-   - Use Drizzle ORM for type-safe queries
+### D1/SQLite Constraints
+- JSON stored as TEXT — always `JSON.parse()`/`JSON.stringify()`
+- UUIDs generated in app code (`crypto.randomUUID()`)
+- Booleans are INTEGER (0/1) — Drizzle handles via `{ mode: 'boolean' }`
+- No row-level security — enforce authorization in application code
 
-3. **Rendering Strategy**:
-   - `/dashboard`: Server-rendered (SSR), protected
-   - `/[handle]`: Server-rendered, highly cached (ISR-like via Cache-Control)
+## Architecture
 
-4. **Privacy Defaults**:
-   - Phone numbers: HIDDEN by default
-   - Street addresses: HIDDEN by default (only City/State shown)
-   - Email: PUBLIC (uses `mailto:` links)
-
----
-
-## Architectural Patterns
-
-### 1. The "Claim Check" Pattern (Critical)
-
-Anonymous users can upload files before authentication. The handoff works like this:
-
-```typescript
-// 1. Anonymous Upload
-POST /api/upload/sign → { uploadUrl, key: "temp/{uuid}/{filename}" }
-// Client uploads to R2, stores key in localStorage
-
-// 2. User logs in with Google OAuth (Better Auth)
-
-// 3. Claim the upload
-POST /api/resume/claim with { key }
-// Server moves ownership to authenticated user
-// Triggers Replicate parsing
-// Returns resume_id
+### Route Groups
+```
+app/
+├── (auth)/              # /api/auth/* — Better Auth handlers
+├── (public)/            # / and /[handle] — no auth required
+│   ├── page.tsx         # Homepage with FileDropzone
+│   └── [handle]/        # Public resume viewer (SSR, privacy-filtered)
+└── (protected)/         # Auth required
+    ├── dashboard/       # User dashboard
+    ├── edit/            # Content editor with auto-save
+    ├── settings/        # Privacy toggles, theme selection
+    ├── waiting/         # AI parsing status polling
+    └── wizard/          # 4-step onboarding flow
 ```
 
-**Implementation Rules**:
+### The Claim Check Pattern
+Anonymous users upload before auth:
+1. `POST /api/upload/sign` → presigned R2 URL with temp key `temp/{uuid}/{filename}`
+2. Client uploads to R2, stores key in `localStorage` as `temp_upload_id`
+3. User authenticates via Google OAuth
+4. `POST /api/resume/claim` → links upload to user, triggers Replicate parsing
+5. Status polling at `/api/resume/status` (3s intervals, ~30-40s parse time)
 
-- Store `temp_upload_id` in `localStorage` immediately after upload
-- Clear `localStorage` after successful claim
-- R2 key format: `temp/{uuid}/{filename}` → `users/{user_id}/{filename}`
+### Database Schema
+Tables in `lib/db/schema.ts`:
+- **user** — Better Auth managed + custom fields (handle, headline, privacySettings, onboardingCompleted)
+- **session**, **account**, **verification** — Better Auth managed
+- **resumes** — PDF uploads, status enum: `pending_claim` → `processing` → `completed`/`failed`
+- **siteData** — Parsed resume content (JSON TEXT), theme selection
+- **handleChanges** — Handle change audit trail
+- **uploadRateLimits** — IP-based rate limiting
 
-### 1b. Onboarding Wizard Flow (Post-Auth)
+### Auth Usage
 
-After successful authentication, users are guided through a multi-step wizard to complete their profile:
-
-```typescript
-// Page component checks onboardingCompleted flag
-// (Note: Moved from middleware to page components because Edge middleware cannot make D1 database calls)
-if (user && !user.onboardingCompleted) {
-  redirect("/wizard");
-}
-```
-
-**Wizard Steps** (`/wizard` route):
-
-1. **Handle Selection**: User picks a unique username (3+ chars, alphanumeric + hyphens)
-2. **Content Review**: Shows parsed resume content (read-only preview)
-3. **Privacy Settings**: Toggle phone/address visibility (default: hidden)
-4. **Theme Selection**: Choose from available templates (default: MinimalistEditorial)
-
-**Onboarding Completion**:
-
-- Sets `user.onboardingCompleted = 1`
-- Creates `site_data` record with chosen theme
-- Redirects to `/dashboard`
-
-**Exempt Routes** (skip onboarding check):
-
-- `/wizard`, `/api/auth/*`
-
-### 2. Structured AI Extraction
-
-We use Replicate's `datalab-to/marker` with a **custom JSON schema** to enforce output structure:
-
-```json
-{
-  "file": "https://r2.../file.pdf",
-  "use_llm": true,
-  "page_schema": {
-    "type": "object",
-    "properties": {
-      "full_name": { "type": "string" },
-      "headline": { "type": "string", "description": "A 10-word professional summary" },
-      "summary": { "type": "string", "maxLength": 500 },
-      "contact": { ... },
-      "experience": { "type": "array", "items": { ... } }
-    }
-  }
-}
-```
-
-**Normalization Rule**: If `experience` has >5 items, slice to top 5. If `summary` >500 chars, truncate.
-
-**Retry Mechanism**:
-
-- `resumes.retry_count` tracks parsing attempts (max 2)
-- `resumes.replicate_job_id` stores prediction ID for status polling
-- If parsing fails, user can retry via `/api/resume/retry` endpoint
-- After 2 failed retries, manual intervention required
-- Status transitions: `pending_claim` → `processing` → `completed`/`failed`
-
-### 3. Privacy Filtering (ALWAYS Enforce)
-
-Before rendering public pages (`/[handle]`):
-
-```typescript
-const privacySettings = JSON.parse(user.privacySettings || "{}");
-if (!privacySettings.show_phone) {
-  delete content.contact.phone; // Remove from DOM entirely
-}
-if (!privacySettings.show_address) {
-  content.contact.location = extractCityState(content.contact.location);
-}
-```
-
----
-
-## Data Model (Cloudflare D1 + Drizzle ORM)
-
-### Schema Overview
-
-All tables defined in `lib/db/schema.ts` using Drizzle ORM.
-
-**Important D1/SQLite Notes**:
-
-- JSON fields stored as TEXT (use `JSON.parse()`/`JSON.stringify()`)
-- UUIDs generated in application code (`crypto.randomUUID()`)
-- Timestamps stored as TEXT (ISO string format)
-- No row-level security — authorization enforced in application code
-
-**user** (Better Auth managed + custom profile fields)
-
-- `id` (text, primary key) — generated UUID
-- `email` (text, unique)
-- `name` (text)
-- `image` (text) — avatar URL
-- `emailVerified` (integer) — boolean as 0/1
-- `handle` (text, unique) — user's public username (3+ chars, alphanumeric + hyphens)
-- `headline` (text) — profile headline
-- `privacySettings` (text) — JSON string `{"show_phone":false,"show_address":false}`
-- `onboardingCompleted` (integer) — 0/1 boolean
-- `role` (text) — user role
-- `createdAt`, `updatedAt` (text) — ISO timestamps
-
-**session** (Better Auth managed)
-
-- `id` (text, primary key)
-- `userId` (text, FK to user)
-- `token` (text, unique)
-- `expiresAt` (text) — ISO timestamp
-- `ipAddress`, `userAgent` (text)
-- `createdAt`, `updatedAt` (text) — ISO timestamps
-
-**account** (Better Auth managed)
-
-- `id` (text, primary key)
-- `userId` (text, FK to user)
-- `providerId` (text) — e.g., "google"
-- `accountId` (text) — provider's user ID
-- `accessToken`, `refreshToken` (text)
-- `accessTokenExpiresAt`, `refreshTokenExpiresAt` (text) — ISO timestamps
-
-**verification** (Better Auth managed)
-
-- `id` (text, primary key)
-- `identifier` (text)
-- `value` (text)
-- `expiresAt` (text) — ISO timestamp
-
-**resumes**
-
-- `id` (text, primary key)
-- `user_id` (text, FK to user)
-- `r2_key` (text) — path in bucket
-- `status` (text): `pending_claim`, `processing`, `completed`, `failed`
-- `error_message` (text) — stores parsing error details
-- `replicate_job_id` (text) — prediction ID for tracking
-- `retry_count` (integer, default 0) — max 2 retries allowed
-- `parsed_at` (text) — ISO timestamp when AI parsing completed
-- `created_at` (text) — ISO timestamp
-
-**site_data**
-
-- `id` (text, primary key)
-- `user_id` (text, FK to user)
-- `resume_id` (text, FK to resumes)
-- `content` (text): JSON string of render-ready resume data
-- `theme_id` (text): Template identifier (see Available Templates below)
-- `last_published_at`, `created_at`, `updated_at` (text) — ISO timestamps
-
-### Authorization (Application-Level)
-
-Since D1 does not support row-level security, enforce authorization in application code:
-
-```typescript
-// Example: Ensure user can only access their own data
-async function getUserResumes(userId: string) {
-  const db = getDb();
-  return await db
-    .select()
-    .from(resumes)
-    .where(eq(resumes.user_id, userId));
-}
-
-// Example: Verify ownership before update
-async function updateSiteData(userId: string, siteDataId: string, data: Partial<SiteData>) {
-  const db = getDb();
-  const existing = await db
-    .select()
-    .from(siteData)
-    .where(and(eq(siteData.id, siteDataId), eq(siteData.user_id, userId)))
-    .get();
-
-  if (!existing) throw new Error("Not found or unauthorized");
-
-  return await db
-    .update(siteData)
-    .set(data)
-    .where(eq(siteData.id, siteDataId));
-}
-```
-
----
-
-## Authentication (Better Auth)
-
-### Setup
-
-Better Auth handles OAuth flow, session management, and user creation automatically.
-
-**Server-side (API routes, Server Components)**:
-
+**Server-side:**
 ```typescript
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
-// In API route or Server Component
-export async function GET() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
-  // ... use userId
-}
+const session = await auth.api.getSession({ headers: await headers() });
+if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+const userId = session.user.id;
 ```
 
-**Client-side**:
-
+**Client-side:**
 ```typescript
 import { useSession, signIn, signOut } from "@/lib/auth/client";
-
-function LoginButton() {
-  const { data: session, isPending } = useSession();
-
-  if (isPending) return <div>Loading...</div>;
-
-  if (session) {
-    return <button onClick={() => signOut()}>Sign out</button>;
-  }
-
-  return (
-    <button onClick={() => signIn.social({ provider: "google" })}>
-      Sign in with Google
-    </button>
-  );
-}
+// signIn.social({ provider: "google" })
 ```
 
-### Auth Configuration
-
-Located in `lib/auth/index.ts`:
-
+### Privacy Filtering
+Before rendering `/[handle]`:
 ```typescript
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "@/lib/db";
-
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "sqlite",
-  }),
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // 1 day
-  },
-});
+const settings = JSON.parse(user.privacySettings || "{}");
+if (!settings.show_phone) delete content.contact.phone;
+if (!settings.show_address) content.contact.location = extractCityState(...);
 ```
 
-### Auth API Routes
+## Code Standards
 
-Better Auth mounts at `/api/auth/[...all]`:
+- **Package manager**: bun only (never npm/yarn/pnpm)
+- **Formatting**: Biome — spaces (2), double quotes, semicolons, trailing commas
+- **Commits**: Conventional format with details
+- **Images**: Use `<img>` tags, never Next.js `<Image />`
+- **D1 migrations**: Use Supabase CLI patterns via `bun run db:generate` then `db:migrate`
 
-- `GET /api/auth/session` — Get current session
-- `POST /api/auth/sign-in/social` — Initiate OAuth flow
-- `POST /api/auth/sign-out` — Sign out
-- `GET /api/auth/callback/google` — OAuth callback
+## Templates
 
----
+Four resume templates in `components/templates/`:
+- **MinimalistEditorial** (default) — serif, editorial aesthetic
+- **NeoBrutalist** — bold borders, high contrast
+- **GlassMorphic** — blur effects, dark background
+- **BentoGrid** — mosaic grid layout
 
-## Development Guidelines
+All receive `content` (ResumeContent) and `user` props, must respect privacy settings and be mobile-responsive.
 
-### Code Standards
+## Key Files
 
-- **Spacing**: Use spaces, NOT tabs
-- **Commits**: Conventional format with detailed descriptions
+- `lib/db/schema.ts` — Drizzle schema definitions
+- `lib/auth/index.ts` — Better Auth server config
+- `lib/auth/client.ts` — Client hooks (useSession, signIn, signOut)
+- `lib/r2.ts` — AWS S3 client for R2
+- `lib/replicate.ts` — AI parsing client
+- `lib/schemas/resume.ts` — Zod validation with XSS sanitization
+- `wrangler.jsonc` — Cloudflare Workers config (D1 binding: `DB`)
+- `drizzle.config.ts` — Drizzle config pointing to local D1
 
-  ```
-  feat(upload): implement presigned R2 upload with claim check pattern
+## Environment Variables
 
-  - Add POST /api/upload/sign endpoint
-  - Generate temp keys with UUID prefix
-  - Enforce 10MB limit via content-length-range
-  - Store key in localStorage for post-auth claim
-  ```
-
-- **Dependencies**: ALWAYS use `bun install`, `bun add`, `bun run`
-- **Documentation**: ALWAYS use context7 MCP for library docs
-
-### Phase-Based Vertical Slicing (STRICT)
-
-**DO NOT skip phases. Deploy and verify each phase before proceeding.**
-
-**Phase 1: Skeleton & Plumbing** (Days 1-3)
-
-- Initialize Next.js 15 + OpenNext Cloudflare adapter
-- Configure D1 database + Drizzle ORM schema
-- Set up Better Auth with Google OAuth
-- Deploy to Cloudflare Workers
-- Checkpoint: Login/Logout works on live URL
-
-**Phase 2: Drop & Claim Loop** (Days 4-6)
-
-- Create R2 bucket + CORS config
-- Implement presigned upload API
-- Build FileDropzone component + localStorage logic
-- Create claim API (links upload to user)
-- Checkpoint: Anonymous upload → Auth → DB row created
-
-**Phase 3: The Viewer (Mocked)** (Days 7-9)
-
-- Create `[handle]/page.tsx` dynamic route
-- Manually seed `site_data` with test JSON
-- Build "Minimalist Creme" template component
-- Checkpoint: `webresume.now/testhandle` renders mock data
-
-**Phase 4: The Brain (AI Integration)** (Days 10-13)
-
-- Integrate Replicate client
-- Update claim API to trigger parsing job
-- Build polling UI ("Waiting Room")
-- Implement normalization layer (Replicate → site_data)
-- Checkpoint: Real PDF → AI parse → Dashboard
-
-**Phase 5: Polish & Launch** (Days 14-15)
-
-- Build edit form (survey UI)
-- Add privacy toggles (show_phone, show_address)
-- Implement rate limiting (5/24h)
-- Add SEO metadata (dynamic titles, OG images)
-- Checkpoint: Full E2E flow works flawlessly
-
----
-
-## Critical Implementation Rules
-
-### Security & Validation
-
-**File Upload Security**:
-
-```typescript
-// ALWAYS validate PDF magic number before R2
-const isPDF = buffer[0] === 0x25 && buffer[1] === 0x50; // %PDF
-
-// ALWAYS enforce file size in presigned URL (10MB max)
-const presignedUrl = await getSignedUrl(s3Client, putCommand, {
-  expiresIn: 3600,
-  signableHeaders: new Set(["content-length"]),
-  unhoistableHeaders: new Set(["content-length-range"]),
-});
+Required in `.env.local` (dev) and Cloudflare secrets (prod):
+```
+BETTER_AUTH_SECRET, BETTER_AUTH_URL
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
+REPLICATE_API_TOKEN (or CF_AI_GATEWAY_* for gateway)
+NEXT_PUBLIC_APP_URL
 ```
 
-**XSS Prevention** (Critical):
-All user input MUST pass through Zod schemas in `lib/schemas/resume.ts`:
-
-```typescript
-import {
-  sanitizeText,
-  sanitizeUrl,
-  sanitizeEmail,
-  containsXssPattern,
-} from "@/lib/utils/sanitization";
-
-// All text fields use sanitization transforms
-const resumeSchema = z.object({
-  full_name: z.string().transform(sanitizeText),
-  headline: z.string().refine(noXssPattern).transform(sanitizeText),
-  summary: z.string().refine(noXssPattern).transform(sanitizeText),
-  // ... all fields sanitized
-});
-```
-
-**Sanitization Functions** (`lib/utils/sanitization.ts`):
-
-- `sanitizeText()`: Strips HTML tags, encodes special chars
-- `sanitizeUrl()`: Validates URL format, removes javascript: protocols
-- `sanitizeEmail()`: Validates email format, prevents injection
-- `containsXssPattern()`: Detects common XSS patterns (script tags, event handlers, data URIs)
-
-**Rate Limiting**:
-
-- Upload: 5 resumes per user per 24 hours (enforced in `/api/resume/claim`)
-- Update: 10 content updates per user per hour (enforced in `/api/resume/update`)
-- Check via Drizzle:
-
-```typescript
-const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-const count = await db
-  .select({ count: sql<number>`count(*)` })
-  .from(resumes)
-  .where(and(
-    eq(resumes.user_id, userId),
-    gt(resumes.created_at, oneDayAgo)
-  ))
-  .get();
-```
-
-### Image Handling
-
-```tsx
-// NEVER use Next.js Image component
-<Image src="..." alt="..." /> // WRONG - breaks on Cloudflare
-
-// ALWAYS use standard HTML with CSS
-<img
-  src={avatarUrl}
-  alt="Profile"
-  className="rounded-full aspect-square object-cover w-32 h-32"
-/>
-```
-
-### Storage Patterns
-
-```typescript
-// R2 Key Structure
-temp / { uuid } / { filename }; // Anonymous uploads
-users / { user_id } / { timestamp } / { filename }; // Claimed uploads
-
-// NEVER write to filesystem
-fs.writeFileSync("..."); // WRONG - not available on Workers
-```
-
-### JSON Field Handling (D1/SQLite)
-
-```typescript
-// Reading JSON fields
-const user = await db.select().from(users).where(eq(users.id, userId)).get();
-const privacySettings = JSON.parse(user.privacySettings || "{}");
-
-// Writing JSON fields
-await db.update(users)
-  .set({
-    privacySettings: JSON.stringify({ show_phone: false, show_address: false }),
-    updatedAt: new Date().toISOString(),
-  })
-  .where(eq(users.id, userId));
-```
-
----
-
-## File Structure Conventions
-
-```
-app/
-├── (auth)/                          # Route group: Authentication
-│   └── api/auth/[...all]/route.ts   # Better Auth API handler
-├── (public)/                        # Route group: Public pages (no auth)
-│   ├── [handle]/page.tsx            # Dynamic resume viewer (/username)
-│   └── page.tsx                     # Homepage with file upload
-├── (protected)/                     # Route group: Auth-required pages
-│   ├── dashboard/                   # User dashboard
-│   │   ├── page.tsx                 # Main dashboard view
-│   │   └── Sidebar.tsx              # Navigation sidebar component
-│   ├── edit/page.tsx                # Resume content editor (auto-save)
-│   ├── settings/page.tsx            # Privacy & profile settings
-│   ├── onboarding/page.tsx          # Legacy waiting room (deprecated)
-│   ├── waiting/page.tsx             # AI parsing waiting room with polling
-│   └── wizard/                      # Onboarding wizard (4 steps)
-│       ├── page.tsx                 # Wizard orchestrator
-│       └── [step components...]
-├── api/                             # API routes
-│   ├── upload/
-│   │   └── sign/route.ts            # Generate R2 presigned upload URLs
-│   ├── resume/
-│   │   ├── claim/route.ts           # Claim anonymous upload, trigger AI parse
-│   │   ├── status/route.ts          # Poll parsing status
-│   │   ├── retry/route.ts           # Retry failed parsing job
-│   │   ├── update/route.ts          # Update site_data content (auto-save)
-│   │   └── update-theme/route.ts    # Change template theme
-│   ├── profile/
-│   │   └── update/route.ts          # Update profile settings
-│   ├── wizard/
-│   │   └── complete/route.ts        # Mark onboarding complete
-│   └── health/route.ts              # Health check endpoint
-├── error.tsx                        # Global error boundary
-├── not-found.tsx                    # 404 page (matches Soft Depth theme)
-├── layout.tsx                       # Root layout with auth provider
-└── globals.css                      # Global styles + custom animations
-
-components/
-├── FileDropzone.tsx                 # Drag-and-drop PDF uploader
-├── AttributionWidget.tsx            # Footer attribution link
-├── auth/                            # Auth-related components
-│   ├── LoginButton.tsx              # Google OAuth button (Better Auth)
-│   └── UserMenu.tsx                 # User dropdown menu
-├── dashboard/                       # Dashboard-specific components
-│   ├── Sidebar.tsx                  # Navigation sidebar
-│   ├── ContentPreview.tsx           # Resume content preview
-│   └── [other dashboard components...]
-├── forms/                           # Form components with react-hook-form
-│   ├── EditResumeForm.tsx           # Main edit form with auto-save
-│   └── [field components...]
-├── settings/                        # Settings page components
-│   └── PrivacySettings.tsx          # Phone/address toggle controls
-├── templates/                       # Resume templates
-│   ├── MinimalistEditorial.tsx      # Default serif template
-│   ├── NeoBrutalist.tsx             # Bold brutalist design
-│   ├── GlassMorphic.tsx             # Glassmorphism effects
-│   └── BentoGrid.tsx                # Mosaic grid layout
-├── wizard/                          # Wizard step components
-│   ├── HandleStep.tsx               # Step 1: Choose username
-│   ├── ReviewStep.tsx               # Step 2: Review parsed content
-│   ├── PrivacyStep.tsx              # Step 3: Privacy settings
-│   └── ThemeStep.tsx                # Step 4: Template selection
-└── ui/                              # Reusable UI components (shadcn/ui)
-    ├── button.tsx, input.tsx, etc.
-
-lib/
-├── db/
-│   ├── schema.ts                    # Drizzle ORM schema definitions
-│   ├── index.ts                     # Database client initialization
-│   └── migrations/                  # D1 migration files
-├── auth/
-│   ├── index.ts                     # Better Auth server configuration
-│   └── client.ts                    # Better Auth client hooks (useSession, signIn, signOut)
-├── types/
-│   ├── database.ts                  # Manual types (ResumeContent, ProfileData, etc.)
-│   └── template.ts                  # Template type definitions
-├── schemas/
-│   ├── resume.ts                    # Zod schemas for resume validation
-│   └── profile.ts                   # Zod schemas for profile validation
-├── utils/
-│   ├── sanitization.ts              # XSS prevention utilities
-│   ├── privacy.ts                   # Privacy filtering (phone/address)
-│   └── [other utils...]
-├── onboarding/
-│   └── wizard-state.ts              # Wizard state management
-├── r2.ts                            # AWS S3 client for Cloudflare R2
-├── replicate.ts                     # Replicate API client + parsing logic
-├── env.ts                           # Environment variable validation (Zod)
-└── utils.ts                         # cn() utility (clsx + tailwind-merge)
-
-drizzle/
-├── migrations/                      # Generated Drizzle migrations
-│   ├── 0000_initial.sql
-│   └── meta/
-└── drizzle.config.ts                # Drizzle configuration
-
-middleware.ts                        # Next.js middleware (auth only - no D1 access in Edge)
-wrangler.toml                        # Cloudflare Workers config (includes D1 binding)
-open-next.config.ts                  # OpenNext Cloudflare adapter config
-```
-
-### Key Routing Patterns
-
-**Route Groups** (folders with parentheses don't affect URL structure):
-
-- `(auth)` → `/api/auth/*`
-- `(public)` → `/` and `/[handle]`
-- `(protected)` → `/dashboard`, `/edit`, `/settings`, `/wizard`
-
-**Dynamic Routes**:
-
-- `/[handle]` → Public resume viewer (e.g., `/johnsmith`)
-- Server-side rendered with D1 data fetch
-- Applies privacy filtering before rendering
-
-**API Routes**:
-
-- All in `/api` directory
-- Use Next.js Route Handlers (App Router)
-- Return JSON responses with proper error handling
-- Protected endpoints check authentication via Better Auth session
-
-**Important: Middleware Limitations**:
-
-- Edge middleware cannot make D1 database calls
-- Onboarding check moved from middleware to page components
-- Middleware handles auth session refresh only
-
----
-
-## Environment Variables (Required)
-
-```bash
-# Better Auth
-BETTER_AUTH_SECRET=                  # Secret for signing sessions (generate with openssl rand -base64 32)
-BETTER_AUTH_URL=https://your-domain.com  # Production URL
-
-# Google OAuth
-GOOGLE_CLIENT_ID=                    # From Google Cloud Console
-GOOGLE_CLIENT_SECRET=                # From Google Cloud Console
-
-# Cloudflare R2
-R2_ENDPOINT=https://...
-R2_ACCESS_KEY_ID=
-R2_SECRET_ACCESS_KEY=
-R2_BUCKET_NAME=webresume-uploads
-
-# AI Parsing
-REPLICATE_API_TOKEN=
-
-# Cloudflare D1 (configured in wrangler.toml, accessed via binding)
-# D1 database is bound as `DB` in wrangler.toml
-```
-
----
-
-## Quick Reference Commands
-
-```bash
-# Development
-bun install                      # Install dependencies
-bun run dev                      # Start Next.js dev server (http://localhost:3000)
-bun run lint                     # Run ESLint
-
-# Building
-bun run build                    # Build Next.js for production
-bun run build:worker             # Build and generate Cloudflare Workers bundle
-bun run preview                  # Preview Cloudflare build locally (using wrangler)
-bun run start                    # Start production server (not for Workers deployment)
-
-# Deployment
-bun run deploy                   # Build and deploy to Cloudflare Workers (single command)
-bunx wrangler deploy             # Deploy manually with wrangler
-
-# Database (Cloudflare D1 + Drizzle)
-bun run db:generate              # Generate Drizzle migrations from schema changes
-bun run db:migrate               # Apply migrations to local D1 database
-bun run db:migrate:prod          # Apply migrations to production D1 database
-bun run db:studio                # Open Drizzle Studio (database UI)
-bun run db:push                  # Push schema changes directly (dev only, skips migrations)
-
-# Wrangler D1 Commands (direct)
-bunx wrangler d1 execute DB --local --command "SELECT * FROM user"  # Query local D1
-bunx wrangler d1 execute DB --command "SELECT * FROM user"          # Query production D1
-bunx wrangler d1 migrations list DB                                  # List migrations
-bunx wrangler d1 migrations apply DB --local                         # Apply migrations locally
-bunx wrangler d1 migrations apply DB                                 # Apply migrations to prod
-```
-
----
-
-## Known Gotchas & Troubleshooting
-
-1. **"Cannot find module 'fs'"**
-   - You're on Cloudflare Workers. Use R2 presigned URLs instead.
-
-2. **Next.js Image optimization fails**
-   - Use `<img>` tags with CSS. Image optimization requires a server.
-
-3. **Auth redirect loop**
-   - Check `BETTER_AUTH_URL` matches your deployment URL exactly
-   - Verify Google OAuth redirect URIs in Google Cloud Console include `/api/auth/callback/google`
-
-4. **R2 CORS errors**
-   - Add both `localhost:3000` AND production URL to R2 CORS config
-   - Allow methods: `GET`, `PUT`, `HEAD`
-
-5. **Replicate parsing timeout**
-   - Typical parse time: 20-40s for 2-page resume
-   - Implement client-side polling (3s intervals)
-   - Add timeout UI after 90s with retry option
-
-6. **D1 JSON fields returning strings**
-   - D1/SQLite stores JSON as TEXT. Always `JSON.parse()` when reading
-   - Always `JSON.stringify()` when writing
-
-7. **D1 boolean fields**
-   - SQLite has no native boolean. Use INTEGER (0 or 1)
-   - Drizzle handles this automatically with `integer({ mode: 'boolean' })`
-
-8. **Better Auth session not found**
-   - Ensure cookies are being sent (check `credentials: 'include'` on fetch)
-   - Verify `BETTER_AUTH_SECRET` is set in production
-
-9. **Middleware cannot access D1**
-   - Edge middleware runs in a different runtime than Workers
-   - D1 bindings are not available in Edge middleware
-   - Move database checks to page components or API routes
-
----
-
-## Available Templates
-
-The application includes multiple professionally designed resume templates, each located in `components/templates/`:
-
-### 1. **MinimalistEditorial** (Default)
-
-- Clean serif typography with editorial magazine aesthetic
-- Neutral color palette with subtle accents
-- Perfect for traditional industries and professional roles
-- File: `components/templates/MinimalistEditorial.tsx`
-
-### 2. **NeoBrutalist**
-
-- Bold, high-contrast design with thick borders
-- Black-and-white base with vibrant accent colors
-- Heavy sans-serif typography
-- Best for creative roles and design portfolios
-- File: `components/templates/NeoBrutalist.tsx`
-
-### 3. **GlassMorphic**
-
-- Modern glassmorphism effects with backdrop blur
-- Translucent cards with soft shadows
-- Dark background with colorful gradients
-- Ideal for tech and startup professionals
-- File: `components/templates/GlassMorphic.tsx`
-
-### 4. **BentoGrid**
-
-- Mosaic-style layout inspired by Apple's Bento design
-- Asymmetric grid with varying card sizes
-- Visual hierarchy through layout variation
-- Great for showcasing diverse skill sets
-- File: `components/templates/BentoGrid.tsx`
-
-### Template Selection
-
-- Users choose their template during the wizard onboarding flow (Step 4)
-- Default template is `MinimalistEditorial`
-- Theme can be changed later via `/settings` (updates `site_data.theme_id`)
-- All templates support the same data structure defined in `lib/types/database.ts`
-- Templates are rendered server-side at `/[handle]` route
-
-### Template Development Guidelines
-
-- Each template receives `content` (ResumeContent) and `user` (UserData) props
-- Must respect privacy settings (check `user.privacySettings`)
-- Should handle missing/optional fields gracefully
-- Use consistent spacing: Tailwind's spacing scale (p-4, p-6, p-8, etc.)
-- Avoid Next.js `<Image />` component (use `<img>` with CSS)
-- All templates must be mobile-responsive
-
----
-
-## Design System: Soft Depth Theme (Landing Page Only)
-
-### Overview
-
-The landing page uses the "Soft Depth" theme—a modern, professional aesthetic inspired by Apple and Stripe's design languages, with enhanced visual richness through layered shadows and gradient accents.
-
-### Core Principles
-
-1. **Calm Professionalism**: Light, airy backgrounds (slate-50) create a calming workspace
-2. **Layered Depth**: Multi-layer shadows create visual hierarchy without heavy borders
-3. **Gradient Accents**: Indigo→Blue gradients add sophistication without overwhelming
-4. **Smooth Interactions**: 300ms transitions for all hover states and animations
-
-### Color Palette
-
-**Primary Colors:**
-
-- Background: `slate-50` (#F8FAFC)
-- Text Primary: `slate-900` (#0F172A)
-- Text Secondary: `slate-600` (#475569)
-- Border: `slate-200/60` (with 60% opacity)
-
-**Gradient Accents:**
-
-- Primary Gradient: `indigo-600` (#4F46E5) → `blue-600` (#3B82F6) → `cyan-500` (#06B6D4)
-- Button Gradient: `indigo-600` → `blue-600`
-- Logo Gradient: `indigo-600` → `blue-600`
-
-**Feature Card Gradients:**
-
-- Speed: `orange-500` (#F97316) → `amber-600` (#D97706)
-- AI: `indigo-600` → `purple-600` (#9333EA)
-- Free: `emerald-500` (#10B981) → `teal-600` (#0D9488)
-
-### Shadow System
-
-Custom layered shadows for depth perception:
-
-```css
---shadow-depth-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
---shadow-depth-md:
-  0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 32px rgba(0, 0, 0, 0.08);
---shadow-depth-lg:
-  0 4px 16px rgba(0, 0, 0, 0.06), 0 16px 64px rgba(0, 0, 0, 0.12);
---shadow-depth-xl:
-  0 8px 24px rgba(0, 0, 0, 0.08), 0 24px 96px rgba(0, 0, 0, 0.16);
-```
-
-**Usage:**
-
-- Header/Footer: `shadow-depth-sm`
-- Upload zone (default): `shadow-depth-md`
-- Upload zone (hover): `shadow-depth-lg`
-- Modal dropzone: `shadow-depth-sm` → `shadow-depth-md` on hover
-
-### Animation System
-
-All animations defined in `app/globals.css`:
-
-**1. Fade In Up** (`animate-fade-in-up`)
-
-- Duration: 0.6s ease-out
-- Used on: Hero section
-- Transform: translateY(20px) → translateY(0)
-- Opacity: 0 → 1
-
-**2. Float** (`animate-float`)
-
-- Duration: 6s ease-in-out infinite
-- Used on: (reserved for future use)
-- Transform: translateY(0) → translateY(-10px) → translateY(0)
-
-**3. Gradient Shift** (`animate-gradient-shift`)
-
-- Duration: 8s ease infinite
-- Used on: Gradient backgrounds
-- Background position: 0% → 100% → 0%
-
-**4. Shimmer** (`animate-shimmer`)
-
-- Duration: 2s linear infinite
-- Used on: LoginButton hover overlay
-- Background position: -200% → 200%
-
-**Accessibility:**
-
-- All animations respect `prefers-reduced-motion: reduce`
-- Animations are disabled for users who request reduced motion
-
-### Component Patterns
-
-**1. Elevated Cards**
-
-- White background (`bg-white`)
-- Border: `border border-slate-200/60`
-- Shadow: `shadow-depth-sm` (default), `shadow-depth-md` (hover)
-- Border radius: `rounded-2xl` (16px)
-- Padding: `p-8` (32px)
-
-**2. Gradient Buttons**
-
-- Background: `bg-linear-to-r from-indigo-600 to-blue-600`
-- Text: `text-white font-semibold`
-- Hover: Darker gradient (`from-indigo-700 to-blue-700`)
-- Shadow: `shadow-depth-sm` → `shadow-depth-md` on hover
-- Transition: `transition-all duration-300`
-
-**3. Icon Containers**
-
-- Background: Gradient (e.g., `from-indigo-100 to-blue-100`)
-- Glow effect: Blurred gradient overlay (`blur-xl opacity-20`)
-- Border radius: `rounded-xl` (12px)
-- Padding: `p-3` or `p-4`
-
-**4. SVG Gradients**
-All icons use gradient strokes/fills defined inline:
-
-```tsx
-<defs>
-  <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-    <stop offset="0%" stopColor="#4F46E5" />
-    <stop offset="100%" stopColor="#3B82F6" />
-  </linearGradient>
-</defs>
-```
-
-### Typography
-
-**Headings:**
-
-- Hero H1: `text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.1] tracking-tight`
-- Card Headlines: `text-2xl font-bold` or `text-3xl font-bold`
-- Subheadings: `text-lg font-semibold`
-
-**Body Text:**
-
-- Hero subtitle: `text-xl sm:text-2xl font-light leading-relaxed`
-- Card descriptions: `text-sm font-medium`
-- Helper text: `text-xs font-medium`
-
-**Font Weights:**
-
-- Light: 300 (hero subtitle)
-- Medium: 500 (body text, labels)
-- Semibold: 600 (buttons, card titles)
-- Bold: 700 (numbers, emphasis)
-- Extrabold: 800 (hero headline)
-
-### Hover Effects
-
-**Standard Lift Pattern:**
-
-```tsx
-hover:-translate-y-0.5 hover:shadow-depth-md transition-all duration-300
-```
-
-**Upload Zone Special:**
-
-- Default: `shadow-depth-md`
-- Hover: `shadow-depth-lg` + `-translate-y-1`
-- Gradient overlay fades in: `opacity-0` → `opacity-100`
-- Icon scales: `scale-100` → `scale-110`
-
-### Responsive Breakpoints
-
-Follow Tailwind defaults:
-
-- `sm:` 640px (tablets)
-- `md:` 768px (small laptops)
-- `lg:` 1024px (desktops)
-
-**Mobile-First Approach:**
-
-- Base styles for mobile
-- Add `sm:`, `lg:` modifiers for larger screens
-- Grid: `grid-cols-1 sm:grid-cols-3` for feature cards
-
-### Performance Considerations
-
-1. **CSS-Only Animations**: All animations use CSS keyframes, no JavaScript
-2. **GPU Acceleration**: Transforms use `will-change` hints where needed
-3. **Reduced Motion**: All animations disabled via `prefers-reduced-motion`
-4. **Shadow Optimization**: Shadows use RGBA for better performance than hex
-5. **Gradient Performance**: `background-size: 200%` for smooth gradient shifts
-
-### Design Conflicts to Avoid
-
-**DO NOT** make landing page look like existing templates:
-
-- Editorial serif typography (MinimalistEditorial)
-- Dark backgrounds with noise overlays (GlassMorphic)
-- Thick black borders with hard shadows (NeoBrutalist)
-- Bento grid mosaic layouts (BentoGrid)
-
-**Landing page should:**
-
-- Use light backgrounds (slate-50, not dark)
-- Use soft shadows (not hard drops or glassmorphism)
-- Use indigo/blue gradients (not template-specific colors)
-- Use standard layouts (not editorial or mosaic grids)
-
----
-
-## Contact & Resources
-
-- **Docs**: See `/docs` directory (prd.md, tech-spec.md, roadmap.md)
-- **Architecture Diagrams**: In tech-spec.md
-- **Phase Checklists**: In roadmap.md
-
-**Current Phase**: Phase 5 Complete (Production Ready)
-
----
-
-## Complete User Journey (E2E Flow)
-
-Understanding the full user experience is critical for debugging and feature development:
-
-### 1. Anonymous Upload (Homepage)
-
-- User visits `/` (homepage)
-- Drags PDF onto `FileDropzone` component OR clicks to browse
-- Client requests presigned URL: `POST /api/upload/sign`
-- File uploaded directly to R2 with temp key: `temp/{uuid}/{filename}`
-- Temp upload key stored in `localStorage` as `temp_upload_id`
-- `LoginButton` appears prompting Google OAuth
-
-### 2. Authentication
-
-- User clicks "Sign in with Google"
-- Better Auth initiates OAuth flow via `signIn.social({ provider: "google" })`
-- Redirects to Google OAuth consent screen
-- On success, callback to `/api/auth/callback/google`
-- Better Auth creates `user` row (with profile fields), `account` row, and `session`
-- User redirected based on state:
-  - If `temp_upload_id` exists → `/wizard` (claim upload)
-  - If no upload → `/dashboard`
-
-### 3. Wizard Onboarding (4 Steps)
-
-Located at `/wizard`, managed by `components/wizard/*`:
-
-**Step 1: Handle** (`HandleStep.tsx`)
-
-- User enters desired username (3+ chars, alphanumeric + hyphens)
-- Real-time availability check against `user.handle`
-- Validation: Must be unique, no special chars
-
-**Step 2: Review** (`ReviewStep.tsx`)
-
-- Shows AI-parsed resume content (read-only)
-- User can see what will be published
-- Background: Claim API already triggered parsing
-
-**Step 3: Privacy** (`PrivacyStep.tsx`)
-
-- Toggle: "Show phone number" (default OFF)
-- Toggle: "Show full address" (default OFF)
-- Updates `user.privacySettings` JSON
-
-**Step 4: Theme** (`ThemeStep.tsx`)
-
-- User selects from 4 templates (MinimalistEditorial default)
-- Live preview of each template
-- Sets `site_data.theme_id`
-
-On completion:
-
-- `POST /api/wizard/complete` sets `user.onboardingCompleted = 1`
-- User redirected to `/dashboard`
-
-### 4. AI Parsing (Background)
-
-Triggered by claim API, tracked in `/waiting`:
-
-- Status: `pending_claim` → `processing`
-- Replicate job created with `datalab-to/marker` model
-- Client polls `/api/resume/status` every 3 seconds
-- Parsing takes 30-40 seconds typically
-- On success: `status = completed`, data saved to `site_data.content`
-- On failure: `status = failed`, user can retry (max 2 attempts)
-
-### 5. Dashboard (`/dashboard`)
-
-Post-onboarding landing page:
-
-- Shows current handle: `webresume.now/{handle}`
-- Preview of public site (iframe or link)
-- Quick actions: Edit content, Change theme
-- `Sidebar` component for navigation
-
-### 6. Editing (`/edit`)
-
-Content editor with auto-save:
-
-- `EditResumeForm` component with react-hook-form
-- 3-second debounce on all fields
-- Auto-saves to `/api/resume/update`
-- Updates `site_data.content` and `updated_at`
-- Success toast notification on save
-
-### 7. Settings (`/settings`)
-
-Privacy and profile management:
-
-- Update privacy toggles (phone/address visibility)
-- Change theme via `/api/resume/update-theme`
-- Update profile info (avatar, headline)
-- Delete account option (future)
-
-### 8. Public Profile (`/[handle]`)
-
-The actual published resume:
-
-- Server-side rendered (SSR)
-- Fetches `user` + `site_data` by handle from D1
-- Applies privacy filtering before render
-- Renders chosen template with user content
-- SEO metadata: title, description, OG tags
-- Cache-Control headers for edge caching
-
-### Error States
-
-- **Upload fails**: Show error message, allow retry
-- **Parsing fails**: Redirect to `/waiting` with retry button
-- **Handle taken**: Inline validation error in wizard
-- **Not authenticated**: Redirect to `/`
-- **Onboarding incomplete**: Page component redirects to `/wizard`
-- **404 handle**: Custom 404 page matching Soft Depth theme
-
----
-
-## Context7 Library IDs (Quick Reference)
-
-When using context7 MCP, these are the library IDs to fetch docs:
-
-- Next.js: `/vercel/next.js`
-- Better Auth: `/better-auth/better-auth`
-- Drizzle ORM: `/drizzle-team/drizzle-orm`
-- Cloudflare Workers: `/cloudflare/workers-sdk`
-- AWS SDK S3: `/aws/aws-sdk-js-v3`
-
----
-
-**Last Updated**: 2025-12-06 (Schema and auth documentation fixes)
+## Gotchas
+
+1. **"Cannot find module 'fs'"** — You're on Workers, use R2 presigned URLs
+2. **Auth redirect loop** — Check `BETTER_AUTH_URL` matches deployment URL exactly
+3. **R2 CORS errors** — Add localhost:3000 AND production URL to R2 CORS config
+4. **Parsing stuck** — Check Replicate token, use retry button (max 2 retries)
+5. **D1 JSON returning strings** — Always parse TEXT fields with JSON.parse()

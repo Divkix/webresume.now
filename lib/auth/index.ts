@@ -14,7 +14,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import * as schema from "@/lib/db/schema";
 
 /**

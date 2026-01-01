@@ -13,7 +13,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import {
   COOKIE_MAX_AGE,
   COOKIE_NAME,

@@ -2,7 +2,6 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextResponse } from "next/server";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
 import { checkIPRateLimit, getClientIP } from "@/lib/utils/ip-rate-limit";
 import { generateTempKey, MAX_FILE_SIZE } from "@/lib/utils/validation";

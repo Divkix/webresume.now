@@ -7,7 +7,6 @@
  */
 
 import { Resend } from "resend";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 
 // Singleton client
 let _resendClient: Resend | null = null;

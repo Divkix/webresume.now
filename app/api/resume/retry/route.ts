@@ -4,7 +4,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { resumes } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
 import { getR2Bucket, getR2Client } from "@/lib/r2";

@@ -6,8 +6,6 @@
  * 2. Fall back to process.env (development with .env.local)
  */
 
-import type { CloudflareEnv } from "./cloudflare-env";
-
 class EnvironmentError extends Error {
   constructor(message: string) {
     super(message);

@@ -1,7 +1,6 @@
 import Replicate from "replicate";
 import { z } from "zod";
 import type { ResumeContent } from "@/lib/types/database";
-import type { CloudflareEnv } from "./cloudflare-env";
 import { ENV } from "./env";
 
 // Singleton client cache

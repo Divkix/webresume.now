@@ -3,7 +3,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { getDb } from "@/lib/db";
 import {
   account,

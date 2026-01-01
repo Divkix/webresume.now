@@ -7,7 +7,6 @@
  */
 
 import { S3Client } from "@aws-sdk/client-s3";
-import type { CloudflareEnv } from "./cloudflare-env";
 import { ENV } from "./env";
 
 // Singleton clients (cached per endpoint/credentials combo)

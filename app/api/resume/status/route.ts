@@ -2,7 +2,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
-import type { CloudflareEnv } from "@/lib/cloudflare-env";
 import { resumes, siteData } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
 import { getParseStatus, normalizeResumeData } from "@/lib/replicate";

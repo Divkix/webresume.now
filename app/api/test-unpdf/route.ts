@@ -1,7 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
 
-export const runtime = "edge";
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();

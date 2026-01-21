@@ -157,10 +157,10 @@ export async function PUT(request: Request) {
 
     // 11. Invalidate cache for both old and new handles (path + tag)
     if (oldHandle) {
-      revalidateTag(getResumeCacheTag(oldHandle));
+      revalidateTag(getResumeCacheTag(oldHandle), "max");
       revalidatePath(`/${oldHandle}`);
     }
-    revalidateTag(getResumeCacheTag(newHandle));
+    revalidateTag(getResumeCacheTag(newHandle), "max");
     revalidatePath(`/${newHandle}`);
 
     await captureBookmark();

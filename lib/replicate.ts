@@ -1,3 +1,7 @@
+// @deprecated Use /lib/gemini.ts instead
+// This file is kept for backward compatibility during Gemini migration
+// All Replicate-specific functionality has been replaced with Gemini 2.5 Flash Lite via OpenRouter
+
 import Replicate from "replicate";
 import { z } from "zod";
 import type { ResumeContent } from "@/lib/types/database";

@@ -88,6 +88,8 @@ export function validateEnvironment(): void {
 
     // Replicate
     "REPLICATE_API_TOKEN",
+
+    "GEMINI_API_KEY",
     // REPLICATE_WEBHOOK_SECRET is validated separately as it's critical for production
     // but may be absent in development. See ENV.REPLICATE_WEBHOOK_SECRET below.
   ];
@@ -133,6 +135,7 @@ export const ENV = {
 
   // Replicate
   REPLICATE_API_TOKEN: () => getRequiredEnv("REPLICATE_API_TOKEN"),
+  GEMINI_API_KEY: () => getRequiredEnv("GEMINI_API_KEY"),
   /**
    * CRITICAL FOR PRODUCTION SECURITY:
    * The webhook secret is required to validate that incoming webhook requests

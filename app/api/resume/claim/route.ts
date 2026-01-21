@@ -4,15 +4,15 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import type { NewResume } from "@/lib/db/schema";
 import { resumes, siteData } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
+import { parseResumeWithGemini } from "@/lib/gemini";
 import { getR2Bucket, getR2Client } from "@/lib/r2";
-import { parseResume } from "@/lib/replicate";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
@@ -92,8 +92,8 @@ async function upsertSiteData(
  */
 export async function POST(request: Request) {
   try {
-    // Get Cloudflare env bindings for R2/Replicate secrets
-    const { env } = await getCloudflareContext({ async: true });
+    // Get Cloudflare env bindings for R2/Gemini secrets
+    const { env, ctx } = await getCloudflareContext({ async: true });
     const typedEnv = env as Partial<CloudflareEnv>;
 
     // Initialize R2 client and bucket with env
@@ -425,70 +425,131 @@ export async function POST(request: Request) {
       // Continue - temp file cleanup failure is not critical
     }
 
-    // 10. Generate presigned URL for Replicate (7 day expiry)
-    const getCommand = new GetObjectCommand({
-      Bucket: R2_BUCKET,
-      Key: newKey,
-    });
+    // 10. Download PDF for Gemini parsing
+    let pdfBuffer: Uint8Array;
 
-    let presignedUrl: string;
     try {
-      presignedUrl = await getSignedUrl(r2Client, getCommand, {
-        expiresIn: 7 * 24 * 60 * 60, // 7 days
+      const getCommand = new GetObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: newKey,
       });
+      const response = await r2Client.send(getCommand);
+      const fileBuffer = await response.Body?.transformToByteArray();
+
+      if (!fileBuffer) {
+        return await failResume(
+          "Failed to download file for processing",
+          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+          500,
+        );
+      }
+
+      pdfBuffer = new Uint8Array(fileBuffer);
     } catch (error) {
-      console.error("Presigned URL generation error:", error);
+      console.error("R2 download error:", error);
       return await failResume(
-        "Failed to prepare file for processing",
+        "Failed to download file for processing",
         ERROR_CODES.EXTERNAL_SERVICE_ERROR,
         500,
       );
     }
 
-    // 11. Trigger Replicate parsing with webhook
-    let replicateJobId: string | null = null;
-    let parseError: string | null = null;
-
-    // Build webhook URL for Replicate to call when done
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined;
-
-    try {
-      const prediction = await parseResume(presignedUrl, webhookUrl, typedEnv);
-      replicateJobId = prediction.id;
-    } catch (error) {
-      console.error("Failed to trigger Replicate parsing:", error);
-      parseError = error instanceof Error ? error.message : "Failed to start AI parsing";
+    if (!ctx?.waitUntil) {
+      return await failResume(
+        "Background processing is unavailable",
+        ERROR_CODES.INTERNAL_ERROR,
+        500,
+      );
     }
 
-    // 12. Update resume with replicate job ID or error (include file_hash for future caching)
-    const updatePayload: {
-      status: "processing" | "failed";
-      replicateJobId?: string;
-      errorMessage?: string;
-      fileHash?: string;
-    } = replicateJobId
-      ? {
-          status: "processing",
-          replicateJobId,
-          ...(file_hash && { fileHash: file_hash }),
+    // 11. Trigger Gemini parsing in background
+    const parsePromise = (async () => {
+      const { db: backgroundDb, captureBookmark: captureBackgroundBookmark } = await getSessionDb(
+        env.DB,
+      );
+
+      try {
+        const parseResult = await parseResumeWithGemini(pdfBuffer, typedEnv);
+
+        if (!parseResult.success) {
+          const errorMessage = `Gemini API error: ${parseResult.error || "Unknown error"}`;
+          await backgroundDb
+            .update(resumes)
+            .set({
+              status: "failed",
+              errorMessage,
+            })
+            .where(eq(resumes.id, resumeId));
+          await captureBackgroundBookmark();
+          return;
         }
-      : {
-          status: "failed",
-          errorMessage: parseError || "Unknown error",
-        };
+
+        let parsedContent = parseResult.parsedContent;
+
+        try {
+          const parsedJson = JSON.parse(parsedContent) as Record<string, unknown>;
+          parsedContent = JSON.stringify(parsedJson);
+        } catch (error) {
+          const errorMessage = `Gemini API error: ${error instanceof Error ? error.message : "Invalid JSON response"}`;
+          await backgroundDb
+            .update(resumes)
+            .set({
+              status: "failed",
+              errorMessage,
+            })
+            .where(eq(resumes.id, resumeId));
+          await captureBackgroundBookmark();
+          return;
+        }
+
+        const now = new Date().toISOString();
+
+        await upsertSiteData(backgroundDb, userId, resumeId, parsedContent, now);
+
+        await backgroundDb
+          .update(resumes)
+          .set({
+            status: "completed",
+            parsedAt: now,
+            parsedContent,
+          })
+          .where(eq(resumes.id, resumeId));
+
+        await captureBackgroundBookmark();
+      } catch (error) {
+        const errorMessage = `Gemini API error: ${error instanceof Error ? error.message : "Unknown error"}`;
+        await backgroundDb
+          .update(resumes)
+          .set({
+            status: "failed",
+            errorMessage,
+          })
+          .where(eq(resumes.id, resumeId));
+        await captureBackgroundBookmark();
+      }
+    })();
+
+    const backgroundTaskId = (ctx.waitUntil(parsePromise) as unknown as string | null) ?? null;
+
+    // 12. Update resume with background task ID (include file_hash for future caching)
+    const updatePayload: Partial<NewResume> & { backgroundTaskId?: string | null } = {
+      status: "processing",
+      replicateJobId: null,
+      backgroundTaskId,
+      ...(file_hash && { fileHash: file_hash }),
+    };
 
     try {
       await db.update(resumes).set(updatePayload).where(eq(resumes.id, resumeId));
     } catch (updateError) {
-      console.error("Failed to update resume with replicate job:", updateError);
+      console.error("Failed to update resume with Gemini task:", updateError);
       // Continue anyway - status endpoint will handle it
     }
 
     await captureBookmark();
     return createSuccessResponse({
       resume_id: resumeId,
-      status: updatePayload.status,
+      status: "processing",
     });
   } catch (error) {
     console.error("Error claiming resume:", error);

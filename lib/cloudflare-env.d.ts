@@ -12,6 +12,7 @@ declare namespace Cloudflare {
 		R2_BUCKET_NAME: string;
 		REPLICATE_WEBHOOK_SECRET: string;
 		REPLICATE_API_TOKEN: string;
+		GEMINI_API_KEY: string;
 		NEXT_PUBLIC_APP_URL: string;
 		NEXT_PUBLIC_SITE_NAME: string;
 		NEXT_PUBLIC_SITE_TLD: string;

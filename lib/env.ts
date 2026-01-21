@@ -86,12 +86,7 @@ export function validateEnvironment(): void {
     "CF_AI_GATEWAY_ID",
     "CF_AIG_AUTH_TOKEN",
 
-    // Replicate
-    "REPLICATE_API_TOKEN",
-
     "GEMINI_API_KEY",
-    // REPLICATE_WEBHOOK_SECRET is validated separately as it's critical for production
-    // but may be absent in development. See ENV.REPLICATE_WEBHOOK_SECRET below.
   ];
 
   const missing = requiredVars.filter((key) => {
@@ -133,22 +128,8 @@ export const ENV = {
   CF_AI_GATEWAY_ID: () => getRequiredEnv("CF_AI_GATEWAY_ID"),
   CF_AIG_AUTH_TOKEN: () => getRequiredEnv("CF_AIG_AUTH_TOKEN"),
 
-  // Replicate
-  REPLICATE_API_TOKEN: () => getRequiredEnv("REPLICATE_API_TOKEN"),
+  // Gemini
   GEMINI_API_KEY: () => getRequiredEnv("GEMINI_API_KEY"),
-  /**
-   * CRITICAL FOR PRODUCTION SECURITY:
-   * The webhook secret is required to validate that incoming webhook requests
-   * actually originate from Replicate. Without this, attackers could forge
-   * webhook payloads to manipulate resume parsing status.
-   *
-   * This is REQUIRED in production. In development, you may skip webhook
-   * validation by not setting this variable, but this is strongly discouraged.
-   *
-   * Generate a secure secret: openssl rand -base64 32
-   * Set in production: wrangler secret put REPLICATE_WEBHOOK_SECRET
-   */
-  REPLICATE_WEBHOOK_SECRET: () => getRequiredEnv("REPLICATE_WEBHOOK_SECRET"),
 
   // Optional - Public app URL
   NEXT_PUBLIC_APP_URL: () => getEnvVar("NEXT_PUBLIC_APP_URL", false),

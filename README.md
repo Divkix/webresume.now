@@ -30,7 +30,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 | **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) + [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | [Better Auth](https://better-auth.com) (Google OAuth) |
 | **Storage** | [Cloudflare R2](https://developers.cloudflare.com/r2/) (S3-compatible) |
- | **AI Parsing** | [Gemini 2.5 Flash Lite](https://ai.google.dev/gemini-api) via [OpenRouter](https://openrouter.ai) |
+| **AI Parsing** | [Gemini 2.5 Flash Lite](https://ai.google.dev/gemini-api) via [OpenRouter](https://openrouter.ai) |
 | **Styling** | [Tailwind CSS 4](https://tailwindcss.com) + [Radix UI](https://radix-ui.com) |
 
 ---
@@ -70,7 +70,7 @@ We chose Cloudflare Workers over traditional hosting for several reasons:
 - [Bun](https://bun.sh) v1.0+ (package manager)
 - [Cloudflare Account](https://cloudflare.com) with R2 and D1 enabled
 - [Google Cloud Console](https://console.cloud.google.com) project for OAuth
- - [OpenRouter](https://openrouter.ai) account for AI parsing (Gemini 2.5 Flash Lite)
+- [OpenRouter](https://openrouter.ai) account for AI parsing (Gemini 2.5 Flash Lite)
 
 ### Installation
 
@@ -110,9 +110,10 @@ Open [http://localhost:3000](http://localhost:3000)
 
 3. **Create R2 Bucket**
    - Go to Cloudflare Dashboard > R2
-   - Create bucket named `webresume-uploads`
+   - Create bucket named `webresume-bucket`
    - Generate API token with Read & Write permissions
    - Note your Account ID and Access Keys
+   - This bucket is also used for OpenNext incremental cache
 
 4. **Configure R2 CORS**
    Add CORS policy in R2 bucket settings:
@@ -171,7 +172,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
-R2_BUCKET_NAME=webresume-uploads
+R2_BUCKET_NAME=webresume-bucket
 
 # Cloudflare AI Gateway (BYOK)
 CF_AI_GATEWAY_ACCOUNT_ID=your-account-id
@@ -182,11 +183,24 @@ CF_AIG_AUTH_TOKEN=your-gateway-auth-token
 GEMINI_API_KEY=your-gemini-api-key-here
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# OpenNext incremental cache prefix (optional)
+NEXT_INC_CACHE_R2_PREFIX=incremental-cache
 ```
 
 See `.env.example` for complete template with all options.
 
 ### Step 5: Deploy to Cloudflare
+
+**OpenNext cache + tag cache setup**
+- `open-next.config.ts` uses R2 incremental cache and a sharded Durable Object tag cache.
+- `wrangler.jsonc` includes:
+  - `NEXT_INC_CACHE_R2_BUCKET` binding (can point to the same R2 bucket)
+  - `NEXT_TAG_CACHE_DO_SHARDED` DO binding + SQLite migration
+  - `NEXT_INC_CACHE_R2_PREFIX` var (optional)
+
+If you are deploying the tag-cache DO for the first time, the included migration is correct.
+If you already deployed a non-SQLite DO with the same class name, you must create a new class name + binding.
 
 1. **Apply database migrations**
    ```bash

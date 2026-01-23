@@ -6,7 +6,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Cloudflare Workers](https://img.shields.io/badge/Deployed%20on-Cloudflare%20Workers-F38020)](https://workers.cloudflare.com/)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 
 ---
 
@@ -25,7 +25,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 
 | Layer | Technology |
 |-------|------------|
-| **Framework** | [Next.js 15](https://nextjs.org) (App Router) |
+| **Framework** | [Next.js 16](https://nextjs.org) (App Router) |
 | **Runtime** | [Cloudflare Workers](https://workers.cloudflare.com) |
 | **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) + [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | [Better Auth](https://better-auth.com) (Google OAuth) |

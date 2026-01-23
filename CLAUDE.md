@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **webresume.now** — Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.
 
-**Stack**: Next.js 15 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, Gemini AI parsing via OpenRouter.
+**Stack**: Next.js 16 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, Gemini AI parsing via OpenRouter.
 
 ## Commands
 

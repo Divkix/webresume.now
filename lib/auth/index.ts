@@ -1,5 +1,5 @@
 /**
- * Server-side Better Auth configuration for Next.js 15 with Cloudflare D1
+ * Server-side Better Auth configuration for Next.js 16 with Cloudflare D1
  *
  * IMPORTANT: The auth instance must be created inside request handlers because
  * the D1 database binding is only available within the Cloudflare Workers

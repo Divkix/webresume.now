@@ -4,6 +4,7 @@ import { AttributionWidget } from "@/components/AttributionWidget";
 import { siteConfig } from "@/lib/config/site";
 import { getResumeData, getResumeMetadata } from "@/lib/data/resume";
 import { getTemplate } from "@/lib/templates/theme-registry";
+import { isValidHandleFormat } from "@/lib/utils/handle-validation";
 
 // Enable ISR-like caching: revalidate every hour as fallback
 // Primary invalidation happens via revalidateTag in update APIs
@@ -24,6 +25,16 @@ interface PageProps {
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
+
+  // Early reject invalid formats — skips DB query for bot probes, missing files, malformed paths
+  // See: lib/utils/handle-validation.ts for why this exists
+  if (!isValidHandleFormat(handle)) {
+    return {
+      title: "Not Found",
+      description: "Page not found.",
+    };
+  }
+
   const data = await getResumeMetadata(handle);
 
   if (!data) {
@@ -78,6 +89,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  */
 export default async function HandlePage({ params }: PageProps) {
   const { handle } = await params;
+
+  // Early reject invalid formats — skips DB query for bot probes, missing files, malformed paths
+  // See: lib/utils/handle-validation.ts for why this exists
+  if (!isValidHandleFormat(handle)) {
+    notFound();
+  }
+
   const data = await getResumeData(handle);
 
   // Return 404 if profile or site_data not found

@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
+import { RESERVED_HANDLES } from "@/lib/utils/handle-validation";
 import { checkIPRateLimit, getClientIP } from "@/lib/utils/ip-rate-limit";
 import {
   createErrorResponse,
@@ -72,29 +73,7 @@ export async function GET(request: Request) {
     }
 
     // 3. Check reserved handles
-    const reservedHandles = [
-      "admin",
-      "api",
-      "auth",
-      "dashboard",
-      "edit",
-      "login",
-      "logout",
-      "settings",
-      "wizard",
-      "waiting",
-      "onboarding",
-      "profile",
-      "resume",
-      "help",
-      "support",
-      "about",
-      "terms",
-      "privacy",
-      "contact",
-    ];
-
-    if (reservedHandles.includes(normalizedHandle)) {
+    if (RESERVED_HANDLES.has(normalizedHandle)) {
       return createSuccessResponse({ available: false, reason: "reserved" });
     }
 

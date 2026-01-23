@@ -29,7 +29,7 @@ export const privacySettingsSchema = z.object({
  * Enforces uniqueness, format, and length constraints
  * Includes security checks to prevent injection attacks
  */
-const handleSchema = z
+export const handleSchema = z
   .string()
   .trim()
   .min(3, "Handle must be at least 3 characters")

@@ -18,7 +18,6 @@ const MIN_PDF_SIZE = 100;
  *
  * Returns:
  *   - key: R2 object key (temp/{uuid}/{filename})
- *   - file_hash: SHA-256 hash of file content
  *   - remaining: { hourly, daily } rate limit remaining
  */
 export async function POST(request: Request) {
@@ -110,20 +109,13 @@ export async function POST(request: Request) {
     // 8. Generate temp key
     const key = generateTempKey(filename);
 
-    // 9. Compute SHA-256 hash server-side
-    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-    const fileHash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-
-    // 10. Store to R2 via binding
+    // 9. Store to R2 via binding (hash computed at claim time for efficiency)
     try {
       await R2.put(r2Binding, key, buffer, {
         contentType: "application/pdf",
         customMetadata: {
           originalFilename: filename,
           uploadedAt: new Date().toISOString(),
-          fileHash,
         },
       });
     } catch (r2Error) {
@@ -131,11 +123,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to store file" }, { status: 500 });
     }
 
-    // 11. Return success with rate limit info
+    // 10. Return success with rate limit info
     return NextResponse.json(
       {
         key,
-        file_hash: fileHash,
         remaining: rateLimit.remaining,
       },
       {

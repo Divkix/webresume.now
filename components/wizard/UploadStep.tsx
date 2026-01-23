@@ -17,7 +17,6 @@ type UploadState = "idle" | "uploading" | "claiming" | "parsing" | "error";
 // API Response types
 interface UploadResponse {
   key: string;
-  file_hash: string;
   remaining: number;
   error?: string;
   message?: string;
@@ -206,15 +205,15 @@ export function UploadStep({ onContinue }: UploadStepProps) {
         throw new Error(data.error || "Failed to upload file");
       }
 
-      const { key, file_hash } = (await uploadResponse.json()) as UploadResponse;
+      const { key } = (await uploadResponse.json()) as UploadResponse;
       setUploadProgress(40);
       setUploadState("claiming");
 
-      // Step 2: Claim the upload (include file_hash for caching)
+      // Step 2: Claim the upload (hash computed server-side)
       const claimResponse = await fetch("/api/resume/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, file_hash }),
+        body: JSON.stringify({ key }),
       });
 
       if (!claimResponse.ok) {

@@ -13,12 +13,12 @@ import { validatePDF } from "@/lib/utils/validation";
  * Set pending upload cookie via API (primary storage)
  * Falls back silently if API call fails - sessionStorage remains as backup
  */
-async function setPendingUploadCookie(key: string, fileHash: string | null): Promise<void> {
+async function setPendingUploadCookie(key: string): Promise<void> {
   try {
     await fetch("/api/upload/pending", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, file_hash: fileHash }),
+      body: JSON.stringify({ key }),
     });
   } catch (error) {
     console.warn("Failed to set pending upload cookie, using sessionStorage fallback:", error);
@@ -44,7 +44,6 @@ interface FileDropzoneProps {
 
 interface UploadResponse {
   key: string;
-  file_hash: string;
   remaining: { hourly: number; daily: number };
   error?: string;
   message?: string;
@@ -148,7 +147,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         throw new Error(data.error || "Failed to upload file");
       }
 
-      const { key, file_hash } = (await uploadResponse.json()) as UploadResponse;
+      const { key } = (await uploadResponse.json()) as UploadResponse;
 
       setUploadProgress(90);
 
@@ -162,13 +161,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         }),
       );
 
-      // Store file hash in sessionStorage for claim
-      if (file_hash) {
-        sessionStorage.setItem("temp_file_hash", file_hash);
-      }
-
       // Step 2b: Set HTTP-only cookie via API - PRIMARY storage
-      await setPendingUploadCookie(key, file_hash || null);
+      await setPendingUploadCookie(key);
 
       setUploadProgress(100);
       setUploadComplete(true);
@@ -203,7 +197,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       // Clean up temp storage on error (both sessionStorage and cookie)
       sessionStorage.removeItem("temp_upload");
-      sessionStorage.removeItem("temp_file_hash");
       await clearPendingUploadCookie();
 
       setError(errorMessage);
@@ -218,13 +211,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     setError(null);
 
     try {
-      // Include file hash for deduplication caching (from sessionStorage as fallback)
-      const fileHash = sessionStorage.getItem("temp_file_hash");
-
       const claimResponse = await fetch("/api/resume/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, file_hash: fileHash }),
+        body: JSON.stringify({ key }),
       });
 
       if (!claimResponse.ok) {
@@ -236,7 +226,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       // Clear temp data from sessionStorage
       sessionStorage.removeItem("temp_upload");
-      sessionStorage.removeItem("temp_file_hash");
 
       // Clear HTTP-only cookie
       await clearPendingUploadCookie();
@@ -276,7 +265,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       // Clean up temp storage on error (both sessionStorage and cookie)
       sessionStorage.removeItem("temp_upload");
-      sessionStorage.removeItem("temp_file_hash");
       await clearPendingUploadCookie();
 
       setError(errorMessage);

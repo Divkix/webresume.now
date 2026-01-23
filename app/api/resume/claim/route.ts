@@ -13,11 +13,10 @@ import {
   createSuccessResponse,
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
-import { MAX_FILE_SIZE, validatePDFMagicNumber, validateRequestSize } from "@/lib/utils/validation";
+import { MAX_FILE_SIZE, validateRequestSize } from "@/lib/utils/validation";
 
 interface ClaimRequestBody {
   key?: string;
-  file_hash?: string;
 }
 
 /**
@@ -135,7 +134,7 @@ export async function POST(request: Request) {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    const { key, file_hash } = body;
+    const { key } = body;
 
     if (!key || !key.startsWith("temp/")) {
       return createErrorResponse(
@@ -145,15 +144,54 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate hash format if provided (64 hex chars for SHA-256)
-    if (file_hash && !/^[a-f0-9]{64}$/i.test(file_hash)) {
-      return createErrorResponse("Invalid file hash format", ERROR_CODES.VALIDATION_ERROR, 400);
-    }
-
     // 4. Rate limiting check (5 uploads per 24 hours)
     const rateLimitResponse = await enforceRateLimit(userId, "resume_upload");
     if (rateLimitResponse) {
       return rateLimitResponse;
+    }
+
+    // 4b. Fetch file and compute SHA-256 hash server-side (early fetch for validation + caching)
+    let fileBuffer: ArrayBuffer;
+    let computedFileHash: string;
+
+    try {
+      const buffer = await R2.getAsArrayBuffer(r2Binding, key);
+      if (!buffer) {
+        return createErrorResponse(
+          "File not found. The upload may have expired.",
+          ERROR_CODES.VALIDATION_ERROR,
+          404,
+        );
+      }
+      fileBuffer = buffer;
+
+      // Compute hash (this is now authoritative, not verification)
+      const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer);
+      computedFileHash = Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      // Validate file size using buffer
+      if (fileBuffer.byteLength > MAX_FILE_SIZE) {
+        return createErrorResponse(
+          `File size exceeds 5MB limit (${Math.round(fileBuffer.byteLength / 1024 / 1024)}MB)`,
+          ERROR_CODES.VALIDATION_ERROR,
+          400,
+        );
+      }
+
+      // Validate PDF magic number
+      const pdfBytes = new Uint8Array(fileBuffer.slice(0, 5));
+      if (!String.fromCharCode(...pdfBytes).startsWith("%PDF-")) {
+        return createErrorResponse("Invalid PDF format", ERROR_CODES.VALIDATION_ERROR, 400);
+      }
+    } catch (error) {
+      console.error("Error fetching file from R2:", error);
+      return createErrorResponse(
+        "Failed to retrieve file. The upload may have expired.",
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        500,
+      );
     }
 
     // 5. Generate new key and insert DB record FIRST
@@ -183,76 +221,68 @@ export async function POST(request: Request) {
 
     // 5b. Check for cached parse result (same file uploaded before BY THIS USER)
     // SECURITY: Only look up cache for current user's own resumes to prevent cross-user data access
-    if (file_hash) {
-      const cached = await db
-        .select({ id: resumes.id, parsedContent: resumes.parsedContent })
-        .from(resumes)
-        .where(
-          and(
-            eq(resumes.userId, userId),
-            eq(resumes.fileHash, file_hash),
-            eq(resumes.status, "completed"),
-            isNotNull(resumes.parsedContent),
-            ne(resumes.id, resumeId),
-          ),
-        )
-        .limit(1);
+    const cached = await db
+      .select({ id: resumes.id, parsedContent: resumes.parsedContent })
+      .from(resumes)
+      .where(
+        and(
+          eq(resumes.userId, userId),
+          eq(resumes.fileHash, computedFileHash),
+          eq(resumes.status, "completed"),
+          isNotNull(resumes.parsedContent),
+          ne(resumes.id, resumeId),
+        ),
+      )
+      .limit(1);
 
-      if (cached[0]?.parsedContent) {
-        // DATA INTEGRITY FIX: Move R2 file FIRST before updating DB
-        // If R2 fails, we fall through to normal processing without corrupting DB state
-        let r2CopySucceeded = false;
+    if (cached[0]?.parsedContent) {
+      // DATA INTEGRITY FIX: Store file to user's folder using existing buffer
+      // No need to copy from temp - we already have the file in memory
+      let r2PutSucceeded = false;
+      try {
+        await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
+        r2PutSucceeded = true;
+        // Clean up temp file (best effort)
         try {
-          const copySuccess = await R2.copy(r2Binding, key, newKey);
-          if (copySuccess) {
-            r2CopySucceeded = true;
-            try {
-              await R2.delete(r2Binding, key);
-            } catch (deleteError) {
-              console.warn("R2 delete failed for cached resume path:", deleteError);
-            }
-          } else {
-            // Copy returned false (source object missing/expired) - fall through to normal processing
-            console.warn(
-              "R2 copy returned false for cached resume path, falling through to normal processing",
-            );
-          }
-        } catch (r2Error) {
-          console.error("R2 operations failed for cached resume:", r2Error);
-          // R2 failed - don't update DB, fall through to normal processing
-          // The resume record stays in pending_claim status
+          await R2.delete(r2Binding, key);
+        } catch (deleteError) {
+          console.warn("R2 delete failed for cached resume path:", deleteError);
         }
+      } catch (r2Error) {
+        console.error("R2 operations failed for cached resume:", r2Error);
+        // R2 failed - don't update DB, fall through to normal processing
+        // The resume record stays in pending_claim status
+      }
 
-        // Only update DB if R2 copy succeeded
-        if (r2CopySucceeded) {
-          try {
-            await db
-              .update(resumes)
-              .set({
-                status: "completed",
-                fileHash: file_hash,
-                parsedAt: now,
-                parsedContent: cached[0].parsedContent,
-              })
-              .where(eq(resumes.id, resumeId));
-
-            // Parse the cached content for site_data
-            const parsedContent = JSON.parse(cached[0].parsedContent as string);
-
-            // Copy content to user's site_data for publishing (upsert with race condition handling)
-            await upsertSiteData(db, userId, resumeId, JSON.stringify(parsedContent), now);
-
-            // R2 and DB both succeeded - return cached result
-            await captureBookmark();
-            return createSuccessResponse({
-              resume_id: resumeId,
+      // Only update DB if R2 put succeeded
+      if (r2PutSucceeded) {
+        try {
+          await db
+            .update(resumes)
+            .set({
               status: "completed",
-              cached: true,
-            });
-          } catch (updateError) {
-            console.error("Failed to update resume with cached content:", updateError);
-            // Fall through to normal parsing path
-          }
+              fileHash: computedFileHash,
+              parsedAt: now,
+              parsedContent: cached[0].parsedContent,
+            })
+            .where(eq(resumes.id, resumeId));
+
+          // Parse the cached content for site_data
+          const parsedContent = JSON.parse(cached[0].parsedContent as string);
+
+          // Copy content to user's site_data for publishing (upsert with race condition handling)
+          await upsertSiteData(db, userId, resumeId, JSON.stringify(parsedContent), now);
+
+          // R2 and DB both succeeded - return cached result
+          await captureBookmark();
+          return createSuccessResponse({
+            resume_id: resumeId,
+            status: "completed",
+            cached: true,
+          });
+        } catch (updateError) {
+          console.error("Failed to update resume with cached content:", updateError);
+          // Fall through to normal parsing path
         }
       }
     }
@@ -260,63 +290,56 @@ export async function POST(request: Request) {
     // 5c. Check if another resume with same hash is currently processing
     // If so, wait for it instead of triggering duplicate parsing
     // SECURITY: Only look for processing resumes from the same user
-    if (file_hash) {
-      const processing = await db
-        .select({ id: resumes.id })
-        .from(resumes)
-        .where(
-          and(
-            eq(resumes.userId, userId),
-            eq(resumes.fileHash, file_hash),
-            eq(resumes.status, "processing"),
-            ne(resumes.id, resumeId),
-          ),
-        )
-        .limit(1);
+    const processing = await db
+      .select({ id: resumes.id })
+      .from(resumes)
+      .where(
+        and(
+          eq(resumes.userId, userId),
+          eq(resumes.fileHash, computedFileHash),
+          eq(resumes.status, "processing"),
+          ne(resumes.id, resumeId),
+        ),
+      )
+      .limit(1);
 
-      if (processing[0]) {
-        // This user is already parsing this file - wait for that result
-        // First try to move the R2 file, only proceed if successful
-        let r2CopySucceeded = false;
+    if (processing[0]) {
+      // This user is already parsing this file - wait for that result
+      // Store file to user's folder using existing buffer
+      let r2PutSucceeded = false;
+      try {
+        await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
+        r2PutSucceeded = true;
+        // Clean up temp file (best effort)
         try {
-          const copySuccess = await R2.copy(r2Binding, key, newKey);
-          if (copySuccess) {
-            r2CopySucceeded = true;
-            try {
-              await R2.delete(r2Binding, key);
-            } catch (deleteError) {
-              console.warn("R2 delete failed for waiting_for_cache path:", deleteError);
-            }
-          } else {
-            console.warn(
-              "R2 copy returned false for waiting_for_cache path, falling through to normal processing",
-            );
-          }
-        } catch (error) {
-          console.error("R2 operations failed for waiting resume:", error);
+          await R2.delete(r2Binding, key);
+        } catch (deleteError) {
+          console.warn("R2 delete failed for waiting_for_cache path:", deleteError);
         }
+      } catch (error) {
+        console.error("R2 operations failed for waiting resume:", error);
+      }
 
-        // Only update DB and return if R2 copy succeeded
-        if (r2CopySucceeded) {
-          try {
-            await db
-              .update(resumes)
-              .set({
-                status: "waiting_for_cache",
-                fileHash: file_hash,
-              })
-              .where(eq(resumes.id, resumeId));
+      // Only update DB and return if R2 put succeeded
+      if (r2PutSucceeded) {
+        try {
+          await db
+            .update(resumes)
+            .set({
+              status: "waiting_for_cache",
+              fileHash: computedFileHash,
+            })
+            .where(eq(resumes.id, resumeId));
 
-            await captureBookmark();
-            return createSuccessResponse({
-              resume_id: resumeId,
-              status: "processing", // Client sees "processing" and subscribes to realtime
-              waiting_for_cache: true,
-            });
-          } catch (waitError) {
-            console.error("Failed to set waiting_for_cache status:", waitError);
-            // Fall through to normal processing
-          }
+          await captureBookmark();
+          return createSuccessResponse({
+            resume_id: resumeId,
+            status: "processing", // Client sees "processing" and subscribes to realtime
+            waiting_for_cache: true,
+          });
+        } catch (waitError) {
+          console.error("Failed to set waiting_for_cache status:", waitError);
+          // Fall through to normal processing
         }
       }
     }
@@ -331,92 +354,20 @@ export async function POST(request: Request) {
       return createErrorResponse(errorMessage, errorCode, statusCode);
     };
 
-    // 6. Validate file size (5MB limit)
+    // 6. Store file to user's folder using already-fetched buffer
+    // (File size and PDF validation already done in step 4b)
     try {
-      const headResult = await R2.head(r2Binding, key);
-
-      if (!headResult?.exists) {
-        return await failResume(
-          "Failed to validate file. The file may have expired.",
-          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-          500,
-        );
-      }
-
-      if (headResult.size && headResult.size > MAX_FILE_SIZE) {
-        const sizeInMB = Math.round(headResult.size / 1024 / 1024);
-        return await failResume(
-          `File size exceeds 5MB limit (${sizeInMB}MB)`,
-          ERROR_CODES.VALIDATION_ERROR,
-          400,
-        );
-      }
+      await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
     } catch (error) {
-      console.error("File size validation error:", error);
+      console.error("R2 put error:", error);
       return await failResume(
-        "Failed to validate file. The file may have expired.",
+        "Failed to store file for processing",
         ERROR_CODES.EXTERNAL_SERVICE_ERROR,
         500,
       );
     }
 
-    // 6b. Server-side hash verification (prevent hash poisoning attacks)
-    // If client provided a hash, verify it matches the actual file content
-    if (file_hash) {
-      try {
-        const fileBuffer = await R2.getAsArrayBuffer(r2Binding, key);
-
-        if (fileBuffer) {
-          const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer);
-          const computedHash = Array.from(new Uint8Array(hashBuffer))
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join("");
-
-          if (computedHash !== file_hash.toLowerCase()) {
-            return await failResume(
-              "File hash mismatch - file may be corrupted",
-              ERROR_CODES.VALIDATION_ERROR,
-              400,
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Hash verification error:", error);
-        // If we can't verify the hash, continue without caching benefits
-        // The file will still be processed, just won't use/populate cache
-      }
-    }
-
-    // 7. Validate PDF magic number before processing
-    const pdfValidation = await validatePDFMagicNumber(r2Binding, key);
-    if (!pdfValidation.valid) {
-      return await failResume(
-        pdfValidation.error || "Invalid PDF file",
-        ERROR_CODES.VALIDATION_ERROR,
-        400,
-      );
-    }
-
-    // 8. Copy object to user's folder
-    try {
-      const copySuccess = await R2.copy(r2Binding, key, newKey);
-      if (!copySuccess) {
-        return await failResume(
-          "Failed to process upload. The file may have expired.",
-          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-          500,
-        );
-      }
-    } catch (error) {
-      console.error("R2 copy error:", error);
-      return await failResume(
-        "Failed to process upload. The file may have expired.",
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        500,
-      );
-    }
-
-    // 9. Delete temp object (best effort - not critical if fails)
+    // 7. Delete temp object (best effort - not critical if fails)
     // Can be cleaned up by R2 lifecycle rules if this fails
     try {
       await R2.delete(r2Binding, key);
@@ -425,29 +376,8 @@ export async function POST(request: Request) {
       // Continue - temp file cleanup failure is not critical
     }
 
-    // 10. Download PDF for Gemini parsing
-    let pdfBuffer: Uint8Array;
-
-    try {
-      const fileBuffer = await R2.getAsUint8Array(r2Binding, newKey);
-
-      if (!fileBuffer) {
-        return await failResume(
-          "Failed to download file for processing",
-          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-          500,
-        );
-      }
-
-      pdfBuffer = fileBuffer;
-    } catch (error) {
-      console.error("R2 download error:", error);
-      return await failResume(
-        "Failed to download file for processing",
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        500,
-      );
-    }
+    // 8. Convert buffer for Gemini parsing (reuse already-fetched buffer)
+    const pdfBuffer = new Uint8Array(fileBuffer);
 
     if (!ctx?.waitUntil) {
       return await failResume(
@@ -526,10 +456,10 @@ export async function POST(request: Request) {
 
     ctx.waitUntil(parsePromise);
 
-    // 12. Update resume status to processing (include file_hash for future caching)
+    // 9. Update resume status to processing (include hash for future caching)
     const updatePayload: Partial<NewResume> = {
       status: "processing",
-      ...(file_hash && { fileHash: file_hash }),
+      fileHash: computedFileHash,
     };
 
     try {

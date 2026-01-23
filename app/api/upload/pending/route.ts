@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     const typedEnv = env as Partial<CloudflareEnv>;
     const secret = getSecret(typedEnv);
 
-    const body = (await request.json()) as { key?: string; file_hash?: string };
-    const { key, file_hash } = body;
+    const body = (await request.json()) as { key?: string };
+    const { key } = body;
 
     // Validate the key format (must be temp upload)
     if (!key || typeof key !== "string" || !key.startsWith("temp/")) {
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     // Create signed cookie value
-    const cookieValue = await createSignedCookieValue(key, file_hash || null, secret);
+    const cookieValue = await createSignedCookieValue(key, secret);
     const cookieStore = await cookies();
 
     // Set HTTP-only cookie with secure settings
@@ -93,7 +93,7 @@ export async function GET() {
 
     // No cookie present
     if (!cookie?.value) {
-      return NextResponse.json({ key: null, file_hash: null });
+      return NextResponse.json({ key: null });
     }
 
     // Parse and verify the signed cookie
@@ -102,16 +102,15 @@ export async function GET() {
     // Invalid or expired cookie - clean up and return null
     if (!parsed) {
       cookieStore.delete(COOKIE_NAME);
-      return NextResponse.json({ key: null, file_hash: null });
+      return NextResponse.json({ key: null });
     }
 
     return NextResponse.json({
       key: parsed.tempKey,
-      file_hash: parsed.fileHash,
     });
   } catch (error) {
     console.error("Error reading pending upload cookie:", error);
-    return NextResponse.json({ key: null, file_hash: null });
+    return NextResponse.json({ key: null });
   }
 }
 

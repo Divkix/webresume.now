@@ -7,7 +7,7 @@
  * - Are protected from XSS via httpOnly flag
  * - Are tamper-proof via HMAC-SHA256 signature
  *
- * Cookie format: {temp_key}|{file_hash}|{expires_timestamp}|{hmac_signature}
+ * Cookie format: {temp_key}|{expires_timestamp}|{hmac_signature}
  */
 
 export const COOKIE_NAME = "pending_upload";
@@ -48,20 +48,15 @@ async function verifySignature(value: string, signature: string, secret: string)
 }
 
 /**
- * Create a signed cookie value containing upload key and optional file hash
+ * Create a signed cookie value containing upload key
  *
  * @param tempKey - The R2 temp key (e.g., "temp/{uuid}/{filename}")
- * @param fileHash - Optional SHA-256 hash of the file for deduplication
  * @param secret - The signing secret (BETTER_AUTH_SECRET)
  * @returns Signed cookie value ready for storage
  */
-export async function createSignedCookieValue(
-  tempKey: string,
-  fileHash: string | null,
-  secret: string,
-): Promise<string> {
+export async function createSignedCookieValue(tempKey: string, secret: string): Promise<string> {
   const expiresAt = Date.now() + COOKIE_MAX_AGE * 1000;
-  const payload = `${tempKey}|${fileHash || ""}|${expiresAt}`;
+  const payload = `${tempKey}|${expiresAt}`;
   const signature = await signValue(payload, secret);
   return `${payload}|${signature}`;
 }
@@ -71,7 +66,6 @@ export async function createSignedCookieValue(
  */
 interface ParsedPendingUpload {
   tempKey: string;
-  fileHash: string | null;
 }
 
 /**
@@ -85,15 +79,15 @@ export async function parseSignedCookieValue(
   cookieValue: string,
   secret: string,
 ): Promise<ParsedPendingUpload | null> {
-  // Cookie format: {temp_key}|{file_hash}|{expires_timestamp}|{hmac_signature}
+  // Cookie format: {temp_key}|{expires_timestamp}|{hmac_signature}
   const parts = cookieValue.split("|");
 
-  // Must have exactly 4 parts
-  if (parts.length !== 4) {
+  // Must have exactly 3 parts
+  if (parts.length !== 3) {
     return null;
   }
 
-  const [tempKey, fileHash, expiresAtStr, signature] = parts;
+  const [tempKey, expiresAtStr, signature] = parts;
   const expiresAt = parseInt(expiresAtStr, 10);
 
   // Check expiry - reject expired cookies
@@ -102,7 +96,7 @@ export async function parseSignedCookieValue(
   }
 
   // Verify HMAC signature - reject tampered cookies
-  const payload = `${tempKey}|${fileHash}|${expiresAtStr}`;
+  const payload = `${tempKey}|${expiresAtStr}`;
   const isValid = await verifySignature(payload, signature, secret);
 
   if (!isValid) {
@@ -111,6 +105,5 @@ export async function parseSignedCookieValue(
 
   return {
     tempKey,
-    fileHash: fileHash || null,
   };
 }

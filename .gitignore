@@ -45,3 +45,6 @@ next-env.d.ts
 .open-next/
 .wrangler/
 worker-configuration.d.ts
+
+# playwright
+.playwright-mcp/

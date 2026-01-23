@@ -20,6 +20,13 @@ export interface ResumeData {
   theme_id: string | null;
 }
 
+export interface ResumeMetadata {
+  full_name: string;
+  headline?: string | null;
+  summary?: string | null;
+  avatar_url: string | null;
+}
+
 /**
  * Cache tag format for resume pages.
  * Used for on-demand revalidation via revalidateTag.
@@ -107,6 +114,66 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
   };
 }
 
+function coerceMetadataString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Lightweight metadata fetcher for SEO.
+ * Avoids full Zod validation to keep HEAD requests cheap.
+ */
+async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | null> {
+  const { env } = await getCloudflareContext({ async: true });
+  const db = getDb(env.DB);
+
+  const userData = await db.query.user.findFirst({
+    where: eq(user.handle, handle),
+    columns: {
+      id: true,
+      name: true,
+      handle: true,
+      image: true,
+      headline: true,
+    },
+    with: {
+      siteData: {
+        columns: {
+          content: true,
+        },
+      },
+    },
+  });
+
+  if (!userData || !userData.siteData) {
+    return null;
+  }
+
+  let rawContent: unknown;
+  try {
+    rawContent = JSON.parse(userData.siteData.content);
+  } catch (error) {
+    console.error("Failed to parse site_data metadata for handle:", handle, error);
+    return null;
+  }
+
+  const content = (rawContent ?? {}) as Record<string, unknown>;
+  const fullName =
+    coerceMetadataString(content.full_name) ?? coerceMetadataString(userData.name) ?? null;
+
+  if (!fullName) {
+    return null;
+  }
+
+  return {
+    full_name: fullName,
+    headline: coerceMetadataString(content.headline) ?? userData.headline ?? null,
+    summary: coerceMetadataString(content.summary) ?? null,
+    avatar_url: userData.image,
+  };
+}
+
 /**
  * Cached resume data fetcher.
  *
@@ -126,4 +193,14 @@ export const getResumeData = (handle: string) =>
   unstable_cache(() => fetchResumeDataRaw(handle), ["resume-data", handle], {
     tags: [getResumeCacheTag(handle), "resumes"],
     revalidate: 3600, // 1 hour fallback
+  })();
+
+/**
+ * Cached metadata fetcher.
+ * Uses same tags for consistent invalidation behavior.
+ */
+export const getResumeMetadata = (handle: string) =>
+  unstable_cache(() => fetchResumeMetadataRaw(handle), ["resume-metadata", handle], {
+    tags: [getResumeCacheTag(handle), "resumes"],
+    revalidate: 3600,
   })();

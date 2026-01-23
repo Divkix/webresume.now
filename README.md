@@ -30,7 +30,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 | **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) + [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | [Better Auth](https://better-auth.com) (Google OAuth) |
 | **Storage** | [Cloudflare R2](https://developers.cloudflare.com/r2/) (S3-compatible) |
-| **AI Parsing** | [Replicate](https://replicate.com) (datalab-to/marker) |
+| **AI Parsing** | [Gemini 2.5 Flash Lite](https://ai.google.dev/gemini-api) via [OpenRouter](https://openrouter.ai) |
 | **Styling** | [Tailwind CSS 4](https://tailwindcss.com) + [Radix UI](https://radix-ui.com) |
 
 ---
@@ -70,7 +70,7 @@ We chose Cloudflare Workers over traditional hosting for several reasons:
 - [Bun](https://bun.sh) v1.0+ (package manager)
 - [Cloudflare Account](https://cloudflare.com) with R2 and D1 enabled
 - [Google Cloud Console](https://console.cloud.google.com) project for OAuth
-- [Replicate](https://replicate.com) account for AI parsing
+- [OpenRouter](https://openrouter.ai) account for AI parsing (Gemini 2.5 Flash Lite)
 
 ### Installation
 
@@ -98,6 +98,108 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Self-Hosting Guide
 
+### Beginner-Friendly Deployment (copy/paste)
+
+If you are not technical, follow this exact checklist. You only need a terminal and browser.
+
+**What you need**
+- A Cloudflare account (free is fine)
+- A Google Cloud account (for Google Sign-In)
+- An OpenRouter account (for AI parsing)
+- Bun installed (copy/paste this in Terminal):
+  ```bash
+  curl -fsSL https://bun.sh/install | bash
+  ```
+
+**Step 0: Get the code**
+1. Download the repo ZIP from GitHub and unzip it, **or** use:
+   ```bash
+   git clone https://github.com/divkix/webresume.now.git
+   cd webresume.now
+   ```
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+**Step 1: Create Cloudflare D1 database**
+1. In Terminal:
+   ```bash
+   bunx wrangler d1 create webresume-db
+   ```
+2. Copy the `database_id` printed in the terminal.
+3. Open `wrangler.jsonc` and replace the `database_id` value.
+
+**Step 2: Create Cloudflare R2 bucket**
+1. Go to Cloudflare Dashboard → R2 → Create bucket.
+2. Name it **`webresume-bucket`**.
+3. Generate R2 API tokens (Read + Write).
+4. Keep **Account ID**, **Access Key**, **Secret Key**.
+
+**Step 3: Configure R2 CORS**
+In Cloudflare R2 bucket settings → CORS, paste:
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://your-domain.com"],
+    "AllowedMethods": ["GET", "PUT", "POST"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+**Step 4: Set up Google OAuth**
+1. Go to Google Cloud Console.
+2. Create project → APIs & Services → Credentials.
+3. Create OAuth Client ID (Web app).
+4. Add redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://your-domain.com/api/auth/callback/google`
+5. Copy **Client ID** and **Client Secret**.
+
+**Step 5: Set up OpenRouter**
+1. Create OpenRouter account → API Keys.
+2. Copy your API key.
+
+**Step 6: Add secrets to Cloudflare (production)**
+Run each command and paste the value when prompted:
+```bash
+bunx wrangler secret put BETTER_AUTH_SECRET
+bunx wrangler secret put BETTER_AUTH_URL
+bunx wrangler secret put GOOGLE_CLIENT_ID
+bunx wrangler secret put GOOGLE_CLIENT_SECRET
+bunx wrangler secret put R2_ENDPOINT
+bunx wrangler secret put R2_ACCESS_KEY_ID
+bunx wrangler secret put R2_SECRET_ACCESS_KEY
+bunx wrangler secret put R2_BUCKET_NAME
+bunx wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
+bunx wrangler secret put CF_AI_GATEWAY_ID
+bunx wrangler secret put CF_AIG_AUTH_TOKEN
+bunx wrangler secret put GEMINI_API_KEY
+bunx wrangler secret put NEXT_PUBLIC_APP_URL
+```
+
+**Step 7: Deploy**
+```bash
+bun run db:migrate:prod
+bun run deploy
+```
+
+**Step 8: Add your domain**
+Cloudflare Dashboard → Workers & Pages → your worker → Settings → Domains & Routes.
+
+**Important:** After domain is connected, **update these two secrets**:
+- `BETTER_AUTH_URL` = `https://your-domain.com`
+- `NEXT_PUBLIC_APP_URL` = `https://your-domain.com`
+
+Then redeploy:
+```bash
+bun run deploy
+```
+
+If you followed the steps above, the site should be live at your domain.
+
 ### Step 1: Cloudflare Setup
 
 1. **Create a Cloudflare account** at [cloudflare.com](https://cloudflare.com)
@@ -110,9 +212,10 @@ Open [http://localhost:3000](http://localhost:3000)
 
 3. **Create R2 Bucket**
    - Go to Cloudflare Dashboard > R2
-   - Create bucket named `webresume-uploads`
+   - Create bucket named `webresume-bucket`
    - Generate API token with Read & Write permissions
    - Note your Account ID and Access Keys
+   - This bucket is also used for OpenNext incremental cache
 
 4. **Configure R2 CORS**
    Add CORS policy in R2 bucket settings:
@@ -139,18 +242,19 @@ Open [http://localhost:3000](http://localhost:3000)
    - Production: `https://your-domain.com/api/auth/callback/google`
 7. Copy Client ID and Client Secret
 
-### Step 3: Replicate Setup
+### Step 3: OpenRouter + Cloudflare AI Gateway (required)
 
-1. Create account at [replicate.com](https://replicate.com)
-2. Go to **Account Settings > API Tokens**
-3. Create new token and copy it
+1. Create account at [openrouter.ai](https://openrouter.ai)
+2. Go to **API Keys**
+3. Create new API key and copy it
+4. Get your OpenRouter HTTP Referer and App Title from the dashboard
 
-**Optional: Cloudflare AI Gateway (BYOK)**
-For enhanced reliability and caching:
+**Cloudflare AI Gateway**
+This project uses Cloudflare AI Gateway for Gemini calls.
 1. Go to Cloudflare Dashboard > AI > AI Gateway
 2. Create a gateway
-3. Store your Replicate token in Cloudflare Secrets Store
-4. Use `CF_AI_GATEWAY_*` environment variables
+3. Store your OpenRouter token in Cloudflare Secrets Store
+4. You will use `CF_AI_GATEWAY_*` environment variables
 
 ### Step 4: Environment Variables
 
@@ -170,17 +274,35 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 R2_ACCESS_KEY_ID=your-access-key
 R2_SECRET_ACCESS_KEY=your-secret-key
-R2_BUCKET_NAME=webresume-uploads
+R2_BUCKET_NAME=webresume-bucket
 
-REPLICATE_API_TOKEN=r8_your-token
-REPLICATE_WEBHOOK_SECRET=whsec_your-webhook-secret
+# Cloudflare AI Gateway (BYOK)
+CF_AI_GATEWAY_ACCOUNT_ID=your-account-id
+CF_AI_GATEWAY_ID=your-gateway-id
+CF_AIG_AUTH_TOKEN=your-gateway-auth-token
+
+# Gemini API Key (or use Cloudflare AI Gateway above)
+GEMINI_API_KEY=your-gemini-api-key-here
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# OpenNext incremental cache prefix (optional)
+NEXT_INC_CACHE_R2_PREFIX=incremental-cache
 ```
 
 See `.env.example` for complete template with all options.
 
 ### Step 5: Deploy to Cloudflare
+
+**OpenNext cache + tag cache setup**
+- `open-next.config.ts` uses R2 incremental cache and a sharded Durable Object tag cache.
+- `wrangler.jsonc` includes:
+  - `NEXT_INC_CACHE_R2_BUCKET` binding (can point to the same R2 bucket)
+  - `NEXT_TAG_CACHE_DO_SHARDED` DO binding + SQLite migration
+  - `NEXT_INC_CACHE_R2_PREFIX` var (optional)
+
+If you are deploying the tag-cache DO for the first time, the included migration is correct.
+If you already deployed a non-SQLite DO with the same class name, you must create a new class name + binding.
 
 1. **Apply database migrations**
    ```bash
@@ -197,8 +319,10 @@ See `.env.example` for complete template with all options.
    bunx wrangler secret put R2_ACCESS_KEY_ID
    bunx wrangler secret put R2_SECRET_ACCESS_KEY
    bunx wrangler secret put R2_BUCKET_NAME
-   bunx wrangler secret put REPLICATE_API_TOKEN
-   bunx wrangler secret put REPLICATE_WEBHOOK_SECRET
+   bunx wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
+   bunx wrangler secret put CF_AI_GATEWAY_ID
+   bunx wrangler secret put CF_AIG_AUTH_TOKEN
+   bunx wrangler secret put GEMINI_API_KEY
    bunx wrangler secret put NEXT_PUBLIC_APP_URL
    ```
 
@@ -352,10 +476,9 @@ bun run build       # Fix errors and rebuild
 3. Confirm `R2_BUCKET_NAME` matches actual bucket
 
 ### Parsing Stuck in "Processing"
-1. Verify Replicate API token is valid
+1. Verify Gemini API key is valid
 2. Check PDF isn't corrupted
 3. Use retry button (max 2 retries)
-4. Check Replicate dashboard for job status
 
 ### "Cannot find module 'fs'"
 You're on Cloudflare Workers. Use R2 presigned URLs for file operations.
@@ -374,7 +497,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [Better Auth](https://better-auth.com) - Authentication
 - [Drizzle ORM](https://orm.drizzle.team) - Type-safe database
 - [Cloudflare](https://cloudflare.com) - Edge infrastructure
-- [Replicate](https://replicate.com) - AI inference
+- [OpenRouter](https://openrouter.ai) - AI API gateway
+- [Google Gemini](https://ai.google.dev/gemini-api) - AI inference
 - [Radix UI](https://radix-ui.com) - Accessible components
 - [Tailwind CSS](https://tailwindcss.com) - Styling
 

@@ -1,18 +1,12 @@
-import {
-  CopyObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import type { NewResume } from "@/lib/db/schema";
 import { resumes, siteData } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
-import { getR2Bucket, getR2Client } from "@/lib/r2";
-import { parseResume } from "@/lib/replicate";
+import { parseResumeWithGemini } from "@/lib/gemini";
+import { getR2Binding, R2 } from "@/lib/r2";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
@@ -92,13 +86,19 @@ async function upsertSiteData(
  */
 export async function POST(request: Request) {
   try {
-    // Get Cloudflare env bindings for R2/Replicate secrets
-    const { env } = await getCloudflareContext({ async: true });
+    // Get Cloudflare env bindings for R2/Gemini secrets
+    const { env, ctx } = await getCloudflareContext({ async: true });
     const typedEnv = env as Partial<CloudflareEnv>;
 
-    // Initialize R2 client and bucket with env
-    const r2Client = getR2Client(typedEnv);
-    const R2_BUCKET = getR2Bucket(typedEnv);
+    // Get R2 binding for direct operations
+    const r2Binding = getR2Binding(typedEnv);
+    if (!r2Binding) {
+      return createErrorResponse(
+        "Storage service unavailable",
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        500,
+      );
+    }
 
     // 1. Validate request size before parsing (prevent DoS)
     const sizeCheck = validateRequestSize(request);
@@ -201,54 +201,58 @@ export async function POST(request: Request) {
       if (cached[0]?.parsedContent) {
         // DATA INTEGRITY FIX: Move R2 file FIRST before updating DB
         // If R2 fails, we fall through to normal processing without corrupting DB state
+        let r2CopySucceeded = false;
         try {
-          await r2Client.send(
-            new CopyObjectCommand({
-              Bucket: R2_BUCKET,
-              CopySource: `${R2_BUCKET}/${key}`,
-              Key: newKey,
-            }),
-          );
-          await r2Client.send(
-            new DeleteObjectCommand({
-              Bucket: R2_BUCKET,
-              Key: key,
-            }),
-          );
+          const copySuccess = await R2.copy(r2Binding, key, newKey);
+          if (copySuccess) {
+            r2CopySucceeded = true;
+            try {
+              await R2.delete(r2Binding, key);
+            } catch (deleteError) {
+              console.warn("R2 delete failed for cached resume path:", deleteError);
+            }
+          } else {
+            // Copy returned false (source object missing/expired) - fall through to normal processing
+            console.warn(
+              "R2 copy returned false for cached resume path, falling through to normal processing",
+            );
+          }
         } catch (r2Error) {
           console.error("R2 operations failed for cached resume:", r2Error);
           // R2 failed - don't update DB, fall through to normal processing
           // The resume record stays in pending_claim status
         }
 
-        // R2 succeeded - NOW update DB with cached content
-        try {
-          await db
-            .update(resumes)
-            .set({
+        // Only update DB if R2 copy succeeded
+        if (r2CopySucceeded) {
+          try {
+            await db
+              .update(resumes)
+              .set({
+                status: "completed",
+                fileHash: file_hash,
+                parsedAt: now,
+                parsedContent: cached[0].parsedContent,
+              })
+              .where(eq(resumes.id, resumeId));
+
+            // Parse the cached content for site_data
+            const parsedContent = JSON.parse(cached[0].parsedContent as string);
+
+            // Copy content to user's site_data for publishing (upsert with race condition handling)
+            await upsertSiteData(db, userId, resumeId, JSON.stringify(parsedContent), now);
+
+            // R2 and DB both succeeded - return cached result
+            await captureBookmark();
+            return createSuccessResponse({
+              resume_id: resumeId,
               status: "completed",
-              fileHash: file_hash,
-              parsedAt: now,
-              parsedContent: cached[0].parsedContent,
-            })
-            .where(eq(resumes.id, resumeId));
-
-          // Parse the cached content for site_data
-          const parsedContent = JSON.parse(cached[0].parsedContent);
-
-          // Copy content to user's site_data for publishing (upsert with race condition handling)
-          await upsertSiteData(db, userId, resumeId, JSON.stringify(parsedContent), now);
-
-          // R2 and DB both succeeded - return cached result
-          await captureBookmark();
-          return createSuccessResponse({
-            resume_id: resumeId,
-            status: "completed",
-            cached: true,
-          });
-        } catch (updateError) {
-          console.error("Failed to update resume with cached content:", updateError);
-          // Fall through to normal parsing path
+              cached: true,
+            });
+          } catch (updateError) {
+            console.error("Failed to update resume with cached content:", updateError);
+            // Fall through to normal parsing path
+          }
         }
       }
     }
@@ -272,43 +276,47 @@ export async function POST(request: Request) {
 
       if (processing[0]) {
         // This user is already parsing this file - wait for that result
+        // First try to move the R2 file, only proceed if successful
+        let r2CopySucceeded = false;
         try {
-          await db
-            .update(resumes)
-            .set({
-              status: "waiting_for_cache",
-              fileHash: file_hash,
-            })
-            .where(eq(resumes.id, resumeId));
-
-          // Move file to user's folder
-          try {
-            await r2Client.send(
-              new CopyObjectCommand({
-                Bucket: R2_BUCKET,
-                CopySource: `${R2_BUCKET}/${key}`,
-                Key: newKey,
-              }),
+          const copySuccess = await R2.copy(r2Binding, key, newKey);
+          if (copySuccess) {
+            r2CopySucceeded = true;
+            try {
+              await R2.delete(r2Binding, key);
+            } catch (deleteError) {
+              console.warn("R2 delete failed for waiting_for_cache path:", deleteError);
+            }
+          } else {
+            console.warn(
+              "R2 copy returned false for waiting_for_cache path, falling through to normal processing",
             );
-            await r2Client.send(
-              new DeleteObjectCommand({
-                Bucket: R2_BUCKET,
-                Key: key,
-              }),
-            );
-          } catch (error) {
-            console.error("R2 operations failed for waiting resume:", error);
           }
+        } catch (error) {
+          console.error("R2 operations failed for waiting resume:", error);
+        }
 
-          await captureBookmark();
-          return createSuccessResponse({
-            resume_id: resumeId,
-            status: "processing", // Client sees "processing" and subscribes to realtime
-            waiting_for_cache: true,
-          });
-        } catch (waitError) {
-          console.error("Failed to set waiting_for_cache status:", waitError);
-          // Fall through to normal processing
+        // Only update DB and return if R2 copy succeeded
+        if (r2CopySucceeded) {
+          try {
+            await db
+              .update(resumes)
+              .set({
+                status: "waiting_for_cache",
+                fileHash: file_hash,
+              })
+              .where(eq(resumes.id, resumeId));
+
+            await captureBookmark();
+            return createSuccessResponse({
+              resume_id: resumeId,
+              status: "processing", // Client sees "processing" and subscribes to realtime
+              waiting_for_cache: true,
+            });
+          } catch (waitError) {
+            console.error("Failed to set waiting_for_cache status:", waitError);
+            // Fall through to normal processing
+          }
         }
       }
     }
@@ -325,14 +333,18 @@ export async function POST(request: Request) {
 
     // 6. Validate file size (10MB limit)
     try {
-      const headCommand = new HeadObjectCommand({
-        Bucket: R2_BUCKET,
-        Key: key,
-      });
-      const headResponse = await r2Client.send(headCommand);
+      const headResult = await R2.head(r2Binding, key);
 
-      if (headResponse.ContentLength && headResponse.ContentLength > MAX_FILE_SIZE) {
-        const sizeInMB = Math.round(headResponse.ContentLength / 1024 / 1024);
+      if (!headResult?.exists) {
+        return await failResume(
+          "Failed to validate file. The file may have expired.",
+          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+          500,
+        );
+      }
+
+      if (headResult.size && headResult.size > MAX_FILE_SIZE) {
+        const sizeInMB = Math.round(headResult.size / 1024 / 1024);
         return await failResume(
           `File size exceeds 10MB limit (${sizeInMB}MB)`,
           ERROR_CODES.VALIDATION_ERROR,
@@ -352,18 +364,10 @@ export async function POST(request: Request) {
     // If client provided a hash, verify it matches the actual file content
     if (file_hash) {
       try {
-        const getCommand = new GetObjectCommand({
-          Bucket: R2_BUCKET,
-          Key: key,
-        });
-        const response = await r2Client.send(getCommand);
-        const fileBuffer = await response.Body?.transformToByteArray();
+        const fileBuffer = await R2.getAsArrayBuffer(r2Binding, key);
 
         if (fileBuffer) {
-          // Create a new ArrayBuffer to ensure type compatibility with crypto.subtle.digest
-          const arrayBuffer = new ArrayBuffer(fileBuffer.byteLength);
-          new Uint8Array(arrayBuffer).set(fileBuffer);
-          const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", fileBuffer);
           const computedHash = Array.from(new Uint8Array(hashBuffer))
             .map((b) => b.toString(16).padStart(2, "0"))
             .join("");
@@ -384,7 +388,7 @@ export async function POST(request: Request) {
     }
 
     // 7. Validate PDF magic number before processing
-    const pdfValidation = await validatePDFMagicNumber(r2Client, R2_BUCKET, key);
+    const pdfValidation = await validatePDFMagicNumber(r2Binding, key);
     if (!pdfValidation.valid) {
       return await failResume(
         pdfValidation.error || "Invalid PDF file",
@@ -395,13 +399,14 @@ export async function POST(request: Request) {
 
     // 8. Copy object to user's folder
     try {
-      await r2Client.send(
-        new CopyObjectCommand({
-          Bucket: R2_BUCKET,
-          CopySource: `${R2_BUCKET}/${key}`,
-          Key: newKey,
-        }),
-      );
+      const copySuccess = await R2.copy(r2Binding, key, newKey);
+      if (!copySuccess) {
+        return await failResume(
+          "Failed to process upload. The file may have expired.",
+          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+          500,
+        );
+      }
     } catch (error) {
       console.error("R2 copy error:", error);
       return await failResume(
@@ -414,81 +419,130 @@ export async function POST(request: Request) {
     // 9. Delete temp object (best effort - not critical if fails)
     // Can be cleaned up by R2 lifecycle rules if this fails
     try {
-      await r2Client.send(
-        new DeleteObjectCommand({
-          Bucket: R2_BUCKET,
-          Key: key,
-        }),
-      );
+      await R2.delete(r2Binding, key);
     } catch (error) {
       console.error("R2 delete error:", error);
       // Continue - temp file cleanup failure is not critical
     }
 
-    // 10. Generate presigned URL for Replicate (7 day expiry)
-    const getCommand = new GetObjectCommand({
-      Bucket: R2_BUCKET,
-      Key: newKey,
-    });
+    // 10. Download PDF for Gemini parsing
+    let pdfBuffer: Uint8Array;
 
-    let presignedUrl: string;
     try {
-      presignedUrl = await getSignedUrl(r2Client, getCommand, {
-        expiresIn: 7 * 24 * 60 * 60, // 7 days
-      });
+      const fileBuffer = await R2.getAsUint8Array(r2Binding, newKey);
+
+      if (!fileBuffer) {
+        return await failResume(
+          "Failed to download file for processing",
+          ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+          500,
+        );
+      }
+
+      pdfBuffer = fileBuffer;
     } catch (error) {
-      console.error("Presigned URL generation error:", error);
+      console.error("R2 download error:", error);
       return await failResume(
-        "Failed to prepare file for processing",
+        "Failed to download file for processing",
         ERROR_CODES.EXTERNAL_SERVICE_ERROR,
         500,
       );
     }
 
-    // 11. Trigger Replicate parsing with webhook
-    let replicateJobId: string | null = null;
-    let parseError: string | null = null;
-
-    // Build webhook URL for Replicate to call when done
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const webhookUrl = appUrl ? `${appUrl}/api/webhook/replicate` : undefined;
-
-    try {
-      const prediction = await parseResume(presignedUrl, webhookUrl, typedEnv);
-      replicateJobId = prediction.id;
-    } catch (error) {
-      console.error("Failed to trigger Replicate parsing:", error);
-      parseError = error instanceof Error ? error.message : "Failed to start AI parsing";
+    if (!ctx?.waitUntil) {
+      return await failResume(
+        "Background processing is unavailable",
+        ERROR_CODES.INTERNAL_ERROR,
+        500,
+      );
     }
 
-    // 12. Update resume with replicate job ID or error (include file_hash for future caching)
-    const updatePayload: {
-      status: "processing" | "failed";
-      replicateJobId?: string;
-      errorMessage?: string;
-      fileHash?: string;
-    } = replicateJobId
-      ? {
-          status: "processing",
-          replicateJobId,
-          ...(file_hash && { fileHash: file_hash }),
+    // 11. Trigger Gemini parsing in background
+    const parsePromise = (async () => {
+      const { db: backgroundDb, captureBookmark: captureBackgroundBookmark } = await getSessionDb(
+        env.DB,
+      );
+
+      try {
+        const parseResult = await parseResumeWithGemini(pdfBuffer, typedEnv);
+
+        if (!parseResult.success) {
+          const errorMessage = `Gemini API error: ${parseResult.error || "Unknown error"}`;
+          await backgroundDb
+            .update(resumes)
+            .set({
+              status: "failed",
+              errorMessage,
+            })
+            .where(eq(resumes.id, resumeId));
+          await captureBackgroundBookmark();
+          return;
         }
-      : {
-          status: "failed",
-          errorMessage: parseError || "Unknown error",
-        };
+
+        let parsedContent = parseResult.parsedContent;
+
+        try {
+          const parsedJson = JSON.parse(parsedContent) as Record<string, unknown>;
+          parsedContent = JSON.stringify(parsedJson);
+        } catch (error) {
+          const errorMessage = `Gemini API error: ${error instanceof Error ? error.message : "Invalid JSON response"}`;
+          await backgroundDb
+            .update(resumes)
+            .set({
+              status: "failed",
+              errorMessage,
+            })
+            .where(eq(resumes.id, resumeId));
+          await captureBackgroundBookmark();
+          return;
+        }
+
+        const now = new Date().toISOString();
+
+        await upsertSiteData(backgroundDb, userId, resumeId, parsedContent, now);
+
+        await backgroundDb
+          .update(resumes)
+          .set({
+            status: "completed",
+            parsedAt: now,
+            parsedContent,
+          })
+          .where(eq(resumes.id, resumeId));
+
+        await captureBackgroundBookmark();
+      } catch (error) {
+        const errorMessage = `Gemini API error: ${error instanceof Error ? error.message : "Unknown error"}`;
+        await backgroundDb
+          .update(resumes)
+          .set({
+            status: "failed",
+            errorMessage,
+          })
+          .where(eq(resumes.id, resumeId));
+        await captureBackgroundBookmark();
+      }
+    })();
+
+    ctx.waitUntil(parsePromise);
+
+    // 12. Update resume status to processing (include file_hash for future caching)
+    const updatePayload: Partial<NewResume> = {
+      status: "processing",
+      ...(file_hash && { fileHash: file_hash }),
+    };
 
     try {
       await db.update(resumes).set(updatePayload).where(eq(resumes.id, resumeId));
     } catch (updateError) {
-      console.error("Failed to update resume with replicate job:", updateError);
+      console.error("Failed to update resume with Gemini task:", updateError);
       // Continue anyway - status endpoint will handle it
     }
 
     await captureBookmark();
     return createSuccessResponse({
       resume_id: resumeId,
-      status: updatePayload.status,
+      status: "processing",
     });
   } catch (error) {
     console.error("Error claiming resume:", error);

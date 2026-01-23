@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     if (profile?.handle) {
       // Revalidate the public resume page immediately
       // Tag invalidation works with unstable_cache, path works with full route cache
-      revalidateTag(getResumeCacheTag(profile.handle));
+      revalidateTag(getResumeCacheTag(profile.handle), "max");
       revalidatePath(`/${profile.handle}`);
     }
 

@@ -196,7 +196,7 @@ export async function POST(request: Request) {
     }
 
     // 8. Revalidate public page cache with new handle
-    revalidateTag(getResumeCacheTag(body.handle));
+    revalidateTag(getResumeCacheTag(body.handle), "max");
     revalidatePath(`/${body.handle}`);
 
     // 9. Capture bookmark before returning success

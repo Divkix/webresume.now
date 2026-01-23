@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **webresume.now** — Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.
 
-**Stack**: Next.js 15 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, Replicate AI parsing.
+**Stack**: Next.js 15 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, Gemini AI parsing via OpenRouter.
 
 ## Commands
 
@@ -73,7 +73,7 @@ Anonymous users upload before auth:
 1. `POST /api/upload/sign` → presigned R2 URL with temp key `temp/{uuid}/{filename}`
 2. Client uploads to R2, stores key in `localStorage` as `temp_upload_id`
 3. User authenticates via Google OAuth
-4. `POST /api/resume/claim` → links upload to user, triggers Replicate parsing
+4. `POST /api/resume/claim` → links upload to user, triggers Gemini parsing
 5. Status polling at `/api/resume/status` (3s intervals, ~30-40s parse time)
 
 ### Database Schema
@@ -135,7 +135,7 @@ All receive `content` (ResumeContent) and `user` props, must respect privacy set
 - `lib/auth/index.ts` — Better Auth server config
 - `lib/auth/client.ts` — Client hooks (useSession, signIn, signOut)
 - `lib/r2.ts` — AWS S3 client for R2
-- `lib/replicate.ts` — AI parsing client
+- `lib/gemini.ts` — AI parsing client
 - `lib/schemas/resume.ts` — Zod validation with XSS sanitization
 - `wrangler.jsonc` — Cloudflare Workers config (D1 binding: `DB`)
 - `drizzle.config.ts` — Drizzle config pointing to local D1
@@ -147,7 +147,7 @@ Required in `.env.local` (dev) and Cloudflare secrets (prod):
 BETTER_AUTH_SECRET, BETTER_AUTH_URL
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME
-REPLICATE_API_TOKEN (or CF_AI_GATEWAY_* for gateway)
+GEMINI_API_KEY (or CF_AI_GATEWAY_* for gateway)
 NEXT_PUBLIC_APP_URL
 ```
 
@@ -156,5 +156,5 @@ NEXT_PUBLIC_APP_URL
 1. **"Cannot find module 'fs'"** — You're on Workers, use R2 presigned URLs
 2. **Auth redirect loop** — Check `BETTER_AUTH_URL` matches deployment URL exactly
 3. **R2 CORS errors** — Add localhost:3000 AND production URL to R2 CORS config
-4. **Parsing stuck** — Check Replicate token, use retry button (max 2 retries)
+4. **Parsing stuck** — Check Gemini API key, use retry button (max 2 retries)
 5. **D1 JSON returning strings** — Always parse TEXT fields with JSON.parse()

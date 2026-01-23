@@ -84,7 +84,7 @@ export async function PUT(request: Request) {
     // 7. Invalidate cache for public page so privacy changes reflect immediately
     // This prevents PII exposure through stale ISR cache
     if (userHandle) {
-      revalidateTag(getResumeCacheTag(userHandle));
+      revalidateTag(getResumeCacheTag(userHandle), "max");
       revalidatePath(`/${userHandle}`);
     }
 

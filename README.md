@@ -31,7 +31,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 | **Auth** | [Better Auth](https://better-auth.com) (Google OAuth) |
 | **Storage** | [Cloudflare R2](https://developers.cloudflare.com/r2/) (S3-compatible) |
 | **AI Parsing** | [Gemini 2.5 Flash Lite](https://ai.google.dev/gemini-api) via [OpenRouter](https://openrouter.ai) |
-| **Styling** | [Tailwind CSS 4](https://tailwindcss.com) + [Radix UI](https://radix-ui.com) |
+| **Styling** | [shadcn/ui](https://ui.shadcn.com) + [Tailwind CSS 4](https://tailwindcss.com) |
 
 ---
 
@@ -479,8 +479,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [Cloudflare](https://cloudflare.com) - Edge infrastructure
 - [OpenRouter](https://openrouter.ai) - AI API gateway
 - [Google Gemini](https://ai.google.dev/gemini-api) - AI inference
-- [Radix UI](https://radix-ui.com) - Accessible components
-- [Tailwind CSS](https://tailwindcss.com) - Styling
+- [shadcn/ui](https://ui.shadcn.com) - UI components (built on Radix UI + Tailwind CSS)
 
 ---
 

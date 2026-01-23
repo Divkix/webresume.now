@@ -93,8 +93,9 @@
 		// Note: R2 is accessed via binding (R2_BUCKET) - no API credentials needed
 		// Note: AI Gateway secrets are configured in ai-parser-worker, not here
 		//
-		// Optional secrets:
-		//   (none currently)
-		"NEXT_INC_CACHE_R2_PREFIX": "incremental-cache"
+		// Optional vars:
+		//   AI_MODEL - Override the default AI model for resume parsing
+		"NEXT_INC_CACHE_R2_PREFIX": "incremental-cache",
+		"AI_MODEL": "google/gemini-2.5-flash-lite"
 	}
 }

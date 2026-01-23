@@ -261,6 +261,8 @@ async function extractPdfText(
   return response.json() as Promise<PdfExtractResponse>;
 }
 
+const DEFAULT_AI_MODEL = "google/gemini-2.5-flash-lite";
+
 /**
  * Parse text with AI using ai-parser-worker
  */
@@ -270,6 +272,8 @@ async function parseWithAi(text: string, env: Partial<CloudflareEnv>): Promise<A
     return { success: false, data: null, error: "AI parser not available" };
   }
 
+  const model = env.AI_MODEL || DEFAULT_AI_MODEL;
+
   const response = await worker.fetch("https://internal/parse", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -277,7 +281,7 @@ async function parseWithAi(text: string, env: Partial<CloudflareEnv>): Promise<A
       text,
       schema: RESUME_EXTRACTION_SCHEMA,
       systemPrompt: SYSTEM_PROMPT,
-      model: "google/gemini-2.5-flash-lite",
+      model,
     }),
   });
 

@@ -27,6 +27,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname triggers refetch on route change (wizard → dashboard)
   useEffect(() => {
     async function loadProfile() {
       if (!session?.user?.id) {
@@ -58,7 +59,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     if (!isPending) {
       loadProfile();
     }
-  }, [session?.user, isPending]);
+  }, [session?.user, isPending, pathname]);
 
   const handleLogout = async () => {
     await signOut();

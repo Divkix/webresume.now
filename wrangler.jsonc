@@ -116,6 +116,15 @@
 		//   wrangler secret put GOOGLE_CLIENT_ID
 		//   wrangler secret put GOOGLE_CLIENT_SECRET
 		//   wrangler secret put NEXT_PUBLIC_APP_URL
+		//   wrangler secret put INTERNAL_CACHE_INVALIDATION_TOKEN  # openssl rand -hex 32
+		//
+		// Optional secrets for edge cache purge (privacy-sensitive changes):
+		//   wrangler secret put CF_ZONE_ID                  # From Cloudflare Dashboard
+		//   wrangler secret put CF_CACHE_PURGE_API_TOKEN    # API token with Cache Purge permission
+		//
+		// Optional secrets for DLQ alerting:
+		//   wrangler secret put ALERT_CHANNEL       # logpush | webhook | email
+		//   wrangler secret put ALERT_WEBHOOK_URL   # Slack/Discord webhook URL
 		//
 		// Note: R2 is accessed via binding (R2_BUCKET) - no API credentials needed
 		// Note: AI Gateway secrets are configured in ai-parser-worker, not here

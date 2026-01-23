@@ -1,13 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { Brand } from "@/components/Brand";
 import { FileDropzone } from "@/components/FileDropzone";
 import { Footer } from "@/components/Footer";
-import { TemplatePreviewModal } from "@/components/templates/TemplatePreviewModal";
 import { Toaster } from "@/components/ui/sonner";
 import { DEMO_PROFILES } from "@/lib/templates/demo-data";
+
+const TemplatePreviewModal = dynamic(
+  () =>
+    import("@/components/templates/TemplatePreviewModal").then(
+      (module) => module.TemplatePreviewModal,
+    ),
+  { ssr: false },
+);
 
 export default function Home() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -185,12 +193,14 @@ export default function Home() {
       <Footer />
 
       {/* Template Preview Modal */}
-      <TemplatePreviewModal
-        isOpen={previewIndex !== null}
-        onClose={() => setPreviewIndex(null)}
-        selectedIndex={previewIndex ?? 0}
-        onNavigate={setPreviewIndex}
-      />
+      {previewIndex !== null && (
+        <TemplatePreviewModal
+          isOpen
+          onClose={() => setPreviewIndex(null)}
+          selectedIndex={previewIndex}
+          onNavigate={setPreviewIndex}
+        />
+      )}
     </div>
   );
 }

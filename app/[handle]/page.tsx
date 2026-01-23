@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AttributionWidget } from "@/components/AttributionWidget";
 import { siteConfig } from "@/lib/config/site";
-import { getResumeData } from "@/lib/data/resume";
+import { getResumeData, getResumeMetadata } from "@/lib/data/resume";
 import { getTemplate } from "@/lib/templates/theme-registry";
 
 // Enable ISR-like caching: revalidate every hour as fallback
@@ -24,7 +24,7 @@ interface PageProps {
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
-  const data = await getResumeData(handle);
+  const data = await getResumeMetadata(handle);
 
   if (!data) {
     return {
@@ -33,37 +33,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const { content, profile } = data;
+  const { full_name, headline, summary, avatar_url } = data;
 
   // Truncate summary to 160 characters for meta description
-  const description = content.summary
-    ? content.summary.slice(0, 157) + (content.summary.length > 157 ? "..." : "")
-    : `View ${content.full_name}'s professional resume and experience.`;
+  const description = summary
+    ? summary.slice(0, 157) + (summary.length > 157 ? "..." : "")
+    : `View ${full_name}'s professional resume and experience.`;
 
   return {
-    title: `${content.full_name}'s Resume — ${siteConfig.fullName}`,
+    title: `${full_name}'s Resume — ${siteConfig.fullName}`,
     description,
     openGraph: {
-      title: `${content.full_name} — ${content.headline}`,
+      title: `${full_name} — ${headline ?? "Resume"}`,
       description,
       type: "profile",
       url: `${siteConfig.url}/${handle}`,
-      images: profile.avatar_url
+      images: avatar_url
         ? [
             {
-              url: profile.avatar_url,
+              url: avatar_url,
               width: 400,
               height: 400,
-              alt: content.full_name,
+              alt: full_name,
             },
           ]
         : undefined,
     },
     twitter: {
       card: "summary",
-      title: `${content.full_name} — ${content.headline}`,
+      title: `${full_name} — ${headline ?? "Resume"}`,
       description,
-      images: profile.avatar_url ? [profile.avatar_url] : undefined,
+      images: avatar_url ? [avatar_url] : undefined,
     },
   };
 }

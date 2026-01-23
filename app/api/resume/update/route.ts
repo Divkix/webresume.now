@@ -1,11 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
-import { getResumeCacheTag } from "@/lib/data/resume";
 import { siteData, user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
+import { invalidateHandle } from "@/lib/queue/cache-invalidation";
 import { resumeContentSchema } from "@/lib/schemas/resume";
 import type { ResumeContent } from "@/lib/types/database";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
@@ -119,7 +118,7 @@ export async function PUT(request: Request) {
 
     const data = updateResult[0];
 
-    // 7. Invalidate cache for public resume page
+    // 7. Invalidate cache for public resume page via queue
     // Fetch user's handle to revalidate their public page
     const profile = await db.query.user.findFirst({
       where: eq(user.id, userId),
@@ -127,10 +126,11 @@ export async function PUT(request: Request) {
     });
 
     if (profile?.handle) {
-      // Revalidate the public resume page immediately
-      // Tag invalidation works with unstable_cache, path works with full route cache
-      revalidateTag(getResumeCacheTag(profile.handle), "max");
-      revalidatePath(`/${profile.handle}`);
+      // Queue cache invalidation asynchronously
+      const cacheQueue = (env as CloudflareEnv).CACHE_INVALIDATION_QUEUE;
+      if (cacheQueue) {
+        await invalidateHandle(cacheQueue, profile.handle);
+      }
     }
 
     // 8. Return success response

@@ -1,5 +1,6 @@
 {
-	"main": ".open-next/worker.js",
+	// Custom worker wraps OpenNext handler + adds queue consumer
+	"main": "worker.ts",
 	"name": "webresume-now",
 	"compatibility_date": "2026-01-22",
 	// Explicitly enable workers.dev subdomain (set to false if using custom domain only)

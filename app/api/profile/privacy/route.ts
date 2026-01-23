@@ -1,10 +1,9 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
-import { getResumeCacheTag } from "@/lib/data/resume";
 import { user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
+import { invalidateHandle } from "@/lib/queue/cache-invalidation";
 import { privacySettingsSchema } from "@/lib/schemas/profile";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
@@ -83,9 +82,12 @@ export async function PUT(request: Request) {
 
     // 7. Invalidate cache for public page so privacy changes reflect immediately
     // This prevents PII exposure through stale ISR cache
+    // Uses async queue to avoid blocking the response
     if (userHandle) {
-      revalidateTag(getResumeCacheTag(userHandle), "max");
-      revalidatePath(`/${userHandle}`);
+      const cacheQueue = (env as CloudflareEnv).CACHE_INVALIDATION_QUEUE;
+      if (cacheQueue) {
+        await invalidateHandle(cacheQueue, userHandle);
+      }
     }
 
     await captureBookmark();

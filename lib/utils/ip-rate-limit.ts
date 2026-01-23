@@ -6,7 +6,7 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { and, gte, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { uploadRateLimits } from "@/lib/db/schema";
 
@@ -77,30 +77,23 @@ export async function checkIPRateLimit(ip: string): Promise<IPRateLimitResult> {
     const { env } = await getCloudflareContext({ async: true });
     const db = getDb(env.DB);
 
-    // Count requests in both windows in parallel
-    const [hourlyResult, dailyResult] = await Promise.all([
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(uploadRateLimits)
-        .where(
-          and(
-            gte(uploadRateLimits.createdAt, oneHourAgo),
-            sql`${uploadRateLimits.ipHash} = ${ipHash}`,
-          ),
+    // Single query with conditional aggregation (saves 1 D1 roundtrip)
+    // WHERE clause orders ipHash first (index prefix) for optimal index usage
+    const result = await db
+      .select({
+        hourly: sql<number>`SUM(CASE WHEN ${uploadRateLimits.createdAt} >= ${oneHourAgo} THEN 1 ELSE 0 END)`,
+        daily: sql<number>`COUNT(*)`,
+      })
+      .from(uploadRateLimits)
+      .where(
+        and(
+          eq(uploadRateLimits.ipHash, ipHash), // Index prefix first
+          gte(uploadRateLimits.createdAt, oneDayAgo),
         ),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(uploadRateLimits)
-        .where(
-          and(
-            gte(uploadRateLimits.createdAt, oneDayAgo),
-            sql`${uploadRateLimits.ipHash} = ${ipHash}`,
-          ),
-        ),
-    ]);
+      );
 
-    const hourlyCount = hourlyResult[0]?.count ?? 0;
-    const dailyCount = dailyResult[0]?.count ?? 0;
+    const hourlyCount = result[0]?.hourly ?? 0;
+    const dailyCount = result[0]?.daily ?? 0;
 
     const hourlyRemaining = Math.max(0, HOURLY_LIMIT - hourlyCount);
     const dailyRemaining = Math.max(0, DAILY_LIMIT - dailyCount);
@@ -124,11 +117,14 @@ export async function checkIPRateLimit(ip: string): Promise<IPRateLimitResult> {
     }
 
     // Record this request (insert before returning success)
+    // Include expiresAt (24h TTL) for automatic cleanup via cron
     try {
+      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
       await db.insert(uploadRateLimits).values({
         id: crypto.randomUUID(),
         ipHash,
         createdAt: now.toISOString(),
+        expiresAt,
       });
     } catch (insertError) {
       console.error("Failed to record rate limit:", insertError);

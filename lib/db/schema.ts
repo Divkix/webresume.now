@@ -41,45 +41,68 @@ export const user = sqliteTable(
   ],
 );
 
-export const session = sqliteTable("session", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  token: text("token").notNull().unique(),
-  expiresAt: text("expires_at").notNull(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
+export const session = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: text("expires_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    // Index for auth lookups by userId
+    index("session_user_id_idx").on(table.userId),
+    // Index for session cleanup queries
+    index("session_expires_at_idx").on(table.expiresAt),
+  ],
+);
 
-export const account = sqliteTable("account", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  accessTokenExpiresAt: text("access_token_expires_at"),
-  refreshTokenExpiresAt: text("refresh_token_expires_at"),
-  scope: text("scope"),
-  idToken: text("id_token"),
-  password: text("password"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
+export const account = sqliteTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    accessTokenExpiresAt: text("access_token_expires_at"),
+    refreshTokenExpiresAt: text("refresh_token_expires_at"),
+    scope: text("scope"),
+    idToken: text("id_token"),
+    password: text("password"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    // Index for auth lookups by userId
+    index("account_user_id_idx").on(table.userId),
+  ],
+);
 
-export const verification = sqliteTable("verification", {
-  id: text("id").primaryKey(),
-  identifier: text("identifier").notNull(),
-  value: text("value").notNull(),
-  expiresAt: text("expires_at").notNull(),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
+export const verification = sqliteTable(
+  "verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    // Index for verification lookups
+    index("verification_identifier_idx").on(table.identifier),
+  ],
+);
 
 // =============================================================================
 // Application Tables
@@ -158,10 +181,12 @@ export const uploadRateLimits = sqliteTable(
     id: text("id").primaryKey(),
     ipHash: text("ip_hash").notNull(),
     createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(), // TTL: createdAt + 24h for automatic cleanup
   },
   (table) => [
     index("upload_rate_limits_ip_hash_idx").on(table.ipHash),
     index("upload_rate_limits_ip_created_idx").on(table.ipHash, table.createdAt),
+    index("upload_rate_limits_expires_idx").on(table.expiresAt), // Index for cleanup queries
   ],
 );
 

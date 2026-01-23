@@ -1,5 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { count, desc, eq } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { User } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -28,10 +28,30 @@ export default async function SettingsPage() {
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
 
-  // Fetch user profile
-  const profile = await db.query.user.findFirst({
-    where: eq(user.id, session.user.id),
-  });
+  // Run profile and resume queries in parallel to reduce roundtrips
+  const [profile, resumeData] = await Promise.all([
+    // Fetch user profile with only needed columns
+    db.query.user.findFirst({
+      where: eq(user.id, session.user.id),
+      columns: {
+        id: true,
+        email: true,
+        handle: true,
+        headline: true,
+        image: true,
+        privacySettings: true,
+      },
+    }),
+    // Combined resume query: count + latest in single roundtrip
+    db
+      .select({
+        count: count(),
+        latestId: sql<string | null>`MAX(${resumes.id})`,
+        latestCreatedAt: sql<string | null>`MAX(${resumes.createdAt})`,
+      })
+      .from(resumes)
+      .where(eq(resumes.userId, session.user.id)),
+  ]);
 
   if (!profile) {
     console.error("Failed to fetch profile for user:", session.user.id);
@@ -48,18 +68,22 @@ export default async function SettingsPage() {
     ? parsedPrivacySettings
     : { show_phone: false, show_address: false };
 
-  // Fetch resume count
-  const resumeCountResult = await db
-    .select({ count: count() })
-    .from(resumes)
-    .where(eq(resumes.userId, session.user.id));
-  const resumeCount = resumeCountResult[0]?.count ?? 0;
+  const resumeCount = resumeData[0]?.count ?? 0;
 
-  // Fetch latest resume
-  const latestResume = await db.query.resumes.findFirst({
-    where: eq(resumes.userId, session.user.id),
-    orderBy: [desc(resumes.createdAt)],
-  });
+  // Fetch latest resume details only if there are resumes (conditional query)
+  const latestResume =
+    resumeCount > 0
+      ? await db.query.resumes.findFirst({
+          where: eq(resumes.userId, session.user.id),
+          orderBy: [desc(resumes.createdAt)],
+          columns: {
+            id: true,
+            createdAt: true,
+            status: true,
+            errorMessage: true,
+          },
+        })
+      : null;
 
   return (
     <div className="min-h-screen py-8">

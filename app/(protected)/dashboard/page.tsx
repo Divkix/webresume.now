@@ -29,7 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { getAuth } from "@/lib/auth";
 import { siteConfig } from "@/lib/config/site";
 import { getDb } from "@/lib/db";
-import { type Resume, resumes, siteData, user } from "@/lib/db/schema";
+import { type Resume, resumes, type siteData, user } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
 
 /**
@@ -157,21 +157,33 @@ export default async function DashboardPage() {
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
 
-  // Fetch user profile with onboarding status
-  const profile = await db.query.user.findFirst({
+  // Single query with relations to eliminate N+1 queries
+  const userData = await db.query.user.findFirst({
     where: eq(user.id, session.user.id),
+    with: {
+      resumes: {
+        orderBy: [desc(resumes.createdAt)],
+        limit: 1,
+      },
+      siteData: true,
+    },
+    columns: {
+      id: true,
+      handle: true,
+      name: true,
+      email: true,
+      image: true,
+      headline: true,
+      privacySettings: true,
+      onboardingCompleted: true,
+      createdAt: true,
+    },
   });
 
-  // Fetch most recent resume
-  const resume = (await db.query.resumes.findFirst({
-    where: eq(resumes.userId, session.user.id),
-    orderBy: [desc(resumes.createdAt)],
-  })) as Resume | null;
-
-  // Fetch site data if available
-  const siteDataResult = (await db.query.siteData.findFirst({
-    where: eq(siteData.userId, session.user.id),
-  })) as typeof siteData.$inferSelect | null;
+  // Extract data from the consolidated query
+  const profile = userData ?? null;
+  const resume = (userData?.resumes?.[0] ?? null) as Resume | null;
+  const siteDataResult = (userData?.siteData ?? null) as typeof siteData.$inferSelect | null;
 
   // Determine resume state
   const hasResume = !!resume;

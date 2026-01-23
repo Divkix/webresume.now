@@ -79,6 +79,10 @@
 			"invocation_logs": true
 		}
 	},
+	// Cron Triggers for scheduled tasks
+	"triggers": {
+		"crons": ["0 3 * * *"] // Daily at 3 AM UTC - runs /api/cron/cleanup
+	},
 	"vars": {
 		// Environment variables are set via 'wrangler secret put' for production
 		// and in .env.local for local development (Next.js loads these automatically)

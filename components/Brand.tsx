@@ -32,20 +32,20 @@ export function Brand({ size = "lg", className = "", showTagline = false }: Bran
 
   return (
     <div className={`inline-flex flex-col ${className}`}>
-      <span className={`font-black tracking-tight ${text} text-[#0D0D0D]`}>
+      <span className={`font-black tracking-tight ${text} text-ink`}>
         {siteConfig.name}
         <span
           className={`
             ${accent}
             ml-0.5
-            bg-[#FF6B6B]
+            bg-coral
             text-white
             font-black
             inline-block
             transform
             -rotate-1
             border-2
-            border-[#0D0D0D]
+            border-ink
           `}
         >
           {siteConfig.tld}

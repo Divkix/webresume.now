@@ -311,7 +311,7 @@ export default function PrivacyPolicyPage() {
 
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                       <svg
                         className="w-3.5 h-3.5 text-emerald-600"
                         fill="none"
@@ -336,7 +336,7 @@ export default function PrivacyPolicyPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                       <svg
                         className="w-3.5 h-3.5 text-emerald-600"
                         fill="none"
@@ -361,7 +361,7 @@ export default function PrivacyPolicyPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
                       <svg
                         className="w-3.5 h-3.5 text-emerald-600"
                         fill="none"
@@ -386,7 +386,7 @@ export default function PrivacyPolicyPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
                       <svg
                         className="w-3.5 h-3.5 text-amber-600"
                         fill="none"

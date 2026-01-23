@@ -41,11 +41,11 @@ export function LoginButton() {
         relative
         px-5
         py-2.5
-        bg-[#0D0D0D]
-        text-[#FDF8F3]
+        bg-ink
+        text-cream
         font-black
         border-3
-        border-[#0D0D0D]
+        border-ink
         shadow-brutal-sm
         hover:translate-x-[-2px]
         hover:translate-y-[-2px]

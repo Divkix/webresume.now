@@ -322,18 +322,18 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         className={`
           group
           relative
-          bg-[#FDF8F3]
+          bg-cream
           border-3
           border-dashed
-          border-[#0D0D0D]
+          border-ink
           p-8
           cursor-pointer
           transition-all
           duration-200
           ${
             isDragging
-              ? "bg-[#FFB84D]/20 border-solid border-[#FF6B6B] translate-x-[-2px] translate-y-[-2px] shadow-brutal-md"
-              : "hover:bg-[#FFB84D]/10 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-sm"
+              ? "bg-amber/20 border-solid border-coral translate-x-[-2px] translate-y-[-2px] shadow-brutal-md"
+              : "hover:bg-amber/10 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-sm"
           }
           ${uploading ? "pointer-events-none opacity-60" : ""}
         `}
@@ -355,17 +355,17 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               w-16
               h-16
               border-3
-              border-[#0D0D0D]
+              border-ink
               flex
               items-center
               justify-center
               transition-all
               duration-200
-              ${isDragging ? "bg-[#FF6B6B] rotate-3" : "bg-[#FFB84D] group-hover:rotate-3"}
+              ${isDragging ? "bg-coral rotate-3" : "bg-amber group-hover:rotate-3"}
             `}
           >
             <svg
-              className="w-8 h-8 text-[#0D0D0D]"
+              className="w-8 h-8 text-ink"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
@@ -382,7 +382,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
           {/* Text */}
           <div className="text-center">
-            <p className="font-black text-lg text-[#0D0D0D] mb-1">
+            <p className="font-black text-lg text-ink mb-1">
               {file ? file.name : "Drop your PDF here"}
             </p>
             <p className="font-mono text-sm text-[#6B6B6B]">or click to browse • Max 5MB</p>
@@ -393,9 +393,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       {/* Progress Bar */}
       {uploading && (
         <div className="space-y-2">
-          <div className="h-3 bg-[#FDF8F3] border-2 border-[#0D0D0D] overflow-hidden">
+          <div className="h-3 bg-cream border-2 border-ink overflow-hidden">
             <div
-              className="h-full bg-[#4ECDC4] transition-all duration-300"
+              className="h-full bg-mint transition-all duration-300"
               style={{ width: `${uploadProgress}%` }}
             />
           </div>
@@ -414,21 +414,21 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       {/* Error Message with Retry Button */}
       {error && (
-        <div className="bg-[#FF6B6B]/10 border-3 border-[#FF6B6B] p-4" role="alert">
-          <p className="font-bold text-sm text-[#FF6B6B] mb-3">{error}</p>
+        <div className="bg-coral/10 border-3 border-coral p-4" role="alert">
+          <p className="font-bold text-sm text-coral mb-3">{error}</p>
           <button
             type="button"
             onClick={handleRetry}
             className="
               w-full
-              bg-[#0D0D0D]
-              text-[#FDF8F3]
+              bg-ink
+              text-cream
               font-black
               py-2
               px-4
               border-2
-              border-[#0D0D0D]
-              hover:bg-[#FF6B6B]
+              border-ink
+              hover:bg-coral
               hover:text-white
               transition-colors
             "
@@ -450,7 +450,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   // Upload complete state content - Neubrutalist style
   const uploadCompleteContent = (
     <div className="space-y-4">
-      <div className="bg-white border-3 border-[#0D0D0D] p-6">
+      <div className="bg-white border-3 border-ink p-6">
         {claiming ? (
           /* Claiming State - For Authenticated Users */
           <div className="flex flex-col items-center gap-4">
@@ -458,9 +458,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               className="
                 w-16
                 h-16
-                bg-[#4ECDC4]
+                bg-mint
                 border-3
-                border-[#0D0D0D]
+                border-ink
                 flex
                 items-center
                 justify-center
@@ -468,7 +468,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               "
             >
               <svg
-                className="w-8 h-8 text-[#0D0D0D] animate-spin"
+                className="w-8 h-8 text-ink animate-spin"
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden="true"
@@ -490,7 +490,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
 
             <div className="text-center">
-              <h3 className="font-black text-lg text-[#0D0D0D] mb-2">AI Parsing Your Resume...</h3>
+              <h3 className="font-black text-lg text-ink mb-2">AI Parsing Your Resume...</h3>
               <p className="font-medium text-sm text-[#6B6B6B] mb-1" aria-live="polite">
                 Extracting your experience, skills, and achievements
               </p>
@@ -504,9 +504,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               className="
                 w-16
                 h-16
-                bg-[#FF6B6B]
+                bg-coral
                 border-3
-                border-[#0D0D0D]
+                border-ink
                 flex
                 items-center
                 justify-center
@@ -529,8 +529,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
 
             <div className="text-center">
-              <h3 className="font-black text-lg text-[#0D0D0D] mb-2">Something Went Wrong</h3>
-              <p className="font-bold text-sm text-[#FF6B6B] mb-4">{error}</p>
+              <h3 className="font-black text-lg text-ink mb-2">Something Went Wrong</h3>
+              <p className="font-bold text-sm text-coral mb-4">{error}</p>
             </div>
 
             <button
@@ -539,13 +539,13 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               className="
                 w-full
                 max-w-xs
-                bg-[#0D0D0D]
-                text-[#FDF8F3]
+                bg-ink
+                text-cream
                 font-black
                 py-3
                 px-6
                 border-3
-                border-[#0D0D0D]
+                border-ink
                 shadow-brutal-sm
                 hover:translate-x-[-2px]
                 hover:translate-y-[-2px]
@@ -567,9 +567,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               className="
                 w-16
                 h-16
-                bg-[#4ECDC4]
+                bg-mint
                 border-3
-                border-[#0D0D0D]
+                border-ink
                 flex
                 items-center
                 justify-center
@@ -577,7 +577,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               "
             >
               <svg
-                className="w-8 h-8 text-[#0D0D0D]"
+                className="w-8 h-8 text-ink"
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden="true"
@@ -593,7 +593,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
             </div>
 
             <div className="text-center">
-              <h3 className="font-black text-lg text-[#0D0D0D] mb-2">Upload Complete!</h3>
+              <h3 className="font-black text-lg text-ink mb-2">Upload Complete!</h3>
               <p className="font-medium text-sm text-[#6B6B6B] mb-4">
                 {file?.name} has been uploaded successfully.
               </p>
@@ -614,13 +614,13 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                   className="
                     w-full
                     max-w-xs
-                    bg-[#FF6B6B]
+                    bg-coral
                     text-white
                     font-black
                     py-3
                     px-6
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     shadow-brutal-sm
                     hover:translate-x-[-2px]
                     hover:translate-y-[-2px]
@@ -647,7 +647,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="font-mono text-xs text-[#6B6B6B] hover:text-[#0D0D0D] underline transition-colors"
+                  className="font-mono text-xs text-[#6B6B6B] hover:text-ink underline transition-colors"
                 >
                   Upload a different file
                 </button>
@@ -666,9 +666,9 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   if (isModal) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md border-3 border-[#0D0D0D] shadow-brutal-lg rounded-none">
+        <DialogContent className="sm:max-w-md border-3 border-ink shadow-brutal-lg rounded-none">
           <DialogHeader>
-            <DialogTitle className="font-black text-[#0D0D0D]">Upload New Resume</DialogTitle>
+            <DialogTitle className="font-black text-ink">Upload New Resume</DialogTitle>
           </DialogHeader>
           {content}
         </DialogContent>

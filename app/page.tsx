@@ -21,11 +21,11 @@ export default function Home() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#FDF8F3] flex flex-col paper-texture">
+    <div className="min-h-screen bg-cream flex flex-col paper-texture">
       <Toaster />
 
       {/* Header - Bold, minimal */}
-      <header className="sticky top-0 z-50 border-b-3 border-[#0D0D0D] bg-[#FDF8F3]">
+      <header className="sticky top-0 z-50 border-b-3 border-ink bg-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <Brand size="lg" />
           <LoginButton />
@@ -34,9 +34,9 @@ export default function Home() {
 
       <main id="main-content" className="flex-1 relative overflow-hidden">
         {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-[#FFB84D] rounded-full opacity-20 blur-3xl" />
-        <div className="absolute bottom-40 right-10 w-40 h-40 bg-[#FF6B6B] rounded-full opacity-20 blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-[#4ECDC4] rounded-full opacity-15 blur-2xl" />
+        <div className="absolute top-20 left-10 w-32 h-32 bg-amber rounded-full opacity-20 blur-3xl" />
+        <div className="absolute bottom-40 right-10 w-40 h-40 bg-coral rounded-full opacity-20 blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-mint rounded-full opacity-15 blur-2xl" />
 
         {/* Hero Section - Asymmetric Bento Layout */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 lg:pt-20">
@@ -48,7 +48,7 @@ export default function Home() {
                 className="
                   bg-white
                   border-3
-                  border-[#0D0D0D]
+                  border-ink
                   p-8
                   lg:p-12
                   shadow-brutal-lg
@@ -58,16 +58,16 @@ export default function Home() {
                 "
               >
                 {/* Corner accent */}
-                <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF6B6B]" />
-                <div className="absolute top-0 right-0 w-0 h-0 border-l-[64px] border-l-transparent border-t-[64px] border-t-white" />
+                <div className="absolute top-0 right-0 w-16 h-16 bg-coral" />
+                <div className="absolute top-0 right-0 w-0 h-0 border-l-64 border-l-transparent border-t-64 border-t-white" />
 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#0D0D0D] leading-[1.1] tracking-tight mb-6">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-ink leading-[1.1] tracking-tight mb-6">
                   Your Resume
                   <br />
                   <span className="relative inline-block">
                     is already a
                     <svg
-                      className="absolute -bottom-2 left-0 w-full h-3 text-[#FF6B6B]"
+                      className="absolute -bottom-2 left-0 w-full h-3 text-coral"
                       viewBox="0 0 200 12"
                       preserveAspectRatio="none"
                     >
@@ -81,7 +81,7 @@ export default function Home() {
                     </svg>
                   </span>
                   <br />
-                  <span className="inline-block bg-[#0D0D0D] text-[#FDF8F3] px-4 py-2 -rotate-1 mt-2">
+                  <span className="inline-block bg-ink text-cream px-4 py-2 -rotate-1 mt-2">
                     Website
                   </span>
                 </h1>
@@ -89,7 +89,7 @@ export default function Home() {
                 <p className="text-lg sm:text-xl text-[#6B6B6B] max-w-lg font-medium leading-relaxed">
                   Drop your PDF. Get a shareable link.
                   <br />
-                  <span className="font-mono text-[#0D0D0D]">It takes less than a minute.</span>
+                  <span className="font-mono text-ink">It takes less than a minute.</span>
                 </p>
               </div>
 
@@ -97,9 +97,9 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-4">
                 <div
                   className="
-                    bg-[#FFB84D]
+                    bg-amber
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     p-4
                     shadow-brutal-sm
                     hover-brutal-shift
@@ -107,17 +107,17 @@ export default function Home() {
                     delay-100
                   "
                 >
-                  <div className="font-black text-2xl sm:text-3xl text-[#0D0D0D]">~30s</div>
-                  <div className="font-mono text-xs sm:text-sm text-[#0D0D0D]/80 uppercase tracking-wide">
+                  <div className="font-black text-2xl sm:text-3xl text-ink">~30s</div>
+                  <div className="font-mono text-xs sm:text-sm text-ink/80 uppercase tracking-wide">
                     Setup
                   </div>
                 </div>
 
                 <div
                   className="
-                    bg-[#4ECDC4]
+                    bg-mint
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     p-4
                     shadow-brutal-sm
                     hover-brutal-shift
@@ -125,17 +125,17 @@ export default function Home() {
                     delay-200
                   "
                 >
-                  <div className="font-black text-2xl sm:text-3xl text-[#0D0D0D]">AI</div>
-                  <div className="font-mono text-xs sm:text-sm text-[#0D0D0D]/80 uppercase tracking-wide">
+                  <div className="font-black text-2xl sm:text-3xl text-ink">AI</div>
+                  <div className="font-mono text-xs sm:text-sm text-ink/80 uppercase tracking-wide">
                     Parsing
                   </div>
                 </div>
 
                 <div
                   className="
-                    bg-[#A78BFA]
+                    bg-lavender
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     p-4
                     shadow-brutal-sm
                     hover-brutal-shift
@@ -143,8 +143,8 @@ export default function Home() {
                     delay-300
                   "
                 >
-                  <div className="font-black text-2xl sm:text-3xl text-[#0D0D0D]">Free</div>
-                  <div className="font-mono text-xs sm:text-sm text-[#0D0D0D]/80 uppercase tracking-wide">
+                  <div className="font-black text-2xl sm:text-3xl text-ink">Free</div>
+                  <div className="font-mono text-xs sm:text-sm text-ink/80 uppercase tracking-wide">
                     Forever
                   </div>
                 </div>
@@ -158,13 +158,13 @@ export default function Home() {
                 className="
                   bg-white
                   border-3
-                  border-[#0D0D0D]
+                  border-ink
                   shadow-brutal-md
                   animate-fade-in-up
                   delay-200
                 "
               >
-                <div className="border-b-3 border-[#0D0D0D] bg-[#0D0D0D] text-[#FDF8F3] px-4 py-2">
+                <div className="border-b-3 border-ink bg-ink text-cream px-4 py-2">
                   <span className="font-mono text-sm uppercase tracking-wider">
                     → Drop your resume
                   </span>
@@ -177,9 +177,9 @@ export default function Home() {
               {/* Social Proof */}
               <div
                 className="
-                  bg-[#FF6B6B]
+                  bg-coral
                   border-3
-                  border-[#0D0D0D]
+                  border-ink
                   p-4
                   shadow-brutal-sm
                   animate-fade-in-up
@@ -190,13 +190,13 @@ export default function Home() {
                 "
               >
                 <div className="flex -space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-[#FFB84D] border-3 border-[#0D0D0D] flex items-center justify-center font-black text-sm text-[#0D0D0D]">
+                  <div className="w-10 h-10 rounded-full bg-amber border-3 border-ink flex items-center justify-center font-black text-sm text-ink">
                     SC
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-[#4ECDC4] border-3 border-[#0D0D0D] flex items-center justify-center font-black text-sm text-[#0D0D0D]">
+                  <div className="w-10 h-10 rounded-full bg-mint border-3 border-ink flex items-center justify-center font-black text-sm text-ink">
                     JS
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-[#A78BFA] border-3 border-[#0D0D0D] flex items-center justify-center font-black text-sm text-[#0D0D0D]">
+                  <div className="w-10 h-10 rounded-full bg-lavender border-3 border-ink flex items-center justify-center font-black text-sm text-ink">
                     MR
                   </div>
                 </div>
@@ -213,8 +213,8 @@ export default function Home() {
           {/* Examples Section */}
           <section className="mt-16 lg:mt-20">
             <div className="flex items-center gap-4 mb-8">
-              <h2 className="font-black text-2xl sm:text-3xl text-[#0D0D0D]">See live examples</h2>
-              <div className="flex-1 h-1 bg-[#0D0D0D]" />
+              <h2 className="font-black text-2xl sm:text-3xl text-ink">See live examples</h2>
+              <div className="flex-1 h-1 bg-ink" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -227,7 +227,7 @@ export default function Home() {
                     group
                     bg-white
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     p-4
                     shadow-brutal-sm
                     hover-brutal-shift
@@ -235,7 +235,7 @@ export default function Home() {
                     animate-fade-in-up
                     focus:outline-none
                     focus:ring-4
-                    focus:ring-[#FF6B6B]
+                    focus:ring-coral
                   `}
                   style={{ animationDelay: `${(index + 4) * 100}ms` }}
                 >
@@ -246,7 +246,7 @@ export default function Home() {
                         h-12
                         rounded-full
                         border-3
-                        border-[#0D0D0D]
+                        border-ink
                         flex
                         items-center
                         justify-center
@@ -254,19 +254,19 @@ export default function Home() {
                         text-sm
                         ${
                           index === 0
-                            ? "bg-[#FF6B6B] text-white"
+                            ? "bg-coral text-white"
                             : index === 1
-                              ? "bg-[#4ECDC4] text-[#0D0D0D]"
+                              ? "bg-mint text-ink"
                               : index === 2
-                                ? "bg-[#A78BFA] text-white"
-                                : "bg-[#FFB84D] text-[#0D0D0D]"
+                                ? "bg-lavender text-white"
+                                : "bg-amber text-ink"
                         }
                       `}
                     >
                       {profile.initials}
                     </div>
                     <div>
-                      <div className="font-bold text-[#0D0D0D]">{profile.name}</div>
+                      <div className="font-bold text-ink">{profile.name}</div>
                       <div className="font-mono text-xs text-[#6B6B6B]">{profile.role}</div>
                     </div>
                   </div>
@@ -276,25 +276,25 @@ export default function Home() {
                       px-2
                       py-1
                       border-2
-                      border-[#0D0D0D]
+                      border-ink
                       font-mono
                       text-xs
                       uppercase
                       tracking-wide
                       ${
                         index === 0
-                          ? "bg-[#FF6B6B]/10 text-[#FF6B6B]"
+                          ? "bg-coral/10 text-coral"
                           : index === 1
-                            ? "bg-[#4ECDC4]/10 text-[#0D0D0D]"
+                            ? "bg-mint/10 text-ink"
                             : index === 2
-                              ? "bg-[#A78BFA]/10 text-[#A78BFA]"
-                              : "bg-[#FFB84D]/10 text-[#0D0D0D]"
+                              ? "bg-lavender/10 text-lavender"
+                              : "bg-amber/10 text-ink"
                       }
                     `}
                   >
                     {profile.badgeLabel}
                   </div>
-                  <div className="mt-3 flex items-center gap-2 text-[#6B6B6B] group-hover:text-[#0D0D0D] transition-colors">
+                  <div className="mt-3 flex items-center gap-2 text-[#6B6B6B] group-hover:text-ink transition-colors">
                     <span className="font-mono text-xs">View template</span>
                     <svg
                       className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
@@ -318,8 +318,8 @@ export default function Home() {
           {/* How it works - Horizontal steps */}
           <section className="mt-16 lg:mt-20">
             <div className="flex items-center gap-4 mb-8">
-              <h2 className="font-black text-2xl sm:text-3xl text-[#0D0D0D]">How it works</h2>
-              <div className="flex-1 h-1 bg-[#0D0D0D]" />
+              <h2 className="font-black text-2xl sm:text-3xl text-ink">How it works</h2>
+              <div className="flex-1 h-1 bg-ink" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -328,19 +328,19 @@ export default function Home() {
                   step: "01",
                   title: "Upload",
                   desc: "Drop your PDF resume. No account needed.",
-                  color: "bg-[#FFB84D]",
+                  color: "bg-amber",
                 },
                 {
                   step: "02",
                   title: "AI Parses",
                   desc: "We extract your experience, skills, and achievements.",
-                  color: "bg-[#4ECDC4]",
+                  color: "bg-mint",
                 },
                 {
                   step: "03",
                   title: "Publish",
                   desc: "Get a beautiful shareable link in seconds.",
-                  color: "bg-[#FF6B6B]",
+                  color: "bg-coral",
                 },
               ].map((item, index) => (
                 <div
@@ -348,7 +348,7 @@ export default function Home() {
                   className={`
                     ${item.color}
                     border-3
-                    border-[#0D0D0D]
+                    border-ink
                     p-6
                     shadow-brutal-md
                     hover-brutal-shift
@@ -356,11 +356,11 @@ export default function Home() {
                   `}
                   style={{ animationDelay: `${(index + 8) * 100}ms` }}
                 >
-                  <div className="font-mono text-4xl font-black text-[#0D0D0D]/30 mb-2">
+                  <div className="font-mono text-4xl font-black text-ink/30 mb-2">
                     {item.step}
                   </div>
-                  <h3 className="font-black text-xl text-[#0D0D0D] mb-2">{item.title}</h3>
-                  <p className="font-medium text-[#0D0D0D]/80">{item.desc}</p>
+                  <h3 className="font-black text-xl text-ink mb-2">{item.title}</h3>
+                  <p className="font-medium text-ink/80">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -370,23 +370,23 @@ export default function Home() {
           <section className="mt-16 lg:mt-20">
             <div
               className="
-                bg-[#0D0D0D]
+                bg-ink
                 border-3
-                border-[#0D0D0D]
+                border-ink
                 p-8
                 lg:p-12
                 shadow-brutal-lg
                 text-center
               "
             >
-              <h2 className="font-black text-3xl sm:text-4xl text-[#FDF8F3] mb-4">
+              <h2 className="font-black text-3xl sm:text-4xl text-cream mb-4">
                 Your resume shouldn&apos;t
                 <br />
-                <span className="inline-block bg-[#FF6B6B] text-white px-3 py-1 rotate-1 mt-2">
+                <span className="inline-block bg-coral text-white px-3 py-1 rotate-1 mt-2">
                   blend in.
                 </span>
               </h2>
-              <p className="font-mono text-[#FDF8F3]/70 mb-8 max-w-md mx-auto">
+              <p className="font-mono text-cream/70 mb-8 max-w-md mx-auto">
                 Neither should we. Start building your web portfolio today.
               </p>
               <div className="flex justify-center">
@@ -397,14 +397,14 @@ export default function Home() {
                   }}
                   className="
                     inline-block
-                    bg-[#FF6B6B]
+                    bg-coral
                     text-white
                     font-black
                     text-lg
                     px-8
                     py-4
                     border-3
-                    border-[#FDF8F3]
+                    border-cream
                     shadow-[5px_5px_0px_#FDF8F3]
                     hover:translate-x-[-2px]
                     hover:translate-y-[-2px]

@@ -5,8 +5,10 @@
     "components/**/*.{ts,tsx,mdx}",
     "hooks/**/*.{ts,tsx}",
     "lib/**/*.{ts,tsx}",
-    "open-next.config.ts"
+    "open-next.config.ts",
+    "scripts/**/*.ts"
   ],
   "ignore": ["app/globals.css"],
-  "ignoreBinaries": []
+  "ignoreBinaries": [],
+  "ignoreDependencies": []
 }

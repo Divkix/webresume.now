@@ -12,7 +12,7 @@ import {
   Mail,
 } from "lucide-react";
 import type React from "react";
-import { siteConfig } from "@/lib/config/site";
+import { PoweredByBadge } from "@/components/PoweredByBadge";
 import { flattenSkills, formatDateRange, getInitials } from "@/lib/templates/helpers";
 import type { TemplateProps } from "@/lib/types/template";
 
@@ -300,12 +300,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
 
       {/* Footer Branding */}
       <div className="max-w-6xl mx-auto mt-12 text-center">
-        <p className="text-neutral-600 text-sm">
-          Built with{" "}
-          <a href={siteConfig.url} className="hover:underline font-medium">
-            {siteConfig.fullName}
-          </a>
-        </p>
+        <PoweredByBadge variant="bento_grid" />
       </div>
 
       <style>{`

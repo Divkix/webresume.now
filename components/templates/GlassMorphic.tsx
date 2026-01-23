@@ -12,7 +12,7 @@ import {
   Menu,
 } from "lucide-react";
 import type React from "react";
-import { siteConfig } from "@/lib/config/site";
+import { PoweredByBadge } from "@/components/PoweredByBadge";
 import { flattenSkills, formatDateRange } from "@/lib/templates/helpers";
 import type { Project } from "@/lib/types/database";
 import type { TemplateProps } from "@/lib/types/template";
@@ -342,12 +342,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
         )}
 
         <footer id="contact" className="mt-32 border-t border-white/10 pt-12 pb-6 text-center">
-          <p className="text-white/40 text-sm">
-            Built with{" "}
-            <a href={siteConfig.url} className="hover:underline text-white/60">
-              {siteConfig.fullName}
-            </a>
-          </p>
+          <PoweredByBadge variant="glassmorphic" />
         </footer>
       </div>
 

@@ -3,12 +3,15 @@ import { LogoText } from "./LogoText";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 type LogoVariant = "full" | "icon" | "text";
+type LogoColorScheme = "dark" | "light";
 
 interface LogoProps {
   /** Size variant */
   size?: LogoSize;
   /** Which parts to render */
   variant?: LogoVariant;
+  /** Color scheme for different backgrounds */
+  colorScheme?: LogoColorScheme;
   /** Additional classes */
   className?: string;
 }
@@ -45,20 +48,25 @@ const gapMap: Record<LogoSize, string> = {
  * - variant="icon": Just the document icon
  * - variant="text": Just the text with badge
  */
-export function Logo({ size = "md", variant = "full", className = "" }: LogoProps) {
+export function Logo({
+  size = "md",
+  variant = "full",
+  colorScheme = "dark",
+  className = "",
+}: LogoProps) {
   if (variant === "icon") {
-    return <LogoIcon size={iconSizeMap[size]} className={className} />;
+    return <LogoIcon size={iconSizeMap[size]} colorScheme={colorScheme} className={className} />;
   }
 
   if (variant === "text") {
-    return <LogoText size={textSizeMap[size]} className={className} />;
+    return <LogoText size={textSizeMap[size]} colorScheme={colorScheme} className={className} />;
   }
 
   // Full logo: compose icon + text
   return (
     <div className={`inline-flex items-center ${gapMap[size]} ${className}`}>
-      <LogoIcon size={iconSizeMap[size]} />
-      <LogoText size={textSizeMap[size]} />
+      <LogoIcon size={iconSizeMap[size]} colorScheme={colorScheme} />
+      <LogoText size={textSizeMap[size]} colorScheme={colorScheme} />
     </div>
   );
 }

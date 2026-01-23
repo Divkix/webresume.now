@@ -1,6 +1,6 @@
 import { ArrowUpRight, Award, Briefcase, Globe, GraduationCap, Star } from "lucide-react";
 import type React from "react";
-import { siteConfig } from "@/lib/config/site";
+import { PoweredByBadge } from "@/components/PoweredByBadge";
 import { flattenSkills, formatDateRange, getInitials } from "@/lib/templates/helpers";
 import type { Project } from "@/lib/types/database";
 import type { TemplateProps } from "@/lib/types/template";
@@ -391,12 +391,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
 
         {/* Footer */}
         <footer className="mt-16 text-center pb-8">
-          <p className="font-bold text-sm">
-            Built with{" "}
-            <a href={siteConfig.url} className="underline decoration-4 decoration-[#FFDE00]">
-              {siteConfig.fullName}
-            </a>
-          </p>
+          <PoweredByBadge variant="neo_brutalist" />
         </footer>
       </div>
 

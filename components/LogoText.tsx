@@ -1,8 +1,11 @@
 type LogoTextSize = "xs" | "sm" | "md" | "lg" | "xl";
+type LogoTextColorScheme = "dark" | "light";
 
 interface LogoTextProps {
   /** Size variant */
   size?: LogoTextSize;
+  /** Color scheme for different backgrounds */
+  colorScheme?: LogoTextColorScheme;
   /** Additional classes */
   className?: string;
 }
@@ -15,12 +18,18 @@ const sizeConfig: Record<LogoTextSize, { width: number; height: number }> = {
   xl: { width: 300, height: 60 },
 };
 
+const colorConfig: Record<LogoTextColorScheme, { main: string; shadow: string; stroke: string }> = {
+  dark: { main: "#0D0D0D", shadow: "#0D0D0D", stroke: "#0D0D0D" },
+  light: { main: "#FFFFFF", shadow: "rgba(0,0,0,0.3)", stroke: "#FFFFFF" },
+};
+
 /**
  * Text-only portion of the logo (webresume + .now badge)
  * Use alongside LogoIcon or standalone
  */
-export function LogoText({ size = "md", className = "" }: LogoTextProps) {
+export function LogoText({ size = "md", colorScheme = "dark", className = "" }: LogoTextProps) {
   const { width, height } = sizeConfig[size];
+  const colors = colorConfig[colorScheme];
 
   return (
     <svg
@@ -34,13 +43,13 @@ export function LogoText({ size = "md", className = "" }: LogoTextProps) {
     >
       <defs>
         <style>
-          {`.logotext-main { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 900; font-size: 36px; fill: #0D0D0D; }
+          {`.logotext-main-${colorScheme} { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 900; font-size: 36px; fill: ${colors.main}; }
           .logotext-tld { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight: 900; font-size: 24px; fill: #FFFFFF; }`}
         </style>
       </defs>
 
       {/* Brand text "webresume" */}
-      <text x="0" y="40" className="logotext-main">
+      <text x="0" y="40" className={`logotext-main-${colorScheme}`}>
         webresume
       </text>
 
@@ -52,7 +61,7 @@ export function LogoText({ size = "md", className = "" }: LogoTextProps) {
         height="36"
         rx="4"
         transform="rotate(-3 208 15)"
-        fill="#0D0D0D"
+        fill={colors.shadow}
       />
 
       {/* .now badge */}
@@ -64,7 +73,7 @@ export function LogoText({ size = "md", className = "" }: LogoTextProps) {
         rx="4"
         transform="rotate(-3 204 11)"
         fill="#FF6B6B"
-        stroke="#0D0D0D"
+        stroke={colors.stroke}
         strokeWidth="3"
       />
       <text x="212" y="36" className="logotext-tld" transform="rotate(-3 212 36)">

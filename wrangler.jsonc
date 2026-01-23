@@ -112,7 +112,7 @@
 		// Environment variables are set via 'wrangler secret put' for production
 		// and in .env.local for local development (Next.js loads these automatically)
 		//
-		// Required secrets (run these commands for production deployment):
+		// ===== REQUIRED SECRETS =====
 		//   wrangler secret put BETTER_AUTH_SECRET
 		//   wrangler secret put BETTER_AUTH_URL
 		//   wrangler secret put GOOGLE_CLIENT_ID
@@ -120,19 +120,16 @@
 		//   wrangler secret put NEXT_PUBLIC_APP_URL
 		//   wrangler secret put INTERNAL_CACHE_INVALIDATION_TOKEN  # openssl rand -hex 32
 		//
-		// Optional secrets for edge cache purge (privacy-sensitive changes):
+		// ===== OPTIONAL: Edge cache purge (only for custom domains behind CF proxy) =====
 		//   wrangler secret put CF_ZONE_ID                  # From Cloudflare Dashboard
 		//   wrangler secret put CF_CACHE_PURGE_API_TOKEN    # API token with Cache Purge permission
 		//
-		// Optional secrets for DLQ alerting:
+		// ===== OPTIONAL: DLQ alerting (defaults to Cloudflare Logpush) =====
 		//   wrangler secret put ALERT_CHANNEL       # logpush | webhook | email
 		//   wrangler secret put ALERT_WEBHOOK_URL   # Slack/Discord webhook URL
 		//
 		// Note: R2 is accessed via binding (R2_BUCKET) - no API credentials needed
 		// Note: AI Gateway secrets are configured in ai-parser-worker, not here
-		//
-		// Optional vars:
-		//   AI_MODEL - Override the default AI model for resume parsing
 		"NEXT_INC_CACHE_R2_PREFIX": "incremental-cache",
 		"AI_MODEL": "google/gemini-2.5-flash-lite"
 	}

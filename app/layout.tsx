@@ -7,6 +7,14 @@ export const metadata: Metadata = {
   title: `${siteConfig.fullName} - ${siteConfig.tagline}`,
   description:
     "Drop your PDF résumé and get a shareable website in seconds. Free, fast, and AI-powered.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

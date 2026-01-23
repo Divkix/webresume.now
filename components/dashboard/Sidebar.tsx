@@ -3,7 +3,7 @@
 import { Edit3, ExternalLink, Home, LogOut, Palette, Settings, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogoIcon } from "@/components/LogoIcon";
+import { Logo } from "@/components/Logo";
 import { signOut, useSession } from "@/lib/auth/client";
 
 interface SidebarProps {
@@ -148,12 +148,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
         {/* Logo Header */}
         <div className="p-4 border-b border-slate-200/60">
-          <a href="/" className="flex items-center gap-2 group" aria-label="webresume.now home">
-            <LogoIcon size="sm" />
-            <span className="font-black text-slate-900 text-lg tracking-tight">
-              webresume
-              <span className="text-coral">.now</span>
-            </span>
+          <a href="/" aria-label="webresume.now home">
+            <Logo size="xs" />
           </a>
         </div>
 

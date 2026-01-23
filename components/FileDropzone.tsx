@@ -364,12 +364,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               ${isDragging ? "bg-coral rotate-3" : "bg-amber group-hover:rotate-3"}
             `}
           >
-            <svg
-              className="w-8 h-8 text-ink"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-            >
+            <svg className="w-8 h-8 text-ink" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -576,12 +571,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                 rotate-3
               "
             >
-              <svg
-                className="w-8 h-8 text-ink"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
+              <svg className="w-8 h-8 text-ink" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

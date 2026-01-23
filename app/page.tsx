@@ -3,9 +3,9 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { LoginButton } from "@/components/auth/LoginButton";
-import { Brand } from "@/components/Brand";
 import { FileDropzone } from "@/components/FileDropzone";
 import { Footer } from "@/components/Footer";
+import { Logo } from "@/components/Logo";
 import { Toaster } from "@/components/ui/sonner";
 import { DEMO_PROFILES } from "@/lib/templates/demo-data";
 
@@ -27,7 +27,9 @@ export default function Home() {
       {/* Header - Bold, minimal */}
       <header className="sticky top-0 z-50 border-b-3 border-ink bg-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Brand size="lg" />
+          <a href="/" aria-label="webresume.now home">
+            <Logo size="md" />
+          </a>
           <LoginButton />
         </div>
       </header>
@@ -356,9 +358,7 @@ export default function Home() {
                   `}
                   style={{ animationDelay: `${(index + 8) * 100}ms` }}
                 >
-                  <div className="font-mono text-4xl font-black text-ink/30 mb-2">
-                    {item.step}
-                  </div>
+                  <div className="font-mono text-4xl font-black text-ink/30 mb-2">{item.step}</div>
                   <h3 className="font-black text-xl text-ink mb-2">{item.title}</h3>
                   <p className="font-medium text-ink/80">{item.desc}</p>
                 </div>

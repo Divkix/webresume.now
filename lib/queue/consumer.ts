@@ -1,17 +1,9 @@
 import { and, eq, isNotNull } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { resumes, siteData } from "../db/schema";
 import { getSessionDb } from "../db/session";
 import { parseResumeWithGemini } from "../gemini";
 import { getR2Binding, R2 } from "../r2";
-import type { CacheInvalidationMessage, QueueMessage, ResumeParseMessage } from "./types";
-
-/**
- * Get cache tag for a resume handle (matches lib/utils/cache.ts pattern)
- */
-function getResumeCacheTag(handle: string): string {
-  return `resume:${handle}`;
-}
+import type { QueueMessage, ResumeParseMessage } from "./types";
 
 /**
  * Upsert site_data with UNIQUE constraint handling
@@ -195,33 +187,11 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
 }
 
 /**
- * Handle cache invalidation from queue
- */
-async function handleCacheInvalidation(message: CacheInvalidationMessage): Promise<void> {
-  for (const handle of message.handles) {
-    revalidateTag(getResumeCacheTag(handle), "max");
-  }
-
-  for (const path of message.paths) {
-    revalidatePath(path);
-  }
-}
-
-/**
  * Main queue consumer handler
  * Export this from the worker entry point
  */
 export async function handleQueueMessage(message: QueueMessage, env: CloudflareEnv): Promise<void> {
-  switch (message.type) {
-    case "parse":
-      await handleResumeParse(message, env);
-      break;
-    case "invalidate":
-      await handleCacheInvalidation(message);
-      break;
-    default: {
-      const _exhaustive: never = message;
-      throw new Error(`Unknown message type: ${JSON.stringify(_exhaustive)}`);
-    }
-  }
+  // Currently only supporting parse messages
+  // Add additional handlers here when new message types are added
+  await handleResumeParse(message, env);
 }

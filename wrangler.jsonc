@@ -73,8 +73,7 @@
 	// Cloudflare Queues for async processing
 	"queues": {
 		"producers": [
-			{ "binding": "RESUME_PARSE_QUEUE", "queue": "resume-parse-queue" },
-			{ "binding": "CACHE_INVALIDATION_QUEUE", "queue": "cache-invalidation-queue" }
+			{ "binding": "RESUME_PARSE_QUEUE", "queue": "resume-parse-queue" }
 		],
 		"consumers": [
 			{
@@ -82,11 +81,6 @@
 				"max_batch_size": 1,
 				"max_retries": 3,
 				"dead_letter_queue": "resume-parse-dlq"
-			},
-			{
-				"queue": "cache-invalidation-queue",
-				"max_batch_size": 10,
-				"max_retries": 5
 			},
 			{
 				"queue": "resume-parse-dlq",

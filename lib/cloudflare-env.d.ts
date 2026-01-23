@@ -11,7 +11,6 @@ declare namespace Cloudflare {
 		NEXT_INC_CACHE_R2_BUCKET: R2Bucket;
 		DB: D1Database;
 		RESUME_PARSE_QUEUE: Queue;
-		CACHE_INVALIDATION_QUEUE: Queue;
 		ASSETS: Fetcher;
 		NEXT_INC_CACHE_R2_PREFIX: "incremental-cache";
 		AI_MODEL: "google/gemini-2.5-flash-lite";

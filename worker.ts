@@ -9,9 +9,9 @@
 /// <reference types="@cloudflare/workers-types" />
 /// <reference path="./lib/cloudflare-env.d.ts" />
 
+import opennextHandler from "./.open-next/worker.js";
 import { handleQueueMessage } from "./lib/queue/consumer";
 import type { QueueMessage } from "./lib/queue/types";
-import opennextHandler from "./.open-next/worker.js";
 
 export default {
   // Re-use the OpenNext fetch handler

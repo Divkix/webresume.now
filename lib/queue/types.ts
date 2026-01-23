@@ -15,18 +15,9 @@ export interface ResumeParseMessage {
 }
 
 /**
- * Message for cache invalidation queue
- */
-export interface CacheInvalidationMessage {
-  type: "invalidate";
-  handles: string[];
-  paths: string[];
-}
-
-/**
  * Union type for all queue messages
  */
-export type QueueMessage = ResumeParseMessage | CacheInvalidationMessage;
+export type QueueMessage = ResumeParseMessage;
 
 /**
  * Dead letter queue message wrapper

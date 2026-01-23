@@ -1,11 +1,12 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, ne } from "drizzle-orm";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAuth } from "@/lib/auth";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { siteData, user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
-import { invalidateHandle } from "@/lib/queue/cache-invalidation";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -194,11 +195,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // 8. Invalidate public page cache via queue (async, non-blocking)
-    const cacheQueue = (env as CloudflareEnv).CACHE_INVALIDATION_QUEUE;
-    if (cacheQueue) {
-      await invalidateHandle(cacheQueue, body.handle);
-    }
+    // 8. Invalidate public page cache (synchronous)
+    revalidateTag(getResumeCacheTag(body.handle), "max");
+    revalidatePath(`/${body.handle}`);
 
     // 9. Capture bookmark before returning success
     await captureBookmark();

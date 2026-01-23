@@ -1,7 +1,10 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import { purgeResumeCache } from "@/lib/cloudflare-cache-purge";
+import { getResumeCacheTag } from "@/lib/data/resume";
 import { getDb } from "@/lib/db";
 import {
   account,
@@ -110,6 +113,15 @@ export async function POST(request: Request) {
       .from(resumes)
       .where(eq(resumes.userId, userId));
 
+    // Fetch user's handle BEFORE deletion for cache invalidation
+    const userWithHandle = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    const userHandle = userWithHandle[0]?.handle;
+
     // 7. Delete R2 files (best effort - continue even if some fail)
     for (const resume of userResumes) {
       if (resume.r2Key) {
@@ -161,6 +173,22 @@ export async function POST(request: Request) {
           .delete(user)
           .where(eq(user.id, userId)),
       ]);
+
+      // Invalidate cache for deleted user's public page
+      if (userHandle) {
+        // Purge Next.js ISR cache
+        revalidateTag(getResumeCacheTag(userHandle), "max");
+        revalidatePath(`/${userHandle}`);
+
+        // Purge Cloudflare edge cache immediately (privacy-sensitive deletion)
+        const cfZoneId = (typedEnv as CloudflareEnv).CF_ZONE_ID;
+        const cfApiToken = (typedEnv as CloudflareEnv).CF_CACHE_PURGE_API_TOKEN;
+        const baseUrl = typedEnv.NEXT_PUBLIC_APP_URL;
+
+        if (cfZoneId && cfApiToken && baseUrl) {
+          await purgeResumeCache(userHandle, baseUrl, cfZoneId, cfApiToken);
+        }
+      }
     } catch (dbError) {
       console.error("Database deletion error:", dbError);
       return createErrorResponse(

@@ -1,10 +1,8 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, ne } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getAuth } from "@/lib/auth";
-import { getResumeCacheTag } from "@/lib/data/resume";
 import { siteData, user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
 import {
@@ -195,14 +193,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // 8. Invalidate public page cache (synchronous)
-    revalidateTag(getResumeCacheTag(body.handle), "max");
-    revalidatePath(`/${body.handle}`);
-
-    // 9. Capture bookmark before returning success
+    // 8. Capture bookmark before returning success
     await captureBookmark();
 
-    // 10. Return success response
+    // 9. Return success response
     return createSuccessResponse({
       success: true,
       handle: body.handle,

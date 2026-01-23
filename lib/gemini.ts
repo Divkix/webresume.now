@@ -1,3 +1,5 @@
+import { resumeContentSchema } from "./schemas/resume";
+
 /**
  * Response types for utility workers
  */
@@ -412,8 +414,21 @@ export async function parseResumeWithGemini(
       };
     }
 
-    // Step 3: Transform and return
-    const transformed = transformGeminiOutput(parseResult.data as ResumeSchema);
+    // Step 2.5: Validate AI response against schema
+    const validationResult = resumeContentSchema.safeParse(parseResult.data);
+    if (!validationResult.success) {
+      // Log validation errors for debugging
+      console.error("AI response validation failed:", validationResult.error.flatten());
+
+      return {
+        success: false,
+        parsedContent: "",
+        error: `AI response validation failed: ${validationResult.error.issues[0]?.message || "Invalid structure"}`,
+      };
+    }
+
+    // Step 3: Transform and return (using validated data)
+    const transformed = transformGeminiOutput(validationResult.data as ResumeSchema);
 
     return {
       success: true,

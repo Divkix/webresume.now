@@ -44,11 +44,20 @@ export async function POST(request: Request) {
 
     const userId = session.user.id;
 
-    // 3. Parse request body
+    // 3. Fetch user's handle early for later cache invalidation
+    const userProfile = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    const userHandle = userProfile[0]?.handle;
+
+    // 4. Parse request body
     const body = (await request.json()) as ThemeUpdateRequestBody;
     const { theme_id } = body;
 
-    // 4. Validate theme_id
+    // 5. Validate theme_id
     if (!theme_id || typeof theme_id !== "string") {
       return createErrorResponse(
         "theme_id is required and must be a string",
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
 
-    // 5. Update site_data theme_id
+    // 6. Update site_data theme_id
     const updateResult = await db
       .update(siteData)
       .set({
@@ -86,16 +95,10 @@ export async function POST(request: Request) {
 
     const data = updateResult[0];
 
-    // 6. Invalidate cache for public resume page
-    // Fetch user's handle to revalidate their public page
-    const profile = await db.query.user.findFirst({
-      where: eq(user.id, userId),
-      columns: { handle: true },
-    });
-
-    if (profile?.handle) {
-      revalidateTag(getResumeCacheTag(profile.handle), "max");
-      revalidatePath(`/${profile.handle}`);
+    // 7. Invalidate cache for public resume page
+    if (userHandle) {
+      revalidateTag(getResumeCacheTag(userHandle), "max");
+      revalidatePath(`/${userHandle}`);
     }
 
     await captureBookmark();

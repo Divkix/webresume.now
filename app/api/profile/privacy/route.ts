@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithMessage } from "@/lib/auth/middleware";
+import { purgeResumeCache } from "@/lib/cloudflare-cache-purge";
 import { getResumeCacheTag } from "@/lib/data/resume";
 import { user } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
@@ -86,6 +87,15 @@ export async function PUT(request: Request) {
     if (userHandle) {
       revalidateTag(getResumeCacheTag(userHandle), "max");
       revalidatePath(`/${userHandle}`);
+
+      // Purge Cloudflare edge cache immediately (privacy-sensitive change)
+      const cfZoneId = (env as CloudflareEnv).CF_ZONE_ID;
+      const cfApiToken = (env as CloudflareEnv).CF_CACHE_PURGE_API_TOKEN;
+      const baseUrl = (env as CloudflareEnv).NEXT_PUBLIC_APP_URL;
+
+      if (cfZoneId && cfApiToken && baseUrl) {
+        await purgeResumeCache(userHandle, baseUrl, cfZoneId, cfApiToken);
+      }
     }
 
     await captureBookmark();

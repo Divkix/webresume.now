@@ -1,9 +1,44 @@
 import { and, eq, isNotNull } from "drizzle-orm";
-import { resumes, siteData } from "../db/schema";
+import { resumes, siteData, user } from "../db/schema";
 import { getSessionDb } from "../db/session";
 import { parseResumeWithGemini } from "../gemini";
 import { getR2Binding, R2 } from "../r2";
+import { classifyQueueError } from "./errors";
 import type { QueueMessage, ResumeParseMessage } from "./types";
+
+/**
+ * Invalidate cache for a user's resume page
+ * Best-effort - failures are logged but don't throw
+ */
+async function invalidateResumeCache(handle: string, env: CloudflareEnv): Promise<void> {
+  const appUrl = env.NEXT_PUBLIC_APP_URL;
+  const token = env.INTERNAL_CACHE_INVALIDATION_TOKEN;
+
+  if (!appUrl || !token) {
+    console.warn(
+      "Cache invalidation skipped - missing NEXT_PUBLIC_APP_URL or INTERNAL_CACHE_INVALIDATION_TOKEN",
+    );
+    return;
+  }
+
+  try {
+    const response = await fetch(`${appUrl}/api/internal/cache/invalidate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-auth": token,
+      },
+      body: JSON.stringify({ handle }),
+    });
+
+    if (!response.ok) {
+      console.error(`Cache invalidation failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Cache invalidation error:", error);
+    // Don't throw - cache invalidation is best-effort
+  }
+}
 
 /**
  * Upsert site_data with UNIQUE constraint handling
@@ -71,6 +106,70 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     throw new Error("R2 binding not available");
   }
 
+  // Check for staged content from previous attempt (idempotency)
+  const currentResume = await db
+    .select({
+      status: resumes.status,
+      parsedContent: resumes.parsedContent,
+      parsedContentStaged: resumes.parsedContentStaged,
+      totalAttempts: resumes.totalAttempts,
+    })
+    .from(resumes)
+    .where(eq(resumes.id, message.resumeId))
+    .limit(1);
+
+  // If already completed with parsed content, skip (full idempotency)
+  if (currentResume[0]?.status === "completed" && currentResume[0]?.parsedContent) {
+    console.log(`Resume ${message.resumeId} already completed, skipping`);
+    return;
+  }
+
+  // If staged content exists, use it instead of re-parsing
+  if (currentResume[0]?.parsedContentStaged) {
+    console.log(`Using staged content for resume ${message.resumeId}`);
+    const now = new Date().toISOString();
+
+    // Commit staged content to final
+    await db
+      .update(resumes)
+      .set({
+        status: "completed",
+        parsedAt: now,
+        parsedContent: currentResume[0].parsedContentStaged,
+        parsedContentStaged: null, // Clear staging
+        lastAttemptError: null, // Clear error on success
+      })
+      .where(eq(resumes.id, message.resumeId));
+
+    await upsertSiteData(
+      db,
+      message.userId,
+      message.resumeId,
+      currentResume[0].parsedContentStaged as string,
+      now,
+    );
+
+    // Invalidate cache for the user's resume page
+    const userRecord = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, message.userId))
+      .limit(1);
+
+    if (userRecord[0]?.handle) {
+      await invalidateResumeCache(userRecord[0].handle, env);
+    }
+
+    await captureBookmark();
+    return;
+  }
+
+  // Increment total attempts
+  await db
+    .update(resumes)
+    .set({ totalAttempts: (currentResume[0]?.totalAttempts || 0) + 1 })
+    .where(eq(resumes.id, message.resumeId));
+
   // Check for cached result with same fileHash (deduplication)
   const cached = await db
     .select({ id: resumes.id, parsedContent: resumes.parsedContent })
@@ -94,6 +193,7 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
         status: "completed",
         parsedAt: now,
         parsedContent: cached[0].parsedContent,
+        lastAttemptError: null,
       })
       .where(eq(resumes.id, message.resumeId));
 
@@ -105,6 +205,17 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
       now,
     );
 
+    // Invalidate cache for the user's resume page
+    const userRecord = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, message.userId))
+      .limit(1);
+
+    if (userRecord[0]?.handle) {
+      await invalidateResumeCache(userRecord[0].handle, env);
+    }
+
     await captureBookmark();
     return;
   }
@@ -115,22 +226,29 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
   // Fetch PDF from R2
   const pdfBuffer = await R2.getAsUint8Array(r2Binding, message.r2Key);
   if (!pdfBuffer) {
-    throw new Error(`Failed to fetch PDF from R2: ${message.r2Key}`);
+    const error = new Error(`Failed to fetch PDF from R2: ${message.r2Key}`);
+    await db
+      .update(resumes)
+      .set({ lastAttemptError: error.message })
+      .where(eq(resumes.id, message.resumeId));
+    throw error;
   }
 
   // Parse with Gemini
   const parseResult = await parseResumeWithGemini(pdfBuffer, env);
 
   if (!parseResult.success) {
+    const errorMessage = parseResult.error || "Parsing failed";
     await db
       .update(resumes)
       .set({
         status: "failed",
-        errorMessage: parseResult.error || "Parsing failed",
+        errorMessage,
+        lastAttemptError: errorMessage,
       })
       .where(eq(resumes.id, message.resumeId));
     await captureBookmark();
-    throw new Error(parseResult.error || "Parsing failed");
+    throw new Error(errorMessage);
   }
 
   // Validate JSON
@@ -139,30 +257,51 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     const parsedJson = JSON.parse(parsedContent);
     parsedContent = JSON.stringify(parsedJson);
   } catch {
+    const errorMessage = "Invalid JSON response from AI";
     await db
       .update(resumes)
       .set({
         status: "failed",
-        errorMessage: "Invalid JSON response from AI",
+        errorMessage,
+        lastAttemptError: errorMessage,
       })
       .where(eq(resumes.id, message.resumeId));
     await captureBookmark();
-    throw new Error("Invalid JSON response from AI");
+    throw new Error(errorMessage);
   }
 
   const now = new Date().toISOString();
 
-  // Update primary resume
+  // Stage content first (allows recovery if next steps fail)
+  await db
+    .update(resumes)
+    .set({ parsedContentStaged: parsedContent })
+    .where(eq(resumes.id, message.resumeId));
+
+  // Then update to completed and copy to final
   await db
     .update(resumes)
     .set({
       status: "completed",
       parsedAt: now,
       parsedContent,
+      parsedContentStaged: null, // Clear staging
+      lastAttemptError: null, // Clear error on success
     })
     .where(eq(resumes.id, message.resumeId));
 
   await upsertSiteData(db, message.userId, message.resumeId, parsedContent, now);
+
+  // Invalidate cache for the user's resume page
+  const userRecord = await db
+    .select({ handle: user.handle })
+    .from(user)
+    .where(eq(user.id, message.userId))
+    .limit(1);
+
+  if (userRecord[0]?.handle) {
+    await invalidateResumeCache(userRecord[0].handle, env);
+  }
 
   // FIX: Notify ALL resumes waiting for this fileHash
   const waitingResumes = await db
@@ -170,17 +309,33 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     .from(resumes)
     .where(and(eq(resumes.fileHash, message.fileHash), eq(resumes.status, "waiting_for_cache")));
 
-  for (const waiting of waitingResumes) {
+  // Batch update all waiting resumes with same fileHash to completed
+  if (waitingResumes.length > 0) {
     await db
       .update(resumes)
       .set({
         status: "completed",
         parsedAt: now,
         parsedContent,
+        parsedContentStaged: null,
       })
-      .where(eq(resumes.id, waiting.id));
+      .where(and(eq(resumes.fileHash, message.fileHash), eq(resumes.status, "waiting_for_cache")));
+  }
 
+  // Still need individual site data upserts and cache invalidation
+  for (const waiting of waitingResumes) {
     await upsertSiteData(db, waiting.userId as string, waiting.id as string, parsedContent, now);
+
+    // Invalidate cache for this user's handle
+    const waitingUserRecord = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, waiting.userId as string))
+      .limit(1);
+
+    if (waitingUserRecord[0]?.handle) {
+      await invalidateResumeCache(waitingUserRecord[0].handle, env);
+    }
   }
 
   await captureBookmark();
@@ -191,7 +346,21 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
  * Export this from the worker entry point
  */
 export async function handleQueueMessage(message: QueueMessage, env: CloudflareEnv): Promise<void> {
-  // Currently only supporting parse messages
-  // Add additional handlers here when new message types are added
-  await handleResumeParse(message, env);
+  const { db } = await getSessionDb(env.DB);
+
+  try {
+    // Currently only supporting parse messages
+    // Add additional handlers here when new message types are added
+    await handleResumeParse(message, env);
+  } catch (error) {
+    // Record the error for debugging
+    const classifiedError = classifyQueueError(error);
+    await db
+      .update(resumes)
+      .set({ lastAttemptError: classifiedError.message })
+      .where(eq(resumes.id, message.resumeId));
+
+    // Re-throw so the worker can decide whether to retry
+    throw error;
+  }
 }

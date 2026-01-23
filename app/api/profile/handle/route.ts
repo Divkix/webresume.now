@@ -125,15 +125,26 @@ export async function PUT(request: Request) {
       );
     }
 
-    // 9. Update handle in user table (with race condition protection)
+    // 9. Atomically update handle and record the change
+    const now = new Date().toISOString();
+
     try {
-      await db
-        .update(user)
-        .set({
-          handle: newHandle,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(user.id, authUser.id));
+      await db.batch([
+        db
+          .update(user)
+          .set({
+            handle: newHandle,
+            updatedAt: now,
+          })
+          .where(eq(user.id, authUser.id)),
+        db.insert(handleChanges).values({
+          id: crypto.randomUUID(),
+          userId: authUser.id,
+          oldHandle: oldHandle,
+          newHandle: newHandle,
+          createdAt: now,
+        }),
+      ]);
     } catch (error) {
       // Check if it's a unique constraint violation (race condition)
       if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
@@ -146,16 +157,7 @@ export async function PUT(request: Request) {
       throw error; // Re-throw other errors
     }
 
-    // 10. Record the handle change for rate limiting
-    await db.insert(handleChanges).values({
-      id: crypto.randomUUID(),
-      userId: authUser.id,
-      oldHandle: oldHandle,
-      newHandle: newHandle,
-      createdAt: new Date().toISOString(),
-    });
-
-    // 11. Invalidate cache for both old and new handles (sync)
+    // 10. Invalidate cache for both old and new handles (sync)
     if (oldHandle) {
       revalidateTag(getResumeCacheTag(oldHandle), "max");
       revalidatePath(`/${oldHandle}`);

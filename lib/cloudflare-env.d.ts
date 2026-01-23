@@ -33,7 +33,13 @@ declare namespace Cloudflare {
 		AI_PARSER_WORKER: Fetcher /* ai-parser-worker */;
 	}
 }
-interface CloudflareEnv extends Cloudflare.Env {}
+interface CloudflareEnv extends Cloudflare.Env {
+  // Internal cache invalidation token for queue consumer -> Next.js API communication
+  INTERNAL_CACHE_INVALIDATION_TOKEN?: string;
+  // Cloudflare Cache Purge API credentials (for immediate edge cache removal)
+  CF_ZONE_ID?: string;
+  CF_CACHE_PURGE_API_TOKEN?: string;
+}
 type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };

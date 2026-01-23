@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getAuth } from "@/lib/auth";
+import { hasExceededMaxAttempts, isPermanentErrorType, RETRY_LIMITS } from "@/lib/config/retry";
 import type { NewResume } from "@/lib/db/schema";
 import { resumes } from "@/lib/db/schema";
 import { getSessionDb } from "@/lib/db/session";
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Fetch resume from database
+    // 3. Fetch resume from database including idempotency fields
     const resume = await db.query.resumes.findFirst({
       where: eq(resumes.id, resume_id),
       columns: {
@@ -68,6 +69,8 @@ export async function POST(request: Request) {
         r2Key: true,
         status: true,
         retryCount: true,
+        totalAttempts: true,
+        lastAttemptError: true,
       },
     });
 
@@ -84,7 +87,37 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Verify retry eligibility
+    // 5a. Check if max total attempts exceeded
+    if (hasExceededMaxAttempts(resume.totalAttempts ?? 0)) {
+      return createErrorResponse(
+        "Maximum retry attempts exceeded. This resume cannot be retried.",
+        ERROR_CODES.RATE_LIMIT_EXCEEDED,
+        429,
+        {
+          max_attempts: RETRY_LIMITS.TOTAL_MAX_ATTEMPTS,
+          current_attempts: resume.totalAttempts,
+        },
+      );
+    }
+
+    // 5b. Check if last error was permanent (shouldn't retry)
+    if (resume.lastAttemptError) {
+      try {
+        const lastError = JSON.parse(resume.lastAttemptError);
+        if (isPermanentErrorType(lastError.type)) {
+          return createErrorResponse(
+            `This resume failed with a permanent error (${lastError.type}). Retrying will not help.`,
+            ERROR_CODES.VALIDATION_ERROR,
+            400,
+            { error_type: lastError.type, error_message: lastError.message },
+          );
+        }
+      } catch {
+        // Ignore parse errors, allow retry
+      }
+    }
+
+    // 5c. Verify retry eligibility - status check
     if (resume.status !== "failed") {
       return createErrorResponse(
         "Can only retry failed resumes",
@@ -94,12 +127,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if ((resume.retryCount as number) >= 2) {
+    // 5d. Check manual retry limit
+    if ((resume.retryCount as number) >= RETRY_LIMITS.MANUAL_MAX_RETRIES) {
       return createErrorResponse(
         "Maximum retry limit reached. Please upload a new resume.",
         ERROR_CODES.RATE_LIMIT_EXCEEDED,
         429,
-        { max_retries: 2, current_retry_count: resume.retryCount as number },
+        {
+          max_retries: RETRY_LIMITS.MANUAL_MAX_RETRIES,
+          current_retry_count: resume.retryCount as number,
+        },
       );
     }
 
@@ -155,6 +192,7 @@ export async function POST(request: Request) {
       status: "queued",
       errorMessage: null,
       retryCount: (resume.retryCount as number) + 1,
+      queuedAt: new Date().toISOString(),
     };
 
     const updateResult = await db

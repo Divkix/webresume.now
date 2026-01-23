@@ -11,6 +11,8 @@
 
 import opennextHandler from "./.open-next/worker.js";
 import { handleQueueMessage } from "./lib/queue/consumer";
+import { handleDLQMessage } from "./lib/queue/dlq-consumer";
+import { isRetryableError } from "./lib/queue/errors";
 import type { QueueMessage } from "./lib/queue/types";
 
 export default {
@@ -19,14 +21,29 @@ export default {
 
   // Cloudflare Queue consumer handler
   async queue(batch: MessageBatch<unknown>, env: CloudflareEnv): Promise<void> {
+    const isDLQ = batch.queue === "resume-parse-dlq";
+
     for (const message of batch.messages) {
       try {
+        if (isDLQ) {
+          await handleDLQMessage(message.body as QueueMessage, env);
+          message.ack();
+          continue;
+        }
+
         await handleQueueMessage(message.body as QueueMessage, env);
         message.ack();
       } catch (error) {
         console.error("Queue message processing failed:", error);
-        // Message will be retried based on queue config
-        message.retry();
+
+        // Use error classification to determine retry strategy
+        if (isRetryableError(error)) {
+          message.retry();
+        } else {
+          // Permanent error - ack to send to DLQ
+          console.error("Permanent error, sending to DLQ");
+          message.ack();
+        }
       }
     }
   },

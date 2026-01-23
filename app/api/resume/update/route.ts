@@ -66,13 +66,22 @@ export async function PUT(request: Request) {
 
     const userId = session.user.id;
 
-    // 4. Check rate limit (10 updates per hour)
+    // 4. Fetch user's handle early for later cache invalidation
+    const userProfile = await db
+      .select({ handle: user.handle })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    const userHandle = userProfile[0]?.handle;
+
+    // 5. Check rate limit (10 updates per hour)
     const rateLimitResponse = await enforceRateLimit(userId, "resume_update");
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // 5. Parse and validate request body
+    // 6. Parse and validate request body
     let body: UpdateRequestBody;
     try {
       body = (await request.json()) as UpdateRequestBody;
@@ -94,7 +103,7 @@ export async function PUT(request: Request) {
     const content = validation.data;
     const now = new Date().toISOString();
 
-    // 6. Update site_data
+    // 7. Update site_data
     const updateResult = await db
       .update(siteData)
       .set({
@@ -119,19 +128,13 @@ export async function PUT(request: Request) {
 
     const data = updateResult[0];
 
-    // 7. Invalidate cache for public resume page synchronously
-    // Fetch user's handle to revalidate their public page
-    const profile = await db.query.user.findFirst({
-      where: eq(user.id, userId),
-      columns: { handle: true },
-    });
-
-    if (profile?.handle) {
-      revalidateTag(getResumeCacheTag(profile.handle), "max");
-      revalidatePath(`/${profile.handle}`);
+    // 8. Invalidate cache for public resume page synchronously
+    if (userHandle) {
+      revalidateTag(getResumeCacheTag(userHandle), "max");
+      revalidatePath(`/${userHandle}`);
     }
 
-    // 8. Return success response
+    // 9. Return success response
     await captureBookmark();
     return createSuccessResponse({
       success: true,

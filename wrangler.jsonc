@@ -101,7 +101,10 @@
 	},
 	// Cron Triggers for scheduled tasks
 	"triggers": {
-		"crons": ["0 3 * * *"] // Daily at 3 AM UTC - runs /api/cron/cleanup
+		"crons": [
+			"0 3 * * *",     // Daily at 3 AM UTC - runs /api/cron/cleanup
+			"*/15 * * * *"   // Every 15 minutes - runs /api/cron/recover-orphaned
+		]
 	},
 	"vars": {
 		// Environment variables are set via 'wrangler secret put' for production

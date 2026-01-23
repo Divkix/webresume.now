@@ -18,61 +18,78 @@ const noXssPattern = (value: string) => {
 };
 
 /**
- * Contact information schema
- * Email is required, all other fields are optional
- * Includes sanitization and XSS prevention
+ * Email validation regexes
+ * - Lenient: accepts text@text (TLD optional) for AI-parsed incomplete emails
+ * - Strict: requires TLD with at least 2 characters for user-entered emails
  */
-const contactSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .max(255, "Email is too long")
-    // Lenient regex: accepts text@text (TLD optional) for AI-parsed content
-    .refine((val) => /^[^\s@]+@[^\s@]+$/.test(val), {
-      message: "Invalid email format",
-    })
-    .transform(sanitizeEmail),
-  phone: z
-    .string()
-    .trim()
-    .max(50, "Phone number is too long")
-    .transform(sanitizePhone)
-    .optional()
-    .or(z.literal("")),
-  location: z
-    .string()
-    .trim()
-    .max(255, "Location is too long")
-    .refine(noXssPattern, { message: "Invalid content detected" })
-    .transform(sanitizeText)
-    .optional()
-    .or(z.literal("")),
-  linkedin: z
-    .string()
-    .trim()
-    .url({ message: "Invalid LinkedIn URL" })
-    .max(500, "LinkedIn URL is too long")
-    .transform(sanitizeUrl)
-    .optional()
-    .or(z.literal("")),
-  github: z
-    .string()
-    .trim()
-    .url({ message: "Invalid GitHub URL" })
-    .max(500, "GitHub URL is too long")
-    .transform(sanitizeUrl)
-    .optional()
-    .or(z.literal("")),
-  website: z
-    .string()
-    .trim()
-    .url({ message: "Invalid website URL" })
-    .max(500, "Website URL is too long")
-    .transform(sanitizeUrl)
-    .optional()
-    .or(z.literal("")),
-});
+const LENIENT_EMAIL_REGEX = /^[^\s@]+@[^\s@]+$/;
+const STRICT_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * Factory function to create contact schema with configurable email validation
+ */
+const createContactSchema = (emailRegex: RegExp, emailErrorMessage: string) =>
+  z.object({
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email is required")
+      .max(255, "Email is too long")
+      .refine((val) => emailRegex.test(val), {
+        message: emailErrorMessage,
+      })
+      .transform(sanitizeEmail),
+    phone: z
+      .string()
+      .trim()
+      .max(50, "Phone number is too long")
+      .transform(sanitizePhone)
+      .optional()
+      .or(z.literal("")),
+    location: z
+      .string()
+      .trim()
+      .max(255, "Location is too long")
+      .refine(noXssPattern, { message: "Invalid content detected" })
+      .transform(sanitizeText)
+      .optional()
+      .or(z.literal("")),
+    linkedin: z
+      .string()
+      .trim()
+      .url({ message: "Invalid LinkedIn URL" })
+      .max(500, "LinkedIn URL is too long")
+      .transform(sanitizeUrl)
+      .optional()
+      .or(z.literal("")),
+    github: z
+      .string()
+      .trim()
+      .url({ message: "Invalid GitHub URL" })
+      .max(500, "GitHub URL is too long")
+      .transform(sanitizeUrl)
+      .optional()
+      .or(z.literal("")),
+    website: z
+      .string()
+      .trim()
+      .url({ message: "Invalid website URL" })
+      .max(500, "Website URL is too long")
+      .transform(sanitizeUrl)
+      .optional()
+      .or(z.literal("")),
+  });
+
+/**
+ * Contact schemas
+ * - Lenient: for AI-parsed content (accepts incomplete emails like "user@domain")
+ * - Strict: for user edits (requires full email with TLD like "user@domain.com")
+ */
+const contactSchemaLenient = createContactSchema(LENIENT_EMAIL_REGEX, "Invalid email format");
+const contactSchemaStrict = createContactSchema(
+  STRICT_EMAIL_REGEX,
+  "Invalid email format (must include domain extension, e.g., .com)",
+);
 
 /**
  * Experience item schema
@@ -266,41 +283,49 @@ const projectSchema = z.object({
 });
 
 /**
- * Full resume content schema
- * Used for validating the entire resume data structure
- * Includes comprehensive sanitization and limits to prevent DoS
+ * Factory function to create resume content schema with configurable contact validation
  */
-export const resumeContentSchema = z.object({
-  full_name: z
-    .string()
-    .trim()
-    .min(1, "Full name is required")
-    .max(200, "Full name is too long")
-    .refine(noXssPattern, { message: "Invalid content detected" }),
-  headline: z
-    .string()
-    .trim()
-    .min(1, "Headline is required")
-    .max(200, "Headline is too long")
-    .refine(noXssPattern, { message: "Invalid content detected" }),
-  summary: z
-    .string()
-    .trim()
-    .min(1, "Summary is required")
-    .max(10000, "Summary is too long (max 10000 characters)")
-    .refine(noXssPattern, { message: "Invalid content detected" }),
-  contact: contactSchema,
-  experience: z.array(experienceSchema).max(10, "Maximum 10 experience entries allowed"),
-  education: z.array(educationSchema).max(10, "Maximum 10 education entries allowed").optional(),
-  skills: z.array(skillSchema).max(20, "Maximum 20 skill categories allowed").optional(),
-  certifications: z
-    .array(certificationSchema)
-    .max(20, "Maximum 20 certifications allowed")
-    .optional(),
-  projects: z.array(projectSchema).max(10, "Maximum 10 projects allowed").optional(),
-});
+const createResumeContentSchema = (contactSchema: ReturnType<typeof createContactSchema>) =>
+  z.object({
+    full_name: z
+      .string()
+      .trim()
+      .min(1, "Full name is required")
+      .max(200, "Full name is too long")
+      .refine(noXssPattern, { message: "Invalid content detected" }),
+    headline: z
+      .string()
+      .trim()
+      .min(1, "Headline is required")
+      .max(200, "Headline is too long")
+      .refine(noXssPattern, { message: "Invalid content detected" }),
+    summary: z
+      .string()
+      .trim()
+      .min(1, "Summary is required")
+      .max(10000, "Summary is too long (max 10000 characters)")
+      .refine(noXssPattern, { message: "Invalid content detected" }),
+    contact: contactSchema,
+    experience: z.array(experienceSchema).max(10, "Maximum 10 experience entries allowed"),
+    education: z.array(educationSchema).max(10, "Maximum 10 education entries allowed").optional(),
+    skills: z.array(skillSchema).max(20, "Maximum 20 skill categories allowed").optional(),
+    certifications: z
+      .array(certificationSchema)
+      .max(20, "Maximum 20 certifications allowed")
+      .optional(),
+    projects: z.array(projectSchema).max(10, "Maximum 10 projects allowed").optional(),
+  });
+
+/**
+ * Resume content schemas
+ * - resumeContentSchema: Lenient validation for AI-parsed content (TLD optional)
+ * - resumeContentSchemaStrict: Strict validation for user edits (requires TLD)
+ */
+export const resumeContentSchema = createResumeContentSchema(contactSchemaLenient);
+export const resumeContentSchemaStrict = createResumeContentSchema(contactSchemaStrict);
 
 /**
  * Type inference for TypeScript
+ * Both schemas have the same output type after transformation
  */
 export type ResumeContentFormData = z.infer<typeof resumeContentSchema>;

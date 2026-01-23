@@ -4,7 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { getResumeCacheTag } from "@/lib/data/resume";
 import { siteData } from "@/lib/db/schema";
-import { resumeContentSchema } from "@/lib/schemas/resume";
+import { resumeContentSchemaStrict } from "@/lib/schemas/resume";
 import type { ResumeContent } from "@/lib/types/database";
 import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
@@ -74,7 +74,7 @@ export async function PUT(request: Request) {
       return createErrorResponse("Invalid JSON in request body", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    const validation = resumeContentSchema.safeParse(body.content);
+    const validation = resumeContentSchemaStrict.safeParse(body.content);
 
     if (!validation.success) {
       return createErrorResponse(

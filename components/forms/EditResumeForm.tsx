@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { SaveIndicator, type SaveStatus } from "@/components/ui/save-indicator";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { type ResumeContentFormData, resumeContentSchema } from "@/lib/schemas/resume";
+import { type ResumeContentFormData, resumeContentSchemaStrict } from "@/lib/schemas/resume";
 import type { ResumeContent } from "@/lib/types/database";
 
 interface EditResumeFormProps {
@@ -47,7 +47,7 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
   }, [saveStatus]);
 
   const form = useForm<ResumeContentFormData>({
-    resolver: zodResolver(resumeContentSchema),
+    resolver: zodResolver(resumeContentSchemaStrict),
     defaultValues: {
       ...initialData,
       // Ensure arrays are never undefined
@@ -138,7 +138,7 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
       // Set new timeout for auto-save (3 seconds)
       const timeout = setTimeout(() => {
         const values = form.getValues();
-        const result = resumeContentSchema.safeParse(values);
+        const result = resumeContentSchemaStrict.safeParse(values);
 
         if (result.success) {
           handleSave(result.data, true);

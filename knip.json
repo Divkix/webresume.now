@@ -6,7 +6,8 @@
     "hooks/**/*.{ts,tsx}",
     "lib/**/*.{ts,tsx}",
     "open-next.config.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "worker.ts"
   ],
   "ignore": ["app/globals.css"],
   "ignoreBinaries": [],

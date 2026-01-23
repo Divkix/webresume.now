@@ -27,8 +27,11 @@ const contactSchema = z.object({
     .string()
     .trim()
     .min(1, "Email is required")
-    .email({ message: "Invalid email address" })
     .max(255, "Email is too long")
+    // Lenient regex: accepts text@text (TLD optional) for AI-parsed content
+    .refine((val) => /^[^\s@]+@[^\s@]+$/.test(val), {
+      message: "Invalid email format",
+    })
     .transform(sanitizeEmail),
   phone: z
     .string()

@@ -61,8 +61,9 @@ export function sanitizeEmail(input: string): string {
 
   const trimmed = input.trim().toLowerCase();
 
-  // Basic email format validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Lenient email format validation: just needs @ with text on both sides
+  // Accepts AI-parsed emails without TLD (e.g., user@university)
+  const emailRegex = /^[^\s@]+@[^\s@]+$/;
   if (!emailRegex.test(trimmed)) {
     return "";
   }

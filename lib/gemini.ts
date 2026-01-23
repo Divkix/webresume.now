@@ -1,5 +1,3 @@
-import { resumeContentSchema } from "./schemas/resume";
-
 /**
  * Response types for utility workers
  */
@@ -103,9 +101,19 @@ const RESUME_EXTRACTION_SCHEMA = {
           type: "string",
           description: "City, State format preferred",
         },
-        linkedin: { type: "string", format: "uri" },
-        github: { type: "string", format: "uri" },
-        website: { type: "string", format: "uri" },
+        linkedin: {
+          type: "string",
+          description:
+            "Full LinkedIn URL. Must start with https://linkedin.com/in/ or https://www.linkedin.com/in/",
+        },
+        github: {
+          type: "string",
+          description: "Full GitHub URL. Must start with https://github.com/",
+        },
+        website: {
+          type: "string",
+          description: "Full website URL. Must start with https:// or http://",
+        },
       },
     },
     experience: {
@@ -139,10 +147,13 @@ const RESUME_EXTRACTION_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["degree"],
+        required: ["degree", "institution"],
         properties: {
           degree: { type: "string" },
-          institution: { type: "string" },
+          institution: {
+            type: "string",
+            description: "University or school name. Always include this field.",
+          },
           location: { type: "string" },
           graduation_date: { type: "string" },
           gpa: { type: "string" },
@@ -159,7 +170,11 @@ const RESUME_EXTRACTION_SCHEMA = {
             type: "string",
             description: "Skill category (e.g., Languages, Frameworks)",
           },
-          items: { type: "array", items: { type: "string" } },
+          items: {
+            type: "array",
+            items: { type: "string" },
+            description: "List of skills in this category. Must have at least one item.",
+          },
         },
       },
     },
@@ -167,12 +182,18 @@ const RESUME_EXTRACTION_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["name"],
+        required: ["name", "issuer"],
         properties: {
           name: { type: "string" },
-          issuer: { type: "string" },
+          issuer: {
+            type: "string",
+            description: "Organization that issued the certification. Always include this field.",
+          },
           date: { type: "string" },
-          url: { type: "string", format: "uri" },
+          url: {
+            type: "string",
+            description: "Certification URL. Must start with https:// or http://",
+          },
         },
       },
     },
@@ -204,7 +225,7 @@ const RESUME_EXTRACTION_SCHEMA = {
           },
           url: {
             type: "string",
-            description: "Project URL or demo link if available",
+            description: "Project URL or demo link. Must start with https:// or http://",
           },
         },
       },
@@ -296,29 +317,93 @@ async function parseWithAi(text: string, env: Partial<CloudflareEnv>): Promise<A
 }
 
 /**
- * Normalize raw AI response to ensure required fields have valid defaults
- * This runs BEFORE Zod validation to handle incomplete AI responses
+ * Normalize URL - add protocol if missing, return empty string if invalid
  */
-function normalizeAiResponse(raw: unknown): unknown {
+function normalizeUrl(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "";
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Already has valid protocol
+  if (lower.startsWith("http://") || lower.startsWith("https://") || lower.startsWith("mailto:")) {
+    return trimmed;
+  }
+  // Block dangerous protocols
+  if (
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:") ||
+    lower.startsWith("vbscript:")
+  ) {
+    return "";
+  }
+  // Add https:// to URLs without protocol
+  return `https://${trimmed}`;
+}
+
+/**
+ * Normalize string - convert null/undefined to empty string, trim
+ */
+function normalizeString(value: unknown, defaultVal = ""): string {
+  if (value === null || value === undefined) return defaultVal;
+  if (typeof value !== "string") return String(value);
+  return value.trim() || defaultVal;
+}
+
+/**
+ * Basic transforms for AI output - no strict validation
+ * Lenient parsing that always produces usable output.
+ * XSS sanitization + URL normalization + null handling
+ */
+function transformAiResponse(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") {
-    return raw;
+    return {
+      full_name: "Unknown",
+      headline: "Professional",
+      summary: "",
+      contact: { email: "" },
+      experience: [],
+    };
   }
 
   const data = raw as Record<string, unknown>;
 
-  // Ensure contact is an object with at least an email placeholder
-  if (!data.contact || typeof data.contact !== "object") {
-    data.contact = { email: "unknown@example.com" };
+  // Top-level fields - use empty strings as defaults (lenient)
+  data.full_name = normalizeString(data.full_name, "Unknown");
+  data.headline = normalizeString(data.headline, "Professional");
+  data.summary = normalizeString(data.summary);
+
+  // Contact - normalize URLs, use empty strings for missing
+  if (data.contact && typeof data.contact === "object") {
+    const c = data.contact as Record<string, unknown>;
+    c.email = normalizeString(c.email);
+    c.phone = normalizeString(c.phone);
+    c.location = normalizeString(c.location);
+    c.linkedin = normalizeUrl(c.linkedin);
+    c.github = normalizeUrl(c.github);
+    c.website = normalizeUrl(c.website);
   } else {
-    const contact = data.contact as Record<string, unknown>;
-    if (!contact.email || typeof contact.email !== "string" || !contact.email.trim()) {
-      contact.email = "unknown@example.com";
+    data.contact = { email: "" };
+  }
+
+  // Arrays - ensure they exist
+  if (!Array.isArray(data.experience)) data.experience = [];
+
+  // Normalize URLs in certifications
+  if (Array.isArray(data.certifications)) {
+    for (const cert of data.certifications) {
+      if (cert && typeof cert === "object") {
+        (cert as Record<string, unknown>).url = normalizeUrl((cert as Record<string, unknown>).url);
+      }
     }
   }
 
-  // Ensure experience is an array (even if empty)
-  if (!Array.isArray(data.experience)) {
-    data.experience = [];
+  // Normalize URLs in projects
+  if (Array.isArray(data.projects)) {
+    for (const proj of data.projects) {
+      if (proj && typeof proj === "object") {
+        (proj as Record<string, unknown>).url = normalizeUrl((proj as Record<string, unknown>).url);
+      }
+    }
   }
 
   return data;
@@ -443,23 +528,12 @@ export async function parseResumeWithGemini(
       };
     }
 
-    // Step 2.5: Normalize and validate AI response against schema
-    // Normalization ensures required fields have valid defaults before validation
-    const normalizedData = normalizeAiResponse(parseResult.data);
-    const validationResult = resumeContentSchema.safeParse(normalizedData);
-    if (!validationResult.success) {
-      // Log validation errors for debugging
-      console.error("AI response validation failed:", validationResult.error.flatten());
+    // Step 2.5: Basic transforms - lenient, no strict validation
+    // Validation happens at edit-time in /api/resume/update, not here
+    const transformedData = transformAiResponse(parseResult.data);
 
-      return {
-        success: false,
-        parsedContent: "",
-        error: `AI response validation failed: ${validationResult.error.issues[0]?.message || "Invalid structure"}`,
-      };
-    }
-
-    // Step 3: Transform and return (using validated data)
-    const transformed = transformGeminiOutput(validationResult.data as ResumeSchema);
+    // Step 3: Final cleanup and return
+    const transformed = transformGeminiOutput(transformedData as ResumeSchema);
 
     return {
       success: true,

@@ -2,6 +2,8 @@
 	"main": ".open-next/worker.js",
 	"name": "webresume-now",
 	"compatibility_date": "2026-01-22",
+	// Minify to reduce bundle size (saves ~400KB gzipped)
+	"minify": true,
 	"compatibility_flags": [
 		// Enable Node.js API
 		// see https://developers.cloudflare.com/workers/configuration/compatibility-flags/#nodejs-compatibility-flag

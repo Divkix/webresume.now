@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
     // @vercel/og is ~2.2MB and not used directly
     "@vercel/og",
     "canvas",
+    // sharp is ~256KB and not needed (images.unoptimized: true)
+    "sharp",
+    "@img/sharp-darwin-arm64",
+    "@img/sharp-linux-x64",
   ],
 
   // Exclude unused files from bundle tracing to reduce worker size
@@ -31,6 +35,9 @@ const nextConfig: NextConfig = {
       // @vercel/og wasm files are ~2.2MB and not used
       "./node_modules/@vercel/og/**/*",
       "./node_modules/canvas/**/*",
+      // sharp is not needed (images.unoptimized: true)
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/**/*",
     ],
   },
 };

@@ -59,15 +59,17 @@
 			]
 		}
 	],
-	// Service bindings for utility workers
+	// Service bindings for utility workers (remote: true uses deployed workers in dev)
 	"services": [
 		{
 			"binding": "PDF_TEXT_WORKER",
-			"service": "pdf-text-worker"
+			"service": "pdf-text-worker",
+			"remote": true
 		},
 		{
 			"binding": "AI_PARSER_WORKER",
-			"service": "ai-parser-worker"
+			"service": "ai-parser-worker",
+			"remote": true
 		}
 	],
 	// Cloudflare Queues for async processing

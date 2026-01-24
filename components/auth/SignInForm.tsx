@@ -14,9 +14,11 @@ interface SignInFormProps {
   onSuccess?: () => void;
   /** Callback to switch to forgot password mode */
   onForgotPassword?: () => void;
+  /** Override the default callback URL (defaults to /dashboard) */
+  callbackURL?: string;
 }
 
-export function SignInForm({ onSuccess, onForgotPassword }: SignInFormProps) {
+export function SignInForm({ onSuccess, onForgotPassword, callbackURL }: SignInFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -36,10 +38,11 @@ export function SignInForm({ onSuccess, onForgotPassword }: SignInFormProps) {
     setIsSubmitting(true);
 
     try {
+      const redirectURL = callbackURL || "/dashboard";
       const { error } = await signIn.email({
         email: data.email,
         password: data.password,
-        callbackURL: "/dashboard",
+        callbackURL: redirectURL,
       });
 
       if (error) {
@@ -57,7 +60,7 @@ export function SignInForm({ onSuccess, onForgotPassword }: SignInFormProps) {
       }
 
       onSuccess?.();
-      router.push("/dashboard");
+      router.push(redirectURL);
     } catch (err) {
       console.error("Sign in error:", err);
       toast.error("Something went wrong. Please try again.");

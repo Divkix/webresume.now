@@ -16,9 +16,16 @@ interface AuthDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Initial mode, defaults to "signin" */
   defaultMode?: AuthMode;
+  /** Override the default callback URL for all auth methods */
+  callbackURL?: string;
 }
 
-export function AuthDialog({ open, onOpenChange, defaultMode = "signin" }: AuthDialogProps) {
+export function AuthDialog({
+  open,
+  onOpenChange,
+  defaultMode = "signin",
+  callbackURL,
+}: AuthDialogProps) {
   const [mode, setMode] = useState<AuthMode>(defaultMode);
 
   const handleSuccess = () => {
@@ -106,11 +113,19 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "signin" }: AuthD
           {/* Auth Content */}
           {mode === "signin" && (
             <div className="space-y-6">
-              <GoogleButton fullWidth callbackURL="/dashboard" onSuccess={handleSuccess} />
+              <GoogleButton
+                fullWidth
+                callbackURL={callbackURL || "/dashboard"}
+                onSuccess={handleSuccess}
+              />
 
               <Divider />
 
-              <SignInForm onSuccess={handleSuccess} onForgotPassword={handleForgotPassword} />
+              <SignInForm
+                onSuccess={handleSuccess}
+                onForgotPassword={handleForgotPassword}
+                callbackURL={callbackURL}
+              />
             </div>
           )}
 
@@ -118,14 +133,14 @@ export function AuthDialog({ open, onOpenChange, defaultMode = "signin" }: AuthD
             <div className="space-y-6">
               <GoogleButton
                 fullWidth
-                callbackURL="/wizard"
+                callbackURL={callbackURL || "/wizard"}
                 text="Sign up with Google"
                 onSuccess={handleSuccess}
               />
 
               <Divider />
 
-              <SignUpForm onSuccess={handleSuccess} />
+              <SignUpForm onSuccess={handleSuccess} callbackURL={callbackURL} />
             </div>
           )}
 

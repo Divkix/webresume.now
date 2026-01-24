@@ -12,9 +12,11 @@ import { type SignUpFormData, signUpSchema } from "@/lib/schemas/auth";
 interface SignUpFormProps {
   /** Callback when sign up succeeds, before redirect */
   onSuccess?: () => void;
+  /** Override the default callback URL (defaults to /wizard) */
+  callbackURL?: string;
 }
 
-export function SignUpForm({ onSuccess }: SignUpFormProps) {
+export function SignUpForm({ onSuccess, callbackURL }: SignUpFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -35,11 +37,12 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
     setIsSubmitting(true);
 
     try {
+      const redirectURL = callbackURL || "/wizard";
       const { error } = await signUp.email({
         name: data.name,
         email: data.email,
         password: data.password,
-        callbackURL: "/wizard",
+        callbackURL: redirectURL,
       });
 
       if (error) {
@@ -57,7 +60,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
       }
 
       onSuccess?.();
-      router.push("/wizard");
+      router.push(redirectURL);
     } catch (err) {
       console.error("Sign up error:", err);
       toast.error("Something went wrong. Please try again.");

@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AuthDialog } from "@/components/auth/AuthDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { signIn, useSession } from "@/lib/auth/client";
+import { useSession } from "@/lib/auth/client";
 import { validatePDF } from "@/lib/utils/validation";
 
 /**
@@ -65,6 +66,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -269,18 +271,6 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       toast.error(errorMessage);
     } finally {
       setClaiming(false);
-    }
-  };
-
-  const handleLoginRedirect = async () => {
-    try {
-      await signIn.social({
-        provider: "google",
-        callbackURL: "/wizard",
-      });
-    } catch (err) {
-      console.error("Error signing in:", err);
-      toast.error("Failed to sign in. Please try again.");
     }
   };
 
@@ -599,7 +589,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               <>
                 <button
                   type="button"
-                  onClick={handleLoginRedirect}
+                  onClick={() => setAuthDialogOpen(true)}
                   disabled={claiming}
                   className="
                     w-full
@@ -641,6 +631,12 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                 >
                   Upload a different file
                 </button>
+
+                <AuthDialog
+                  open={authDialogOpen}
+                  onOpenChange={setAuthDialogOpen}
+                  callbackURL="/wizard"
+                />
               </>
             )}
           </div>

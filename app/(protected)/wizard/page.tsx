@@ -94,6 +94,7 @@ async function clearPendingUploadCookie(): Promise<void> {
 export default function WizardPage() {
   const router = useRouter();
   const { data: session, isPending: sessionLoading } = useSession();
+  const userId = session?.user?.id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsUpload, setNeedsUpload] = useState(false);
@@ -195,7 +196,7 @@ export default function WizardPage() {
       if (sessionLoading) return;
 
       // Check authentication
-      if (!session?.user) {
+      if (!userId) {
         router.push("/");
         return;
       }
@@ -364,7 +365,7 @@ export default function WizardPage() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [router, session, sessionLoading, pollResumeStatus]);
+  }, [router, userId, sessionLoading, pollResumeStatus]);
 
   // Handler for upload completion (Step 1 for login-first users)
   // Note: We keep needsUpload=true to maintain correct step numbering throughout the session

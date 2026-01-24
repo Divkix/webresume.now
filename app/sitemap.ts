@@ -12,7 +12,7 @@ export const revalidate = 21600;
 const URLS_PER_SITEMAP = 50000; // Google's limit
 
 function getBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL || "https://webresume.now";
+  return process.env.BETTER_AUTH_URL || "https://webresume.now";
 }
 
 /**

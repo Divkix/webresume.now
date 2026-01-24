@@ -40,10 +40,10 @@ function getResendClient(): Resend {
 
 /**
  * Gets the "from" email address for transactional emails
- * Uses the configured domain from NEXT_PUBLIC_APP_URL or defaults to Resend's test domain
+ * Uses the configured domain from BETTER_AUTH_URL or defaults to Resend's test domain
  */
 function getFromEmail(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const appUrl = process.env.BETTER_AUTH_URL;
   if (appUrl) {
     try {
       const url = new URL(appUrl);

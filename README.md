@@ -165,13 +165,12 @@ In Cloudflare R2 bucket settings → CORS, paste:
 Run each command and paste the value when prompted:
 ```bash
 bunx wrangler secret put BETTER_AUTH_SECRET
-bunx wrangler secret put BETTER_AUTH_URL
+bunx wrangler secret put BETTER_AUTH_URL              # Also used as app URL
 bunx wrangler secret put GOOGLE_CLIENT_ID
 bunx wrangler secret put GOOGLE_CLIENT_SECRET
 bunx wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
 bunx wrangler secret put CF_AI_GATEWAY_ID
 bunx wrangler secret put CF_AIG_AUTH_TOKEN
-bunx wrangler secret put NEXT_PUBLIC_APP_URL
 ```
 
 **Step 7: Deploy**
@@ -183,9 +182,8 @@ bun run deploy
 **Step 8: Add your domain**
 Cloudflare Dashboard → Workers & Pages → your worker → Settings → Domains & Routes.
 
-**Important:** After domain is connected, **update these two secrets**:
+**Important:** After domain is connected, **update this secret**:
 - `BETTER_AUTH_URL` = `https://your-domain.com`
-- `NEXT_PUBLIC_APP_URL` = `https://your-domain.com`
 
 Then redeploy:
 ```bash
@@ -269,8 +267,6 @@ CF_AI_GATEWAY_ACCOUNT_ID=your-account-id
 CF_AI_GATEWAY_ID=your-gateway-id
 CF_AIG_AUTH_TOKEN=your-gateway-auth-token
 
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
 # OpenNext incremental cache prefix (optional)
 NEXT_INC_CACHE_R2_PREFIX=incremental-cache
 ```
@@ -297,13 +293,12 @@ If you already deployed a non-SQLite DO with the same class name, you must creat
 2. **Set production secrets**
    ```bash
    bunx wrangler secret put BETTER_AUTH_SECRET
-   bunx wrangler secret put BETTER_AUTH_URL
+   bunx wrangler secret put BETTER_AUTH_URL              # Also used as app URL
    bunx wrangler secret put GOOGLE_CLIENT_ID
    bunx wrangler secret put GOOGLE_CLIENT_SECRET
    bunx wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
    bunx wrangler secret put CF_AI_GATEWAY_ID
    bunx wrangler secret put CF_AIG_AUTH_TOKEN
-   bunx wrangler secret put NEXT_PUBLIC_APP_URL
    ```
 
 3. **Deploy**

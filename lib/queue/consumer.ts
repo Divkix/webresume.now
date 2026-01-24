@@ -10,13 +10,15 @@ import type { QueueMessage, ResumeParseMessage } from "./types";
  * Invalidate cache for a user's resume page
  * Best-effort - failures are logged but don't throw
  */
-async function invalidateResumeCache(handle: string, env: CloudflareEnv): Promise<void> {
-  const appUrl = env.NEXT_PUBLIC_APP_URL;
-  const token = env.INTERNAL_CACHE_INVALIDATION_TOKEN;
+async function invalidateResumeCache(handle: string, _env: CloudflareEnv): Promise<void> {
+  // Use process.env for portability - works in both dev and preview modes
+  // With nodejs_compat + compat date ≥ 2025-04-01, process.env is populated from bindings
+  const appUrl = process.env.BETTER_AUTH_URL;
+  const token = process.env.INTERNAL_CACHE_INVALIDATION_TOKEN;
 
   if (!appUrl || !token) {
     console.warn(
-      "Cache invalidation skipped - missing NEXT_PUBLIC_APP_URL or INTERNAL_CACHE_INVALIDATION_TOKEN",
+      "Cache invalidation skipped - missing BETTER_AUTH_URL or INTERNAL_CACHE_INVALIDATION_TOKEN",
     );
     return;
   }

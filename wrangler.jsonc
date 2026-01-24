@@ -114,10 +114,9 @@
 		//
 		// ===== REQUIRED SECRETS =====
 		//   wrangler secret put BETTER_AUTH_SECRET
-		//   wrangler secret put BETTER_AUTH_URL
+		//   wrangler secret put BETTER_AUTH_URL                      # Also used as app URL
 		//   wrangler secret put GOOGLE_CLIENT_ID
 		//   wrangler secret put GOOGLE_CLIENT_SECRET
-		//   wrangler secret put NEXT_PUBLIC_APP_URL
 		//   wrangler secret put INTERNAL_CACHE_INVALIDATION_TOKEN  # openssl rand -hex 32
 		//
 		// ===== OPTIONAL: Edge cache purge (only for custom domains behind CF proxy) =====

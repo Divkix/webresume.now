@@ -184,9 +184,8 @@ All receive `content` (ResumeContent) and `user` props, must respect privacy set
 
 Required in `.env.local` (dev) and Cloudflare secrets (prod):
 ```
-BETTER_AUTH_SECRET, BETTER_AUTH_URL
+BETTER_AUTH_SECRET, BETTER_AUTH_URL   # BETTER_AUTH_URL is also used as the app URL
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-NEXT_PUBLIC_APP_URL
 RESEND_API_KEY              # For password reset emails (optional, free tier: 3k/month)
 ```
 

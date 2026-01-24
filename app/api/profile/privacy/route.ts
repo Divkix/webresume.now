@@ -86,7 +86,7 @@ export async function PUT(request: Request) {
       // Purge Cloudflare edge cache immediately (privacy-sensitive change)
       const cfZoneId = (env as CloudflareEnv).CF_ZONE_ID;
       const cfApiToken = (env as CloudflareEnv).CF_CACHE_PURGE_API_TOKEN;
-      const baseUrl = (env as CloudflareEnv).NEXT_PUBLIC_APP_URL;
+      const baseUrl = process.env.BETTER_AUTH_URL;
 
       if (cfZoneId && cfApiToken && baseUrl) {
         await purgeResumeCache(userHandle, baseUrl, cfZoneId, cfApiToken);

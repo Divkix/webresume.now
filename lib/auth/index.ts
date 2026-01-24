@@ -15,6 +15,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/lib/db/schema";
+import { sendPasswordResetEmail } from "@/lib/email/resend";
 
 /**
  * Wraps a D1Database to automatically convert Date objects to ISO strings.
@@ -165,9 +166,13 @@ export async function getAuth() {
     emailAndPassword: {
       enabled: true,
       sendResetPassword: async ({ user, url }) => {
-        // TODO: Replace with Resend email in Phase 2
-        console.log(`[AUTH] Password reset requested for ${user.email}`);
-        console.log(`[AUTH] Reset URL: ${url}`);
+        // Fire-and-forget to prevent timing attacks
+        // Don't await - response time should be consistent regardless of email existence
+        sendPasswordResetEmail({
+          email: user.email,
+          resetUrl: url,
+          userName: user.name,
+        });
       },
     },
   });

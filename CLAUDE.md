@@ -190,6 +190,12 @@ NEXT_PUBLIC_APP_URL
 RESEND_API_KEY              # For password reset emails (optional, free tier: 3k/month)
 ```
 
+Optional (for edge cache purging on custom domains):
+```
+CF_ZONE_ID                  # Cloudflare zone ID from dashboard
+CF_CACHE_PURGE_API_TOKEN    # API token with Cache Purge permission
+```
+
 Note: R2 is accessed via binding in `wrangler.jsonc` - no API credentials needed.
 Note: AI parsing is handled by utility workers (pdf-text-worker, ai-parser-worker) via service bindings. AI Gateway config is in ai-parser-worker.
 

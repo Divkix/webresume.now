@@ -6,7 +6,6 @@
  * .open-next/worker.js which only exists after OpenNext build.
  * Wrangler handles bundling and type resolution separately.
  */
-/// <reference types="@cloudflare/workers-types" />
 /// <reference path="./lib/cloudflare-env.d.ts" />
 
 import opennextHandler from "./.open-next/worker.js";

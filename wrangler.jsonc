@@ -124,6 +124,9 @@
 		//   wrangler secret put CF_ZONE_ID                  # From Cloudflare Dashboard
 		//   wrangler secret put CF_CACHE_PURGE_API_TOKEN    # API token with Cache Purge permission
 		//
+		// ===== OPTIONAL: Email (password reset) =====
+		//   wrangler secret put RESEND_API_KEY      # From resend.com (free tier: 3k/month)
+		//
 		// ===== OPTIONAL: DLQ alerting (defaults to Cloudflare Logpush) =====
 		//   wrangler secret put ALERT_CHANNEL       # logpush | webhook | email
 		//   wrangler secret put ALERT_WEBHOOK_URL   # Slack/Discord webhook URL

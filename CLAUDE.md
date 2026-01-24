@@ -187,6 +187,7 @@ Required in `.env.local` (dev) and Cloudflare secrets (prod):
 BETTER_AUTH_SECRET, BETTER_AUTH_URL
 GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 NEXT_PUBLIC_APP_URL
+RESEND_API_KEY              # For password reset emails (optional, free tier: 3k/month)
 ```
 
 Note: R2 is accessed via binding in `wrangler.jsonc` - no API credentials needed.

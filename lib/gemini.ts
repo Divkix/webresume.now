@@ -447,7 +447,29 @@ function transformAiResponse(raw: unknown): unknown {
   // Top-level fields - use empty strings as defaults (lenient) with max length
   data.full_name = truncateString(normalizeString(data.full_name, "Unknown"), 100);
   data.headline = truncateString(normalizeString(data.headline, "Professional"), 150);
-  data.summary = truncateString(normalizeString(data.summary), 2000);
+
+  // Summary with fallback generation if AI didn't return one
+  let summary = normalizeString(data.summary);
+
+  if (!summary) {
+    // Try to extract from first experience description
+    if (Array.isArray(data.experience) && data.experience.length > 0) {
+      const firstExp = data.experience[0] as Record<string, unknown>;
+      if (firstExp?.description && typeof firstExp.description === "string") {
+        const desc = firstExp.description.trim();
+        if (desc.length > 0) {
+          summary = desc.slice(0, 500);
+        }
+      }
+    }
+    // Fallback to headline-based summary
+    if (!summary) {
+      const headline = normalizeString(data.headline, "Professional");
+      summary = `Experienced ${headline.toLowerCase()} with a proven track record.`;
+    }
+  }
+
+  data.summary = truncateString(summary, 2000);
 
   // Contact - validate URLs (with garbage detection), sanitize email
   if (data.contact && typeof data.contact === "object") {

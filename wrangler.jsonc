@@ -137,6 +137,6 @@
 		// Optional: For edge cache purge (set via wrangler secret put in production)
 		"CF_ZONE_ID": "",
 		// AI model for resume parsing (override via wrangler secret put AI_MODEL in production)
-		"AI_MODEL": "qwen/qwen3-next-80b-a3b-instruct:free"
+		"AI_MODEL": "google/gemini-2.5-flash-lite"
 	}
 }

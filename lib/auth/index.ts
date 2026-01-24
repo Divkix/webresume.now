@@ -157,7 +157,11 @@ export async function getAuth() {
         maxAge: 60 * 30, // 30 minutes cache
       },
     },
-    trustedOrigins: [baseURL].filter(Boolean),
+    trustedOrigins: [
+      baseURL,
+      // Allow localhost:3000 for Next.js dev server (different port than Workers preview)
+      process.env.NODE_ENV === "development" ? "http://localhost:3000" : null,
+    ].filter(Boolean) as string[],
     emailAndPassword: {
       enabled: true,
       sendResetPassword: async ({ user, url }) => {

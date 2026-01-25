@@ -34,7 +34,11 @@ export async function POST(request: Request) {
     const { env } = await getCloudflareContext({ async: true });
 
     // Access custom env vars via type assertion (not in base Cloudflare.Env)
-    const expectedToken = (env as CloudflareEnv).INTERNAL_CACHE_INVALIDATION_TOKEN;
+    // In OpenNext preview, getCloudflareContext may not include .env vars.
+    // Fall back to process.env to keep local dev working.
+    const expectedToken =
+      (env as CloudflareEnv).INTERNAL_CACHE_INVALIDATION_TOKEN ??
+      process.env.INTERNAL_CACHE_INVALIDATION_TOKEN;
     if (!expectedToken) {
       console.error("INTERNAL_CACHE_INVALIDATION_TOKEN not configured");
       return NextResponse.json({ error: "Internal configuration error" }, { status: 500 });

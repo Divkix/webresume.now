@@ -18,6 +18,9 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
         }`
       : null;
 
+  // Cache flattened skills to avoid triple computation in marquee
+  const flatSkills = content.skills ? flattenSkills(content.skills) : [];
+
   return (
     <div className="min-h-screen bg-[#FFFDF5] font-mono p-4 md:p-6 overflow-y-auto selection:bg-[#FF90E8] selection:text-black">
       <div className="max-w-6xl mx-auto space-y-8 pb-20">
@@ -149,15 +152,15 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
         </header>
 
         {/* Skills Marquee */}
-        {content.skills && flattenSkills(content.skills).length > 0 && (
+        {flatSkills.length > 0 && (
           <div className="bg-[#FFDE00] border-2 md:border-4 border-black py-4 overflow-hidden whitespace-nowrap shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 my-12">
             <div className="inline-block animate-[marquee_20s_linear_infinite] font-black text-2xl md:text-4xl uppercase">
-              {flattenSkills(content.skills).map((skill: string, i: number) => (
+              {flatSkills.map((skill: string, i: number) => (
                 <span key={i} className="mx-6 inline-flex items-center">
                   {skill} <Star className="w-6 h-6 ml-6 fill-black" />
                 </span>
               ))}
-              {flattenSkills(content.skills).map((skill: string, i: number) => (
+              {flatSkills.map((skill: string, i: number) => (
                 <span key={`dup-${i}`} className="mx-6 inline-flex items-center">
                   {skill} <Star className="w-6 h-6 ml-6 fill-black" />
                 </span>

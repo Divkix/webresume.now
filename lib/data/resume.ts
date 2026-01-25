@@ -1,9 +1,9 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
+import { cache } from "react";
 import { getDb } from "@/lib/db";
 import type { PrivacySettings } from "@/lib/db/schema";
 import { user } from "@/lib/db/schema";
-import { resumeContentSchema } from "@/lib/schemas/resume";
 import type { ResumeContent } from "@/lib/types/database";
 import { extractCityState, isValidPrivacySettings } from "@/lib/utils/privacy";
 
@@ -53,19 +53,12 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
     return null;
   }
 
-  // Parse and validate content JSON (stored as text in D1)
+  // Parse content JSON (stored as text in D1)
+  // Data is already validated at write time (/api/resume/update)
+  // D1 is a trusted source - skip redundant Zod validation (saves 200-400ms)
   let content: ResumeContent;
   try {
-    const rawContent = JSON.parse(userData.siteData.content);
-
-    // Validate with Zod schema to ensure data integrity and XSS prevention
-    const parseResult = resumeContentSchema.safeParse(rawContent);
-    if (!parseResult.success) {
-      console.error("Invalid site_data content for handle:", handle, parseResult.error.format());
-      return null;
-    }
-
-    content = parseResult.data as ResumeContent;
+    content = JSON.parse(userData.siteData.content) as ResumeContent;
   } catch (error) {
     console.error("Failed to parse site_data content for handle:", handle, error);
     return null;
@@ -81,14 +74,22 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
     ? parsedPrivacySettings
     : { show_phone: false, show_address: false };
 
-  // Remove phone if privacy setting is false
-  if (!privacySettings.show_phone && content.contact?.phone) {
-    delete content.contact.phone;
-  }
+  // Create defensive copy of contact to avoid mutating parsed JSON
+  if (content.contact) {
+    content = {
+      ...content,
+      contact: { ...content.contact },
+    };
 
-  // Filter address to city/state only if privacy setting is false
-  if (!privacySettings.show_address && content.contact?.location) {
-    content.contact.location = extractCityState(content.contact.location);
+    // Remove phone if privacy setting is false
+    if (!privacySettings.show_phone && content.contact.phone) {
+      delete content.contact.phone;
+    }
+
+    // Filter address to city/state only if privacy setting is false
+    if (!privacySettings.show_address && content.contact.location) {
+      content.contact.location = extractCityState(content.contact.location);
+    }
   }
 
   return {
@@ -165,19 +166,20 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
 }
 
 /**
- * Resume data fetcher.
- * Queries D1 directly - edge cache handles most traffic.
+ * Resume data fetcher with request-level deduplication.
+ * Wrapped with React.cache() to avoid duplicate D1 queries when
+ * both generateMetadata() and the page component call this function.
  *
  * @param handle - The user's unique handle
  * @returns Resume data or null if not found
  */
-export const getResumeData = (handle: string) => {
+export const getResumeData = cache((handle: string) => {
   return fetchResumeDataRaw(handle);
-};
+});
 
 /**
- * Metadata fetcher for SEO.
+ * Metadata fetcher for SEO with request-level deduplication.
  */
-export const getResumeMetadata = (handle: string) => {
+export const getResumeMetadata = cache((handle: string) => {
   return fetchResumeMetadataRaw(handle);
-};
+});

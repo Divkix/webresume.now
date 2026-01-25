@@ -189,18 +189,29 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
  * @param handle - The user's unique handle
  * @returns Cached resume data or null if not found
  */
-export const getResumeData = (handle: string) =>
-  unstable_cache(() => fetchResumeDataRaw(handle), ["resume-data", handle], {
+export const getResumeData = (handle: string) => {
+  // Local preview can have broken tag cache invalidation; allow disabling cache explicitly.
+  if (process.env.DISABLE_RESUME_CACHE === "true") {
+    return fetchResumeDataRaw(handle);
+  }
+
+  return unstable_cache(() => fetchResumeDataRaw(handle), ["resume-data", handle], {
     tags: [getResumeCacheTag(handle), "resumes"],
     revalidate: 3600, // 1 hour fallback
   })();
+};
 
 /**
  * Cached metadata fetcher.
  * Uses same tags for consistent invalidation behavior.
  */
-export const getResumeMetadata = (handle: string) =>
-  unstable_cache(() => fetchResumeMetadataRaw(handle), ["resume-metadata", handle], {
+export const getResumeMetadata = (handle: string) => {
+  if (process.env.DISABLE_RESUME_CACHE === "true") {
+    return fetchResumeMetadataRaw(handle);
+  }
+
+  return unstable_cache(() => fetchResumeMetadataRaw(handle), ["resume-metadata", handle], {
     tags: [getResumeCacheTag(handle), "resumes"],
     revalidate: 3600,
   })();
+};

@@ -135,7 +135,6 @@
 		"NEXT_INC_CACHE_R2_PREFIX": "incremental-cache",
 		// Optional: For edge cache purge (set via wrangler secret put in production)
 		"CF_ZONE_ID": "",
-		// AI model for resume parsing (override via wrangler secret put AI_MODEL in production)
-		"AI_MODEL": "google/gemini-2.5-flash-lite"
+		// AI model for resume parsing (set in .env/.dev.vars locally or as a secret in production)
 	}
 }

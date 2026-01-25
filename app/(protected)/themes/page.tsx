@@ -1,9 +1,8 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ThemeSelector } from "@/components/dashboard/ThemeSelector";
-import { getAuth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 import { getDb } from "@/lib/db";
 import { siteData } from "@/lib/db/schema";
@@ -14,9 +13,8 @@ export const metadata = {
 };
 
 export default async function ThemesPage() {
-  // 1. Check authentication via Better Auth
-  const auth = await getAuth();
-  const session = await auth.api.getSession({ headers: await headers() });
+  // Use cached session helper to deduplicate auth calls within request
+  const session = await getServerSession();
 
   if (!session?.user) {
     redirect("/");

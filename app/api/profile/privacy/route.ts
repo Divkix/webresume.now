@@ -75,16 +75,18 @@ export async function PUT(request: Request) {
       })
       .where(eq(user.id, authUser.id));
 
-    // 7. Purge edge cache for privacy changes to reflect immediately
+    // 7. Purge edge cache for privacy changes (fire-and-forget)
     // This prevents PII exposure through stale edge cache
     if (userHandle) {
-      // Purge Cloudflare edge cache immediately (privacy-sensitive change)
       const cfZoneId = (env as CloudflareEnv).CF_ZONE_ID;
       const cfApiToken = (env as CloudflareEnv).CF_CACHE_PURGE_API_TOKEN;
       const baseUrl = process.env.BETTER_AUTH_URL;
 
       if (cfZoneId && cfApiToken && baseUrl) {
-        await purgeResumeCache(userHandle, baseUrl, cfZoneId, cfApiToken);
+        // Fire-and-forget: don't block response on cache purge
+        purgeResumeCache(userHandle, baseUrl, cfZoneId, cfApiToken).catch(() => {
+          // Error already logged inside purgeResumeCache
+        });
       }
     }
 

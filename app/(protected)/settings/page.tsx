@@ -1,7 +1,6 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { count, desc, eq, sql } from "drizzle-orm";
 import { User } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { HandleForm } from "@/components/forms/HandleForm";
@@ -9,17 +8,15 @@ import { PrivacySettingsForm } from "@/components/forms/PrivacySettings";
 import { DeleteAccountCard } from "@/components/settings/DeleteAccountCard";
 import { ResumeManagementCard } from "@/components/settings/ResumeManagementCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAuth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import type { PrivacySettings } from "@/lib/db/schema";
 import { resumes, user } from "@/lib/db/schema";
 import { isValidPrivacySettings } from "@/lib/utils/privacy";
 
 export default async function SettingsPage() {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  // Use cached session helper to deduplicate auth calls within request
+  const session = await getServerSession();
 
   if (!session) {
     redirect("/");

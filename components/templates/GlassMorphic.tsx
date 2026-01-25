@@ -13,11 +13,18 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { PoweredByBadge } from "@/components/PoweredByBadge";
-import { flattenSkills, formatDateRange } from "@/lib/templates/helpers";
+import {
+  flattenSkills,
+  formatDateRange,
+  formatShortDate,
+  formatYear,
+} from "@/lib/templates/helpers";
 import type { Project } from "@/lib/types/database";
 import type { TemplateProps } from "@/lib/types/template";
 
 const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
+  // Cache flattened skills to avoid re-computation
+  const flatSkills = content.skills ? flattenSkills(content.skills).slice(0, 8) : [];
   return (
     <div className="min-h-screen bg-[#0f172a] text-white font-sans relative overflow-y-auto selection:bg-pink-500/30 scroll-smooth">
       {/* Background Gradients & Noise */}
@@ -109,10 +116,9 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
               )}
             </div>
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                {flattenSkills(content.skills)
-                  .slice(0, 8)
-                  .map((skill: string) => (
+              {flatSkills.length > 0 && (
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  {flatSkills.map((skill: string) => (
                     <span
                       key={skill}
                       className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all text-xs text-white/80 cursor-default"
@@ -120,7 +126,8 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
                       {skill}
                     </span>
                   ))}
-              </div>
+                </div>
+              )}
               <div className="flex gap-4 mt-4 justify-center md:justify-start">
                 {content.contact.email && (
                   <a
@@ -174,41 +181,45 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
-              {content.experience.map((job, index) => (
-                <div
-                  key={index}
-                  className="group relative rounded-3xl overflow-hidden bg-white/3 border border-white/10 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)] p-8"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-1">{job.title}</h3>
-                      <p className="text-white/70 font-medium">{job.company}</p>
+              {content.experience.map((job, index) => {
+                const limitedHighlights = job.highlights?.slice(0, 3) ?? [];
+                return (
+                  <div
+                    key={index}
+                    className="group relative rounded-3xl overflow-hidden bg-white/3 border border-white/10 hover:border-white/20 transition-all duration-500 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.1)] p-8"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-2xl font-bold text-white mb-1">{job.title}</h3>
+                        <p className="text-white/70 font-medium">{job.company}</p>
+                      </div>
+                      <span className="text-xs font-mono text-fuchsia-300">
+                        {formatDateRange(job.start_date, job.end_date)}
+                      </span>
                     </div>
-                    <span className="text-xs font-mono text-fuchsia-300">
-                      {formatDateRange(job.start_date, job.end_date)}
-                    </span>
-                  </div>
-                  {job.description && job.description.trim() !== "" ? (
-                    <p className="text-sm text-white/80 leading-relaxed mb-4">{job.description}</p>
-                  ) : job.highlights && job.highlights.length > 0 ? (
-                    <ul className="text-sm text-white/80 space-y-2 list-disc pl-5 mb-4 leading-relaxed">
-                      {job.highlights.slice(0, 3).map((highlight, i) => (
-                        <li key={i}>{highlight}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {job.description &&
-                    job.description.trim() !== "" &&
-                    job.highlights &&
-                    job.highlights.length > 0 && (
-                      <ul className="text-xs text-white/70 space-y-1">
-                        {job.highlights.slice(0, 3).map((highlight, _i) => (
-                          <li key={_i}>• {highlight}</li>
+                    {job.description && job.description.trim() !== "" ? (
+                      <p className="text-sm text-white/80 leading-relaxed mb-4">
+                        {job.description}
+                      </p>
+                    ) : limitedHighlights.length > 0 ? (
+                      <ul className="text-sm text-white/80 space-y-2 list-disc pl-5 mb-4 leading-relaxed">
+                        {limitedHighlights.map((highlight, i) => (
+                          <li key={i}>{highlight}</li>
                         ))}
                       </ul>
-                    )}
-                </div>
-              ))}
+                    ) : null}
+                    {job.description &&
+                      job.description.trim() !== "" &&
+                      limitedHighlights.length > 0 && (
+                        <ul className="text-xs text-white/70 space-y-1">
+                          {limitedHighlights.map((highlight, _i) => (
+                            <li key={_i}>• {highlight}</li>
+                          ))}
+                        </ul>
+                      )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -289,7 +300,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
                     <h3 className="text-xl font-bold text-white">{edu.degree}</h3>
                     {edu.graduation_date && (
                       <span className="text-xs font-mono text-fuchsia-300">
-                        {new Date(edu.graduation_date).getFullYear()}
+                        {formatYear(edu.graduation_date)}
                       </span>
                     )}
                   </div>
@@ -318,12 +329,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content }) => {
                   <h3 className="text-lg font-bold text-white mb-1">{cert.name}</h3>
                   <p className="text-sm text-white/70">{cert.issuer}</p>
                   {cert.date && (
-                    <p className="text-xs text-white/50 mt-1">
-                      {new Date(cert.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
+                    <p className="text-xs text-white/50 mt-1">{formatShortDate(cert.date)}</p>
                   )}
                   {cert.url && (
                     <a

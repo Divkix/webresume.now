@@ -16,7 +16,6 @@ import {
   Upload,
   Wrench,
 } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
@@ -26,7 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getAuth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 import { getDb } from "@/lib/db";
 import { type Resume, resumes, type siteData, user } from "@/lib/db/schema";
@@ -145,10 +144,8 @@ function truncateText(text: string, maxLength: number): string {
 }
 
 export default async function DashboardPage() {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  // Use cached session helper to deduplicate auth calls within request
+  const session = await getServerSession();
 
   if (!session) {
     redirect("/");

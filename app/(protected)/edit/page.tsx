@@ -1,18 +1,15 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { EditResumeFormWrapper } from "@/components/forms/EditResumeFormWrapper";
-import { getAuth } from "@/lib/auth";
+import { getServerSession } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { siteData } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
 
 export default async function EditPage() {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  // Use cached session helper to deduplicate auth calls within request
+  const session = await getServerSession();
 
   if (!session) {
     redirect("/");

@@ -1,7 +1,7 @@
 import { ArrowUpRight, Award, Calendar, GraduationCap } from "lucide-react";
 import type React from "react";
 import { PoweredByBadge } from "@/components/PoweredByBadge";
-import { formatDateRange } from "@/lib/templates/helpers";
+import { formatDateRange, formatShortDate, formatYear } from "@/lib/templates/helpers";
 import type { TemplateProps } from "@/lib/types/template";
 
 const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
@@ -194,7 +194,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
                     <GraduationCap className="w-5 h-5 text-neutral-400" />
                     {edu.graduation_date && (
                       <span className="text-xs font-mono text-neutral-400">
-                        {new Date(edu.graduation_date).getFullYear()}
+                        {formatYear(edu.graduation_date)}
                       </span>
                     )}
                   </div>
@@ -255,10 +255,7 @@ const MinimalistEditorial: React.FC<TemplateProps> = ({ content, profile }) => {
                       <p className="text-sm text-neutral-600">{cert.issuer}</p>
                       {cert.date && (
                         <p className="text-xs text-neutral-500 mt-1">
-                          {new Date(cert.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatShortDate(cert.date)}
                         </p>
                       )}
                       {cert.url && (

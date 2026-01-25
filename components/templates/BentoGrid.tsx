@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { PoweredByBadge } from "@/components/PoweredByBadge";
-import { flattenSkills, formatDateRange, getInitials } from "@/lib/templates/helpers";
+import { flattenSkills, formatDateRange, formatYear, getInitials } from "@/lib/templates/helpers";
 import type { TemplateProps } from "@/lib/types/template";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -155,9 +155,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
               <GraduationCap size={20} className="text-neutral-400 mb-2" />
               <div>
                 {edu.graduation_date && (
-                  <p className="text-neutral-400 text-xs mb-1">
-                    {new Date(edu.graduation_date).getFullYear()}
-                  </p>
+                  <p className="text-neutral-400 text-xs mb-1">{formatYear(edu.graduation_date)}</p>
                 )}
                 <h3 className="text-lg font-bold leading-tight mb-1">{edu.degree}</h3>
                 <p className="text-neutral-600 text-xs">{edu.institution}</p>
@@ -283,7 +281,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile: _profile }) => {
               <div>
                 {content.certifications[0].date && (
                   <p className="text-neutral-400 text-xs mb-1">
-                    {new Date(content.certifications[0].date).getFullYear()}
+                    {formatYear(content.certifications[0].date)}
                   </p>
                 )}
                 <h3 className="text-lg font-bold leading-tight mb-1">

@@ -1,7 +1,13 @@
 import { ArrowUpRight, Award, Briefcase, Globe, GraduationCap, Star } from "lucide-react";
 import type React from "react";
 import { PoweredByBadge } from "@/components/PoweredByBadge";
-import { flattenSkills, formatDateRange, getInitials } from "@/lib/templates/helpers";
+import {
+  flattenSkills,
+  formatDateRange,
+  formatShortDate,
+  formatYear,
+  getInitials,
+} from "@/lib/templates/helpers";
 import type { Project } from "@/lib/types/database";
 import type { TemplateProps } from "@/lib/types/template";
 
@@ -181,61 +187,63 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-              {content.experience.map((job, _idx: number) => (
-                <div
-                  key={_idx}
-                  className="group bg-white border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-200"
-                >
-                  <div className="border-b-2 md:border-b-4 border-black p-3 flex justify-between items-center bg-neutral-100">
-                    <div className="flex gap-2">
-                      <div className="w-3 h-3 rounded-full border-2 border-black bg-red-400"></div>
-                      <div className="w-3 h-3 rounded-full border-2 border-black bg-yellow-400"></div>
-                      <div className="w-3 h-3 rounded-full border-2 border-black bg-green-400"></div>
-                    </div>
-                    <span className="font-bold text-xs uppercase">
-                      {formatDateRange(job.start_date, job.end_date)}
-                    </span>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-3xl font-black uppercase mb-1">{job.title}</h3>
-                        <p className="font-bold text-lg text-neutral-600">{job.company}</p>
+              {content.experience.map((job, _idx: number) => {
+                const limitedHighlights = job.highlights?.slice(0, 3) ?? [];
+                return (
+                  <div
+                    key={_idx}
+                    className="group bg-white border-2 md:border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-200"
+                  >
+                    <div className="border-b-2 md:border-b-4 border-black p-3 flex justify-between items-center bg-neutral-100">
+                      <div className="flex gap-2">
+                        <div className="w-3 h-3 rounded-full border-2 border-black bg-red-400"></div>
+                        <div className="w-3 h-3 rounded-full border-2 border-black bg-yellow-400"></div>
+                        <div className="w-3 h-3 rounded-full border-2 border-black bg-green-400"></div>
                       </div>
-                      <Briefcase className="w-8 h-8 border-2 border-black p-1 bg-white" />
+                      <span className="font-bold text-xs uppercase">
+                        {formatDateRange(job.start_date, job.end_date)}
+                      </span>
                     </div>
-                    {job.description && job.description.trim() !== "" ? (
-                      <p className="font-medium text-sm mb-4 border-l-2 border-black pl-3">
-                        {job.description}
-                      </p>
-                    ) : job.highlights && job.highlights.length > 0 ? (
-                      <ul className="font-medium text-sm mb-4 border-l-2 md:border-l-4 border-black pl-5 space-y-2 list-disc">
-                        {job.highlights.slice(0, 3).map((highlight: string, i: number) => (
-                          <li key={i} className="font-bold">
-                            {highlight}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    {job.description &&
-                      job.description.trim() !== "" &&
-                      job.highlights &&
-                      job.highlights.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {job.highlights.slice(0, 3).map((highlight: string, i: number) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 bg-[#22CCEE] border-2 border-black text-xs font-bold uppercase"
-                            >
-                              • {highlight}
-                            </span>
-                          ))}
+
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-3xl font-black uppercase mb-1">{job.title}</h3>
+                          <p className="font-bold text-lg text-neutral-600">{job.company}</p>
                         </div>
-                      )}
+                        <Briefcase className="w-8 h-8 border-2 border-black p-1 bg-white" />
+                      </div>
+                      {job.description && job.description.trim() !== "" ? (
+                        <p className="font-medium text-sm mb-4 border-l-2 border-black pl-3">
+                          {job.description}
+                        </p>
+                      ) : limitedHighlights.length > 0 ? (
+                        <ul className="font-medium text-sm mb-4 border-l-2 md:border-l-4 border-black pl-5 space-y-2 list-disc">
+                          {limitedHighlights.map((highlight: string, i: number) => (
+                            <li key={i} className="font-bold">
+                              {highlight}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {job.description &&
+                        job.description.trim() !== "" &&
+                        limitedHighlights.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {limitedHighlights.map((highlight: string, i: number) => (
+                              <span
+                                key={i}
+                                className="px-2 py-1 bg-[#22CCEE] border-2 border-black text-xs font-bold uppercase"
+                              >
+                                • {highlight}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -327,7 +335,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
                     <GraduationCap className="w-8 h-8 border-2 border-black p-1 bg-[#FFDE00]" />
                     {edu.graduation_date && (
                       <span className="font-bold text-xs uppercase">
-                        {new Date(edu.graduation_date).getFullYear()}
+                        {formatYear(edu.graduation_date)}
                       </span>
                     )}
                   </div>
@@ -367,12 +375,7 @@ const NeoBrutalist: React.FC<TemplateProps> = ({ content, profile }) => {
                       <h3 className="font-black text-lg uppercase">{cert.name}</h3>
                       <p className="font-bold text-sm text-neutral-600">{cert.issuer}</p>
                       {cert.date && (
-                        <p className="text-xs font-bold mt-1">
-                          {new Date(cert.date).toLocaleDateString("en-US", {
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </p>
+                        <p className="text-xs font-bold mt-1">{formatShortDate(cert.date)}</p>
                       )}
                       {cert.url && (
                         <a

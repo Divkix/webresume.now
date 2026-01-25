@@ -84,7 +84,7 @@ export async function PUT(request: Request) {
     const content = validation.data;
     const now = new Date().toISOString();
 
-    // 7. Update site_data
+    // 7. Update site_data (don't return content - we already have it validated)
     const updateResult = await db
       .update(siteData)
       .set({
@@ -95,7 +95,6 @@ export async function PUT(request: Request) {
       .where(eq(siteData.userId, userId))
       .returning({
         id: siteData.id,
-        content: siteData.content,
         lastPublishedAt: siteData.lastPublishedAt,
       });
 
@@ -109,13 +108,13 @@ export async function PUT(request: Request) {
 
     const data = updateResult[0];
 
-    // 8. Return success response
+    // 8. Return success response (use validated content directly, avoid JSON round-trip)
     await captureBookmark();
     return createSuccessResponse({
       success: true,
       data: {
         id: data.id,
-        content: JSON.parse(data.content),
+        content, // Use validated object from line 84
         last_published_at: data.lastPublishedAt,
       },
     });

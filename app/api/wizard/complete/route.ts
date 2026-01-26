@@ -3,6 +3,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { siteData, user } from "@/lib/db/schema";
+import { TEMPLATES, type ThemeId } from "@/lib/templates/theme-registry";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/utils/security-headers";
 import { validateRequestSize } from "@/lib/utils/validation";
 
-const VALID_THEMES = ["bento", "glass", "minimalist_editorial", "neo_brutalist"] as const;
+const VALID_THEME_IDS = Object.keys(TEMPLATES) as [ThemeId, ...ThemeId[]];
 
 /**
  * Wizard completion request schema
@@ -28,7 +29,7 @@ const wizardCompleteSchema = z.object({
     show_phone: z.boolean(),
     show_address: z.boolean(),
   }),
-  theme_id: z.enum(VALID_THEMES),
+  theme_id: z.enum(VALID_THEME_IDS),
 });
 
 type WizardCompleteRequest = z.infer<typeof wizardCompleteSchema>;
@@ -41,7 +42,7 @@ type WizardCompleteRequest = z.infer<typeof wizardCompleteSchema>;
  * {
  *   handle: string,
  *   privacy_settings: { show_phone: boolean, show_address: boolean },
- *   theme_id: 'bento' | 'glass' | 'minimalist_editorial' | 'neo_brutalist'
+ *   theme_id: ThemeId (any registered theme from theme-registry)
  * }
  *
  * Response:

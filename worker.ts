@@ -44,7 +44,8 @@ export default {
     }
 
     // All other requests go to the OpenNext handler
-    return opennextHandler.fetch(request, env, ctx);
+    // Cast needed: wrapper function receives CfProperties but opennextHandler expects IncomingRequestCfProperties
+    return opennextHandler.fetch(request as Parameters<typeof opennextHandler.fetch>[0], env, ctx);
   },
 
   // Cloudflare Queue consumer handler

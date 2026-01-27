@@ -78,7 +78,8 @@
 		]
 	},
 	"migrations": [
-		{ "tag": "v1", "new_classes": ["ResumeStatusDO"] }
+		{ "tag": "v1", "new_classes": ["ResumeStatusDO"] },
+		{ "tag": "v2", "deleted_classes": ["DOShardedTagCache"] }
 	],
 	"observability": {
 		"enabled": true,

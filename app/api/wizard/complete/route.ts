@@ -3,15 +3,13 @@ import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { siteData, user } from "@/lib/db/schema";
-import { TEMPLATES, type ThemeId } from "@/lib/templates/theme-registry";
+import { THEME_IDS, type ThemeId } from "@/lib/templates/theme-ids";
 import {
   createErrorResponse,
   createSuccessResponse,
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
 import { validateRequestSize } from "@/lib/utils/validation";
-
-const VALID_THEME_IDS = Object.keys(TEMPLATES) as [ThemeId, ...ThemeId[]];
 
 /**
  * Wizard completion request schema
@@ -29,7 +27,7 @@ const wizardCompleteSchema = z.object({
     show_phone: z.boolean(),
     show_address: z.boolean(),
   }),
-  theme_id: z.enum(VALID_THEME_IDS),
+  theme_id: z.enum([...THEME_IDS] as [ThemeId, ...ThemeId[]]),
 });
 
 type WizardCompleteRequest = z.infer<typeof wizardCompleteSchema>;

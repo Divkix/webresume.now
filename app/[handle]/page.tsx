@@ -101,7 +101,7 @@ export default async function HandlePage({ params }: PageProps) {
   const { content, profile, theme_id } = data;
 
   // Dynamically select template based on theme_id
-  const Template = getTemplate(theme_id);
+  const Template = await getTemplate(theme_id);
 
   return (
     <>

@@ -1,5 +1,5 @@
 import type { ResumeContent } from "@/lib/types/database";
-import type { ThemeId } from "./theme-registry";
+import type { ThemeId } from "./theme-ids";
 
 /**
  * Demo profile metadata for landing page cards

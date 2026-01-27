@@ -1,39 +1,42 @@
-import BentoGrid from "@/components/templates/BentoGrid";
-import BoldCorporate from "@/components/templates/BoldCorporate";
-import GlassMorphic from "@/components/templates/GlassMorphic";
-import Midnight from "@/components/templates/Midnight";
-import MinimalistEditorial from "@/components/templates/MinimalistEditorial";
-import NeoBrutalist from "@/components/templates/NeoBrutalist";
-import Spotlight from "@/components/templates/Spotlight";
-import type { TemplateProps } from "@/lib/types/template";
+/**
+ * Pure data module for theme IDs, metadata, and type guards.
+ * ZERO component imports — safe for API routes, client components, and anywhere
+ * that should not pull in template component bundles.
+ */
 
-export const TEMPLATES = {
-  bento: BentoGrid,
-  bold_corporate: BoldCorporate,
-  glass: GlassMorphic,
-  midnight: Midnight,
-  minimalist_editorial: MinimalistEditorial,
-  neo_brutalist: NeoBrutalist,
-  spotlight: Spotlight,
-} as const;
+export const THEME_IDS = [
+  "bento",
+  "bold_corporate",
+  "glass",
+  "midnight",
+  "minimalist_editorial",
+  "neo_brutalist",
+  "spotlight",
+] as const;
 
-export type ThemeId = keyof typeof TEMPLATES;
+export type ThemeId = (typeof THEME_IDS)[number];
 
-const DEFAULT_THEME: ThemeId = "minimalist_editorial";
+export const DEFAULT_THEME: ThemeId = "minimalist_editorial";
 
 /**
- * Get template component by theme ID
- * Falls back to default theme if ID is invalid
+ * Type guard to check if a string is a valid ThemeId
  */
-export function getTemplate(themeId: string | null | undefined): React.FC<TemplateProps> {
-  if (!themeId) return TEMPLATES[DEFAULT_THEME];
-  return TEMPLATES[themeId as ThemeId] || TEMPLATES[DEFAULT_THEME];
+export function isValidThemeId(id: string): id is ThemeId {
+  return (THEME_IDS as readonly string[]).includes(id);
 }
 
 /**
  * Theme metadata for UI display
  */
-export const THEME_METADATA = {
+export const THEME_METADATA: Record<
+  ThemeId,
+  {
+    readonly name: string;
+    readonly description: string;
+    readonly category: string;
+    readonly preview: string;
+  }
+> = {
   bento: {
     name: "Bento Grid",
     description: "Modern mosaic layout with colorful cards",

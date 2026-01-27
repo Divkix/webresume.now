@@ -12,7 +12,7 @@ import { ReviewStep } from "@/components/wizard/ReviewStep";
 import { ThemeStep } from "@/components/wizard/ThemeStep";
 import { UploadStep } from "@/components/wizard/UploadStep";
 import { useSession } from "@/lib/auth/client";
-import type { ThemeId } from "@/lib/templates/theme-registry";
+import type { ThemeId } from "@/lib/templates/theme-ids";
 import type { ResumeContent } from "@/lib/types/database";
 import { waitForResumeCompletion } from "@/lib/utils/wait-for-completion";
 

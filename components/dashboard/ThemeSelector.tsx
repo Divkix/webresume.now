@@ -6,7 +6,7 @@ import { useState } from "react";
 import { TemplatePreviewModal } from "@/components/templates/TemplatePreviewModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEMO_PROFILES } from "@/lib/templates/demo-data";
-import { THEME_METADATA, type ThemeId } from "@/lib/templates/theme-registry";
+import { THEME_METADATA, type ThemeId } from "@/lib/templates/theme-ids";
 import { cn } from "@/lib/utils";
 
 interface ThemeSelectorProps {

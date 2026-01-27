@@ -2,19 +2,12 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { siteData } from "@/lib/db/schema";
-import { TEMPLATES, type ThemeId } from "@/lib/templates/theme-registry";
+import { isValidThemeId, THEME_IDS } from "@/lib/templates/theme-ids";
 import {
   createErrorResponse,
   createSuccessResponse,
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
-
-// Get valid themes from the source of truth
-const VALID_THEMES = Object.keys(TEMPLATES) as ThemeId[];
-
-function isValidTheme(theme: string): theme is ThemeId {
-  return VALID_THEMES.includes(theme as ThemeId);
-}
 
 interface ThemeUpdateRequestBody {
   theme_id?: string;
@@ -47,9 +40,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isValidTheme(theme_id)) {
+    if (!isValidThemeId(theme_id)) {
       return createErrorResponse("Invalid theme_id provided", ERROR_CODES.VALIDATION_ERROR, 400, {
-        valid_themes: VALID_THEMES,
+        valid_themes: [...THEME_IDS],
       });
     }
 

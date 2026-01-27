@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DEMO_RESUME_CONTENT, TEMPLATE_BACKGROUNDS } from "@/lib/templates/demo-data";
-import { getTemplate, type ThemeId } from "@/lib/templates/theme-registry";
+import type { ThemeId } from "@/lib/templates/theme-ids";
+import { getTemplate } from "@/lib/templates/theme-registry";
 
 /**
  * Standalone template preview page used by the thumbnail generator script.
@@ -15,7 +16,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const Template = getTemplate(themeId);
+  const Template = await getTemplate(themeId);
   const bg = TEMPLATE_BACKGROUNDS[themeId];
   const profile = {
     avatar_url: null,

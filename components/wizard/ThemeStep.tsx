@@ -4,7 +4,7 @@ import { CheckCircle2, Palette } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { THEME_METADATA, type ThemeId } from "@/lib/templates/theme-registry";
+import { THEME_METADATA, type ThemeId } from "@/lib/templates/theme-ids";
 import { cn } from "@/lib/utils";
 
 interface ThemeStepProps {

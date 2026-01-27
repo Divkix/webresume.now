@@ -78,8 +78,8 @@
 		]
 	},
 	"migrations": [
-		{ "tag": "v1", "new_classes": ["ResumeStatusDO"] },
-		{ "tag": "v2", "deleted_classes": ["DOShardedTagCache"] }
+		{ "tag": "v1", "new_sqlite_classes": ["DOShardedTagCache"] },
+		{ "tag": "v2", "deleted_classes": ["DOShardedTagCache"], "new_classes": ["ResumeStatusDO"] }
 	],
 	"observability": {
 		"enabled": true,

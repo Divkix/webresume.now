@@ -111,6 +111,10 @@ export default function WizardPage() {
   // Compute total steps based on whether upload is needed
   const totalSteps = needsUpload ? 5 : 4;
 
+  // Derive onboardingCompleted from session (used by initializeWizard for returning user check)
+  const onboardingCompleted =
+    (session?.user as { onboardingCompleted?: boolean } | undefined)?.onboardingCompleted === true;
+
   // Wait for resume completion via WebSocket (with polling fallback)
   const awaitResumeComplete = useCallback(
     async (resumeId: string): Promise<boolean> => {
@@ -194,6 +198,41 @@ export default function WizardPage() {
               sessionStorage.removeItem("temp_upload");
             }
           }
+        }
+
+        // RETURNING USER CHECK: If onboarding already completed, skip wizard entirely
+        if (onboardingCompleted) {
+          // Returning user — claim pending upload if exists, then redirect to dashboard
+          if (tempKey) {
+            try {
+              const claimResponse = await fetch("/api/resume/claim", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ key: tempKey, file_hash: fileHash }),
+              });
+
+              const claimData = (await claimResponse.json()) as ClaimResponse;
+
+              if (!claimResponse.ok) {
+                throw new Error(claimData.error || "Failed to claim resume");
+              }
+
+              toast.success("Resume uploaded! Processing in background.");
+            } catch (claimError) {
+              console.error("Returning user claim error:", claimError);
+              toast.error(
+                claimError instanceof Error ? claimError.message : "Failed to process upload",
+              );
+            }
+
+            // Clear storage regardless of claim success
+            sessionStorage.removeItem("temp_upload");
+            sessionStorage.removeItem("temp_file_hash");
+            await clearPendingUploadCookie();
+          }
+
+          router.push("/dashboard");
+          return;
         }
 
         if (tempKey && !hasClaimedRef.current) {
@@ -300,7 +339,7 @@ export default function WizardPage() {
 
     initializeWizard();
     // No cleanup needed — waitForResumeCompletion handles its own cleanup internally
-  }, [router, userId, sessionLoading, awaitResumeComplete]);
+  }, [router, userId, sessionLoading, awaitResumeComplete, onboardingCompleted]);
 
   // Handler for upload completion (Step 1 for login-first users)
   // Note: We keep needsUpload=true to maintain correct step numbering throughout the session

@@ -1,11 +1,14 @@
 /**
  * Resend email client wrapper for transactional emails
  *
+ * Uses the Resend HTTP API directly via ofetch instead of the full SDK
+ * to minimize bundle size on Cloudflare Workers.
+ *
  * Used for password reset emails and other auth-related notifications.
  * Designed to work in Cloudflare Workers environment.
  */
 
-import { Resend } from "resend";
+import { FetchError, ofetch } from "ofetch";
 
 /**
  * Escape HTML special characters to prevent XSS in email templates
@@ -17,25 +20,6 @@ function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-/**
- * Lazy-initialized Resend client
- * API key is read from environment at call time for Workers compatibility
- */
-let resendClient: Resend | null = null;
-
-function getResendClient(): Resend {
-  if (!resendClient) {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        "Missing RESEND_API_KEY. Set it via .env.local (dev) or 'wrangler secret put RESEND_API_KEY' (prod).",
-      );
-    }
-    resendClient = new Resend(apiKey);
-  }
-  return resendClient;
 }
 
 /**
@@ -67,7 +51,7 @@ interface SendPasswordResetEmailParams {
 }
 
 /**
- * Sends a password reset email via Resend
+ * Sends a password reset email via the Resend HTTP API
  *
  * IMPORTANT: This function should NOT be awaited in the Better Auth
  * sendResetPassword callback to prevent timing attacks. Fire-and-forget.
@@ -81,20 +65,26 @@ export async function sendPasswordResetEmail({
   email,
   resetUrl,
   userName,
-}: SendPasswordResetEmailParams): Promise<{ success: boolean; error?: string }> {
+}: SendPasswordResetEmailParams): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    const message =
+      "Missing RESEND_API_KEY. Set it via .env.local (dev) or 'wrangler secret put RESEND_API_KEY' (prod).";
+    console.error("[EMAIL]", message);
+    return { success: false, error: message };
+  }
+
   try {
-    const resend = getResendClient();
     // Escape user-controlled values for HTML safety
     const safeUserName = userName ? escapeHtml(userName) : null;
     const greeting = safeUserName ? `Hi ${safeUserName},` : "Hi,";
     // Encode URL to prevent injection via URL parameters
     const safeResetUrl = encodeURI(resetUrl);
 
-    const { data, error } = await resend.emails.send({
-      from: getFromEmail(),
-      to: email,
-      subject: "Reset your password - WebResume",
-      text: `${greeting}
+    const textContent = `${greeting}
 
 You requested to reset your password for your WebResume account.
 
@@ -105,8 +95,9 @@ This link will expire in 1 hour.
 
 If you didn't request this, you can safely ignore this email. Your password won't be changed.
 
-- The WebResume Team`,
-      html: `
+- The WebResume Team`;
+
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -138,17 +129,32 @@ If you didn't request this, you can safely ignore this email. Your password won'
     &copy; WebResume
   </p>
 </body>
-</html>`,
+</html>`;
+
+    const response = await ofetch<{ id: string }>("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: {
+        from: getFromEmail(),
+        to: email,
+        subject: "Reset your password - WebResume",
+        html: htmlContent,
+        text: textContent,
+      },
     });
 
-    if (error) {
-      console.error("[EMAIL] Failed to send password reset:", error.message);
-      return { success: false, error: error.message };
-    }
-
-    console.log(`[EMAIL] Password reset sent to ${email}, id: ${data?.id}`);
+    console.log(`[EMAIL] Password reset sent to ${email}, id: ${response.id}`);
     return { success: true };
   } catch (err) {
+    if (err instanceof FetchError) {
+      const message = (err.data as { message?: string })?.message || err.message;
+      console.error("[EMAIL] Resend API error:", message);
+      return { success: false, error: message };
+    }
+
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[EMAIL] Error sending password reset:", message);
     return { success: false, error: message };

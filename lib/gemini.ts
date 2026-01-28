@@ -335,7 +335,7 @@ async function extractPdfText(
   return response.json() as Promise<PdfExtractResponse>;
 }
 
-const DEFAULT_AI_MODEL = "openai/gpt-oss-20b";
+const DEFAULT_AI_MODEL = "google/gemini-2.5-flash-lite";
 
 /**
  * Parse text with AI using ai-parser-worker

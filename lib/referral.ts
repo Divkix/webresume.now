@@ -9,9 +9,11 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { referralClicks, user } from "@/lib/db/schema";
+import { generateVisitorHashWithDate } from "@/lib/utils/analytics";
+import { getClientIP } from "@/lib/utils/ip-rate-limit";
 
 const REFERRAL_KEY = "referral_handle";
 
@@ -74,18 +76,22 @@ export async function resolveReferralHandle(handle: string): Promise<string | nu
 /**
  * Write referredBy to user record (server-side only)
  *
+ * Uses atomic conditional UPDATE to prevent TOCTOU race conditions.
+ * First-referral-wins: only writes if user doesn't already have a referrer.
+ *
  * Validates:
  * - Referrer exists
- * - User doesn't already have a referrer
  * - User is not self-referring
  *
  * @param userId - The ID of the user to update
  * @param referrerHandle - The handle of the referrer
+ * @param request - Optional request for visitor hash matching
  * @returns Success status
  */
 export async function writeReferral(
   userId: string,
   referrerHandle: string,
+  request?: Request,
 ): Promise<{ success: boolean; reason?: string }> {
   if (!referrerHandle || referrerHandle.trim().length === 0) {
     return { success: false, reason: "empty_handle" };
@@ -105,32 +111,87 @@ export async function writeReferral(
     return { success: false, reason: "self_referral" };
   }
 
-  // Check if user already has a referrer
-  const currentUser = await db
-    .select({ referredBy: user.referredBy })
-    .from(user)
-    .where(eq(user.id, userId))
-    .limit(1);
+  // Atomic conditional update: only set referredBy if currently null
+  // This prevents TOCTOU race conditions where two concurrent requests
+  // could both pass the "already referred" check
+  const result = await db
+    .update(user)
+    .set({ referredBy: referrerId })
+    .where(and(eq(user.id, userId), isNull(user.referredBy)))
+    .returning({ id: user.id });
 
-  if (currentUser[0]?.referredBy) {
+  if (result.length === 0) {
+    // No rows updated - check why
+    const existingUser = await db
+      .select({ id: user.id, referredBy: user.referredBy })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!existingUser[0]) {
+      return { success: false, reason: "user_not_found" };
+    }
     return { success: false, reason: "already_referred" };
   }
 
-  // Write referral
-  await db.update(user).set({ referredBy: referrerId }).where(eq(user.id, userId));
-
-  // Mark any unconverted clicks from this referrer as converted
+  // Mark referral clicks as converted with visitor-specific matching
   // (best effort - don't fail if this doesn't work)
   try {
-    await db
-      .update(referralClicks)
-      .set({
-        converted: true,
-        convertedUserId: userId,
-      })
-      .where(
-        and(eq(referralClicks.referrerUserId, referrerId), eq(referralClicks.converted, false)),
-      );
+    let clickMarked = false;
+
+    if (request) {
+      const ip = getClientIP(request);
+      const ua = request.headers.get("user-agent") || "";
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+      // Try today's hash first
+      const todayHash = await generateVisitorHashWithDate(ip, ua, today);
+      const todayResult = await db
+        .update(referralClicks)
+        .set({ converted: true, convertedUserId: userId })
+        .where(
+          and(
+            eq(referralClicks.referrerUserId, referrerId),
+            eq(referralClicks.visitorHash, todayHash),
+            eq(referralClicks.converted, false),
+          ),
+        )
+        .returning({ id: referralClicks.id });
+
+      if (todayResult.length > 0) {
+        clickMarked = true;
+      } else {
+        // Try yesterday's hash (for clicks that crossed midnight)
+        const yesterdayHash = await generateVisitorHashWithDate(ip, ua, yesterday);
+        const yesterdayResult = await db
+          .update(referralClicks)
+          .set({ converted: true, convertedUserId: userId })
+          .where(
+            and(
+              eq(referralClicks.referrerUserId, referrerId),
+              eq(referralClicks.visitorHash, yesterdayHash),
+              eq(referralClicks.converted, false),
+            ),
+          )
+          .returning({ id: referralClicks.id });
+
+        if (yesterdayResult.length > 0) {
+          clickMarked = true;
+        }
+      }
+    }
+
+    // Fallback: if no request or no hash match, mark most recent unconverted click
+    // This maintains backwards compatibility and handles edge cases
+    if (!clickMarked) {
+      await db
+        .update(referralClicks)
+        .set({ converted: true, convertedUserId: userId })
+        .where(
+          and(eq(referralClicks.referrerUserId, referrerId), eq(referralClicks.converted, false)),
+        );
+    }
   } catch (error) {
     console.error("Failed to mark referral clicks as converted:", error);
     // Don't fail the referral write

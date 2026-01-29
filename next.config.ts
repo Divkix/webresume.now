@@ -56,6 +56,20 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // Redirects for backward compatibility (old /handle URLs to new /@handle URLs)
+  async redirects() {
+    return [
+      {
+        // Redirect old /{handle} to /@{handle}
+        // Exclude known routes, static files, and paths already starting with @
+        source:
+          "/:handle((?!@|api|_next|dashboard|edit|settings|waiting|wizard|privacy|terms|reset-password|preview|sitemap|robots\\.txt|manifest\\.webmanifest|favicon\\.ico)[a-z0-9][a-z0-9-]*[a-z0-9]|[a-z0-9])",
+        destination: "/@:handle",
+        permanent: true, // 308 redirect for SEO
+      },
+    ];
+  },
+
   // Edge caching headers for Cloudflare CDN
   // These enable Cloudflare's edge cache to serve responses without hitting the Worker
   async headers() {
@@ -64,7 +78,8 @@ const nextConfig: NextConfig = {
         // Public resume pages - cache at edge for 1 hour, stale-while-revalidate for 1 day
         // Invalidation still works via revalidateTag/revalidatePath (purges origin cache)
         // Edge cache will serve stale while origin revalidates
-        source: "/:handle((?!api|_next|dashboard|edit|settings|waiting|wizard|privacy|terms)[^/]+)",
+        // Matches /@handle format (@ prefix convention)
+        source: "/@:handle",
         headers: [
           {
             key: "Cache-Control",

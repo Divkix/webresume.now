@@ -103,12 +103,12 @@ export function ShareBar({ url, handle, title, name, variant, className }: Share
   const shareText = generateShareText(name);
   const hasWebShare = isWebShareSupported();
 
-  // Construct URL from handle if not provided
+  // Construct URL from handle if not provided (uses @ prefix convention)
   const shareUrl =
     url ||
     (typeof window !== "undefined" && handle
-      ? `${window.location.origin}/${handle}`
-      : `https://webresume.now/${handle ?? ""}`);
+      ? `${window.location.origin}/@${handle}`
+      : `https://webresume.now/@${handle ?? ""}`);
 
   const handleNativeShare = useCallback(async () => {
     try {

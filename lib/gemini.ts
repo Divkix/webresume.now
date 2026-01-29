@@ -85,19 +85,18 @@ const RESUME_EXTRACTION_SCHEMA = {
     },
     headline: {
       type: "string",
-      description: "A concise 10-word professional headline/title",
-      maxLength: 100,
+      description: "A concise professional headline/title (max 10 words, under 100 characters)",
     },
     summary: {
       type: "string",
-      description: "Professional summary or objective statement",
-      maxLength: 500,
+      description:
+        "Professional summary or objective statement (2-4 sentences, max 500 characters)",
     },
     contact: {
       type: "object",
       required: ["email"],
       properties: {
-        email: { type: "string", format: "email" },
+        email: { type: "string", description: "Email address" },
         phone: { type: "string" },
         location: {
           type: "string",
@@ -136,7 +135,10 @@ const RESUME_EXTRACTION_SCHEMA = {
             type: "string",
             description: "Format: YYYY-MM or Month YYYY. Omit for current role.",
           },
-          description: { type: "string" },
+          description: {
+            type: "string",
+            description: "Role description (2-4 sentences, max 500 characters)",
+          },
           highlights: {
             type: "array",
             items: { type: "string" },
@@ -213,8 +215,8 @@ const RESUME_EXTRACTION_SCHEMA = {
           },
           description: {
             type: "string",
-            maxLength: 200,
-            description: "Brief description of the project and its impact",
+            description:
+              "Brief description of the project and its impact (1-2 sentences, max 200 characters)",
           },
           year: {
             type: "string",

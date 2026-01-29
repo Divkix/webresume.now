@@ -2,10 +2,14 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "@/lib/db";
-import type { PrivacySettings } from "@/lib/db/schema";
 import { user } from "@/lib/db/schema";
 import type { ResumeContent } from "@/lib/types/database";
-import { extractCityState, isValidPrivacySettings } from "@/lib/utils/privacy";
+import {
+  extractCityState,
+  isValidPrivacySettings,
+  normalizePrivacySettings,
+  type PrivacySettingsType,
+} from "@/lib/utils/privacy";
 
 export interface ResumeData {
   profile: {
@@ -17,6 +21,7 @@ export interface ResumeData {
   };
   content: ResumeContent;
   theme_id: string | null;
+  privacy_settings: PrivacySettingsType;
 }
 
 export interface ResumeMetadata {
@@ -24,6 +29,7 @@ export interface ResumeMetadata {
   headline?: string | null;
   summary?: string | null;
   avatar_url: string | null;
+  hide_from_search: boolean;
 }
 
 /**
@@ -65,14 +71,21 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
   }
 
   // Parse privacy settings from JSON string
-  const parsedPrivacySettings = userData.privacySettings
-    ? (JSON.parse(userData.privacySettings) as PrivacySettings)
-    : null;
+  let parsedPrivacySettings: {
+    show_phone: boolean;
+    show_address: boolean;
+    hide_from_search?: boolean;
+  } | null = null;
+  try {
+    parsedPrivacySettings = userData.privacySettings ? JSON.parse(userData.privacySettings) : null;
+  } catch {
+    parsedPrivacySettings = null;
+  }
 
-  // Apply privacy filtering with type guard
-  const privacySettings: PrivacySettings = isValidPrivacySettings(parsedPrivacySettings)
-    ? parsedPrivacySettings
-    : { show_phone: false, show_address: false };
+  // Apply privacy filtering with type guard and normalization
+  const privacySettings = normalizePrivacySettings(
+    isValidPrivacySettings(parsedPrivacySettings) ? parsedPrivacySettings : null,
+  );
 
   // Create defensive copy of contact to avoid mutating parsed JSON
   if (content.contact) {
@@ -102,6 +115,7 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
     },
     content,
     theme_id: userData.siteData.themeId,
+    privacy_settings: privacySettings,
   };
 }
 
@@ -127,6 +141,7 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
       handle: true,
       image: true,
       headline: true,
+      privacySettings: true,
     },
     with: {
       siteData: {
@@ -157,11 +172,23 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
     return null;
   }
 
+  // Parse privacy settings for hide_from_search
+  let hideFromSearch = false;
+  if (userData.privacySettings) {
+    try {
+      const parsedSettings = JSON.parse(userData.privacySettings);
+      hideFromSearch = parsedSettings?.hide_from_search === true;
+    } catch {
+      // Keep default false
+    }
+  }
+
   return {
     full_name: fullName,
     headline: coerceMetadataString(content.headline) ?? userData.headline ?? null,
     summary: coerceMetadataString(content.summary) ?? null,
     avatar_url: userData.image,
+    hide_from_search: hideFromSearch,
   };
 }
 

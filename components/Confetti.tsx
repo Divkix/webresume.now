@@ -78,5 +78,3 @@ export function Confetti({
     </div>
   );
 }
-
-export default Confetti;

@@ -217,7 +217,7 @@ export async function POST(request: Request) {
     // 5a. Link referral if provided (best effort - don't fail claim on referral errors)
     if (body.referral_handle) {
       try {
-        const referralResult = await writeReferral(userId, body.referral_handle);
+        const referralResult = await writeReferral(userId, body.referral_handle, request);
         if (!referralResult.success) {
           console.log(`Referral not linked: ${referralResult.reason}`);
         }

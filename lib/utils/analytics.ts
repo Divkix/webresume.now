@@ -102,3 +102,24 @@ export async function generateVisitorHash(ip: string, userAgent: string): Promis
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+/**
+ * Generate a visitor hash with a specific date.
+ * Used for matching clicks across day boundaries (e.g., click yesterday, signup today).
+ *
+ * @param ip - Visitor IP address
+ * @param userAgent - Visitor user agent
+ * @param dateStr - Date string in YYYY-MM-DD format
+ */
+export async function generateVisitorHashWithDate(
+  ip: string,
+  userAgent: string,
+  dateStr: string,
+): Promise<string> {
+  const input = `${ip}|${userAgent}|${dateStr}`;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}

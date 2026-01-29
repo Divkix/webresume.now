@@ -5,7 +5,8 @@ import { ThemeSelector } from "@/components/dashboard/ThemeSelector";
 import { getServerSession } from "@/lib/auth/session";
 import { siteConfig } from "@/lib/config/site";
 import { getDb } from "@/lib/db";
-import { siteData } from "@/lib/db/schema";
+import { siteData, user } from "@/lib/db/schema";
+import type { ResumeContent } from "@/lib/types/database";
 
 export const metadata = {
   title: `Themes | ${siteConfig.fullName}`,
@@ -24,29 +25,39 @@ export default async function ThemesPage() {
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
 
-  // 3. Fetch user's current theme
-  const userSiteData = await db.query.siteData.findFirst({
-    where: eq(siteData.userId, session.user.id),
-    columns: { themeId: true },
-  });
+  // 3. Fetch user's site data (theme + content) and profile info in parallel
+  const [userSiteData, userProfile] = await Promise.all([
+    db.query.siteData.findFirst({
+      where: eq(siteData.userId, session.user.id),
+      columns: { themeId: true, content: true },
+    }),
+    db.query.user.findFirst({
+      where: eq(user.id, session.user.id),
+      columns: { handle: true, image: true },
+    }),
+  ]);
 
-  const currentThemeId = userSiteData?.themeId || "minimalist_editorial";
+  // Redirect to dashboard if no resume has been uploaded/parsed yet
+  if (!userSiteData?.content) {
+    redirect("/dashboard");
+  }
+
+  const currentThemeId = userSiteData.themeId || "minimalist_editorial";
+  const parsedContent = JSON.parse(userSiteData.content) as ResumeContent;
+  const profile = {
+    handle: userProfile?.handle || session.user.name || "user",
+    avatar_url: userProfile?.image || null,
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-5xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
-            Choose Your Theme
-          </h1>
-          <p className="text-lg text-slate-600 leading-relaxed">
-            Customize how your resume appears to visitors. Each theme offers a unique visual style.
-          </p>
-        </div>
-
-        {/* Theme Selector */}
-        <ThemeSelector initialThemeId={currentThemeId} />
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Theme Selector with Live Preview */}
+        <ThemeSelector
+          initialThemeId={currentThemeId}
+          initialContent={parsedContent}
+          profile={profile}
+        />
       </div>
     </div>
   );

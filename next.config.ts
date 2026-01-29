@@ -46,6 +46,16 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Rewrites for sitemap index (Next.js generateSitemaps doesn't create sitemap index)
+  async rewrites() {
+    return [
+      {
+        source: "/sitemap.xml",
+        destination: "/api/sitemap-index",
+      },
+    ];
+  },
+
   // Edge caching headers for Cloudflare CDN
   // These enable Cloudflare's edge cache to serve responses without hitting the Worker
   async headers() {

@@ -176,9 +176,6 @@ export default function Home() {
                   "
                   >
                     <div className="font-black text-2xl sm:text-3xl text-ink">Free</div>
-                    <div className="font-mono text-xs sm:text-sm text-ink/80 uppercase tracking-wide">
-                      Forever
-                    </div>
                   </div>
                 </div>
               </div>

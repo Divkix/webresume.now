@@ -7,6 +7,7 @@
 export const THEME_IDS = [
   "bento",
   "bold_corporate",
+  "classic_ats",
   "design_folio",
   "dev_terminal",
   "glass",
@@ -54,6 +55,13 @@ export const THEME_METADATA: Record<
     category: "Professional",
     preview: "/previews/bold-corporate.png",
     referralsRequired: 10, // Premium - 10 referrals
+  },
+  classic_ats: {
+    name: "Classic ATS",
+    description: "Legal brief typography, single-column ATS-optimized layout",
+    category: "Professional",
+    preview: "/previews/classic-ats.png",
+    referralsRequired: 0, // Free
   },
   design_folio: {
     name: "DesignFolio",

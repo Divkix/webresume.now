@@ -24,6 +24,7 @@ const TEMPLATE_LOADERS: Record<
 > = {
   bento: () => import("@/components/templates/BentoGrid"),
   bold_corporate: () => import("@/components/templates/BoldCorporate"),
+  classic_ats: () => import("@/components/templates/ClassicATS"),
   design_folio: () => import("@/components/templates/DesignFolio"),
   dev_terminal: () => import("@/components/templates/DevTerminal"),
   glass: () => import("@/components/templates/GlassMorphic"),
@@ -65,6 +66,9 @@ export const DYNAMIC_TEMPLATES: Record<ThemeId, React.ComponentType<TemplateProp
     loading: TemplateLoadingFallback,
   }),
   bold_corporate: dynamic(() => import("@/components/templates/BoldCorporate"), {
+    loading: TemplateLoadingFallback,
+  }),
+  classic_ats: dynamic(() => import("@/components/templates/ClassicATS"), {
     loading: TemplateLoadingFallback,
   }),
   design_folio: dynamic(() => import("@/components/templates/DesignFolio"), {

@@ -3,6 +3,7 @@ import { chromium } from "playwright";
 const TEMPLATES = [
   { id: "bento", file: "bento.png" },
   { id: "bold_corporate", file: "bold-corporate.png" },
+  { id: "classic_ats", file: "classic-ats.png" },
   { id: "glass", file: "glass.png" },
   { id: "midnight", file: "midnight.png" },
   { id: "minimalist_editorial", file: "minimalist.png" },

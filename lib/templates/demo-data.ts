@@ -109,6 +109,16 @@ export const DEMO_PROFILES: DemoProfile[] = [
     badgeBgColor: "bg-green-50",
     badgeTextColor: "text-green-600",
   },
+  {
+    id: "classic_ats",
+    name: "Alexander Sterling",
+    role: "Finance Analyst",
+    initials: "AS",
+    avatarGradient: "from-stone-400 to-zinc-600",
+    badgeLabel: "ATS",
+    badgeBgColor: "bg-stone-50",
+    badgeTextColor: "text-stone-600",
+  },
 ];
 
 /**
@@ -764,6 +774,123 @@ export const DEMO_RESUME_CONTENT: Record<ThemeId, ResumeContent> = {
     ],
   },
 
+  classic_ats: {
+    full_name: "Alexander Sterling",
+    headline: "Senior Financial Analyst | Investment Banking | M&A Advisory",
+    summary:
+      "CFA charterholder with 8+ years of experience in investment banking and corporate finance. Expertise in DCF modeling, M&A due diligence, and capital markets transactions. Proven track record of executing $2B+ in deal value across technology and healthcare sectors.",
+    contact: {
+      email: "alexander.sterling@example.com",
+      phone: "(212) 555-0187",
+      location: "New York, NY",
+      linkedin: "linkedin.com/in/alexandersterling",
+    },
+    experience: [
+      {
+        title: "Vice President, Investment Banking",
+        company: "Goldman Sachs",
+        location: "New York, NY",
+        start_date: "2021-03",
+        end_date: undefined,
+        description:
+          "Lead execution of M&A and capital markets transactions for technology sector clients.",
+        highlights: [
+          "Executed 12 M&A transactions totaling $1.8B in enterprise value",
+          "Led IPO preparation for Series D fintech startup raising $450M",
+          "Developed proprietary DCF and LBO models adopted firm-wide",
+          "Mentored 6 analysts through structured training program",
+        ],
+      },
+      {
+        title: "Associate, Corporate Finance",
+        company: "Morgan Stanley",
+        location: "New York, NY",
+        start_date: "2018-06",
+        end_date: "2021-02",
+        description:
+          "Supported senior bankers on buy-side and sell-side M&A engagements in healthcare.",
+        highlights: [
+          "Built financial models for 8 healthcare acquisitions averaging $200M",
+          "Conducted due diligence reviews across 25+ target companies",
+          "Prepared board presentation materials for Fortune 500 clients",
+        ],
+      },
+      {
+        title: "Analyst, Equity Research",
+        company: "J.P. Morgan",
+        location: "New York, NY",
+        start_date: "2016-07",
+        end_date: "2018-05",
+        description:
+          "Provided coverage of mid-cap technology companies for institutional investors.",
+        highlights: [
+          "Published 40+ equity research reports with 78% recommendation accuracy",
+          "Ranked top 10% in annual stock picking competition",
+        ],
+      },
+    ],
+    education: [
+      {
+        degree: "MBA, Finance Concentration",
+        institution: "Columbia Business School",
+        location: "New York, NY",
+        graduation_date: "2016-05",
+        gpa: "3.8",
+      },
+      {
+        degree: "B.S. in Economics",
+        institution: "University of Pennsylvania",
+        location: "Philadelphia, PA",
+        graduation_date: "2014-05",
+        gpa: "3.9",
+      },
+    ],
+    skills: [
+      {
+        category: "Financial Modeling",
+        items: ["DCF Analysis", "LBO Modeling", "Merger Models", "Comparable Analysis"],
+      },
+      {
+        category: "Tools",
+        items: ["Bloomberg Terminal", "Capital IQ", "FactSet", "Excel VBA", "Python"],
+      },
+      { category: "Languages", items: ["English (Native)", "Mandarin (Professional)"] },
+    ],
+    certifications: [
+      {
+        name: "CFA Charterholder",
+        issuer: "CFA Institute",
+        date: "2019-09",
+      },
+      {
+        name: "Series 7 & 63 Licenses",
+        issuer: "FINRA",
+        date: "2016-08",
+      },
+      {
+        name: "Financial Modeling & Valuation Analyst (FMVA)",
+        issuer: "Corporate Finance Institute",
+        date: "2018-03",
+      },
+    ],
+    projects: [
+      {
+        title: "Cross-Border M&A Framework",
+        description:
+          "Developed standardized due diligence framework for cross-border technology acquisitions, reducing deal execution time by 20%.",
+        year: "2023",
+        technologies: ["Excel", "Python", "Power BI"],
+      },
+      {
+        title: "Valuation Model Library",
+        description:
+          "Built comprehensive library of 15+ valuation templates used by 50+ analysts across the division.",
+        year: "2022",
+        technologies: ["Excel VBA", "Python"],
+      },
+    ],
+  },
+
   design_folio: {
     full_name: "Kai Nakamura",
     headline: "Visual Designer crafting bold digital experiences",
@@ -857,6 +984,7 @@ export const DEMO_RESUME_CONTENT: Record<ThemeId, ResumeContent> = {
 export const TEMPLATE_BACKGROUNDS: Record<ThemeId, { bg: string; isDark: boolean }> = {
   bento: { bg: "bg-neutral-100", isDark: false },
   bold_corporate: { bg: "bg-white", isDark: false },
+  classic_ats: { bg: "bg-gray-100", isDark: false },
   design_folio: { bg: "bg-[#0f0f0f]", isDark: true },
   dev_terminal: { bg: "bg-[#0d1117]", isDark: true },
   glass: { bg: "bg-[#0f172a]", isDark: true },

@@ -25,6 +25,7 @@ const shareBarVariants = cva("flex items-center gap-2 flex-wrap", {
       spotlight: "",
       midnight: "",
       "bold-corporate": "",
+      "classic-ats": "",
       "design-folio": "",
       "dev-terminal": "",
     },
@@ -53,6 +54,8 @@ const buttonVariants = cva(
           "bg-amber-900/20 text-amber-200 hover:bg-amber-900/40 border border-amber-700/30 rounded-lg px-3 py-1.5",
         "bold-corporate":
           "bg-white text-neutral-700 hover:bg-neutral-50 border border-neutral-200 rounded-md px-3 py-1.5 shadow-sm",
+        "classic-ats":
+          "text-gray-500 hover:text-gray-900 border border-gray-300 rounded px-3 py-1.5 text-xs uppercase tracking-wider hover:bg-gray-100",
         "design-folio":
           "bg-[#1a1a1a] text-[#888] hover:text-[#CCFF00] border border-[#333] hover:border-[#CCFF00] rounded-full px-3 py-1.5 font-mono text-xs uppercase tracking-widest",
         "dev-terminal":

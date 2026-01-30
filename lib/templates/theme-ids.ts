@@ -7,6 +7,7 @@
 export const THEME_IDS = [
   "bento",
   "bold_corporate",
+  "design_folio",
   "glass",
   "midnight",
   "minimalist_editorial",
@@ -52,6 +53,13 @@ export const THEME_METADATA: Record<
     category: "Professional",
     preview: "/previews/bold-corporate.png",
     referralsRequired: 10, // Premium - 10 referrals
+  },
+  design_folio: {
+    name: "DesignFolio",
+    description: "Digital brutalism meets Swiss typography. Dark theme with acid lime accents.",
+    category: "Creative",
+    preview: "/previews/design-folio.png",
+    referralsRequired: 3, // Premium - 3 referrals
   },
   glass: {
     name: "Glass Morphic",

@@ -89,6 +89,16 @@ export const DEMO_PROFILES: DemoProfile[] = [
     badgeBgColor: "bg-slate-50",
     badgeTextColor: "text-slate-600",
   },
+  {
+    id: "design_folio",
+    name: "Kai Nakamura",
+    role: "Visual Designer",
+    initials: "KN",
+    avatarGradient: "from-lime-400 to-green-500",
+    badgeLabel: "DesignFolio",
+    badgeBgColor: "bg-lime-50",
+    badgeTextColor: "text-lime-600",
+  },
 ];
 
 /**
@@ -671,6 +681,92 @@ export const DEMO_RESUME_CONTENT: Record<ThemeId, ResumeContent> = {
       },
     ],
   },
+
+  design_folio: {
+    full_name: "Kai Nakamura",
+    headline: "Visual Designer crafting bold digital experiences",
+    summary:
+      "Visual designer with 6+ years creating striking brand identities and digital products. Passionate about Swiss typography, brutalist aesthetics, and pushing creative boundaries.",
+    contact: {
+      email: "kai@example.com",
+      location: "Portland, OR",
+      github: "github.com/kainakamura",
+      linkedin: "linkedin.com/in/kainakamura",
+      website: "kainakamura.design",
+    },
+    experience: [
+      {
+        title: "Lead Visual Designer",
+        company: "Abstract",
+        location: "San Francisco, CA",
+        start_date: "2022-01",
+        end_date: undefined,
+        description:
+          "Leading visual design for product marketing and brand campaigns. Defining the visual language for product launches.",
+        highlights: [
+          "Redesigned brand identity increasing recognition by 45%",
+          "Created design system used across 12 product teams",
+          "Led team of 4 visual designers",
+        ],
+      },
+      {
+        title: "Senior Visual Designer",
+        company: "Dropbox",
+        location: "San Francisco, CA",
+        start_date: "2019-06",
+        end_date: "2021-12",
+        description: "Designed marketing campaigns and product illustrations for Dropbox Paper.",
+        highlights: [
+          "Led rebrand project for Dropbox Paper",
+          "Created illustration system with 200+ assets",
+        ],
+      },
+      {
+        title: "Visual Designer",
+        company: "ustwo",
+        location: "London, UK",
+        start_date: "2017-03",
+        end_date: "2019-05",
+        description: "Designed digital products and brand identities for global clients.",
+      },
+    ],
+    education: [
+      {
+        degree: "BFA in Graphic Design",
+        institution: "California College of the Arts",
+        location: "San Francisco, CA",
+        graduation_date: "2016-05",
+      },
+    ],
+    skills: [
+      { category: "Design", items: ["Visual Identity", "Typography", "Motion Graphics", "3D"] },
+      { category: "Tools", items: ["Figma", "Blender", "After Effects", "Cinema 4D"] },
+      { category: "Code", items: ["HTML/CSS", "GSAP", "Three.js"] },
+    ],
+    certifications: [
+      {
+        name: "Motion Design Certification",
+        issuer: "School of Motion",
+        date: "2021-06",
+      },
+    ],
+    projects: [
+      {
+        title: "Type Experiments",
+        description: "Kinetic typography explorations featured on Typewolf",
+        year: "2023",
+        technologies: ["After Effects", "GSAP"],
+        url: "kainakamura.design/type",
+      },
+      {
+        title: "Brutalist UI Kit",
+        description: "Open-source Figma component library with 15k+ downloads",
+        year: "2022",
+        technologies: ["Figma"],
+        url: "figma.com/kainakamura/brutalist-kit",
+      },
+    ],
+  },
 };
 
 /**
@@ -679,6 +775,7 @@ export const DEMO_RESUME_CONTENT: Record<ThemeId, ResumeContent> = {
 export const TEMPLATE_BACKGROUNDS: Record<ThemeId, { bg: string; isDark: boolean }> = {
   bento: { bg: "bg-neutral-100", isDark: false },
   bold_corporate: { bg: "bg-white", isDark: false },
+  design_folio: { bg: "bg-[#0f0f0f]", isDark: true },
   glass: { bg: "bg-[#0f172a]", isDark: true },
   midnight: { bg: "bg-[#0a0a0a]", isDark: true },
   minimalist_editorial: { bg: "bg-[#fdfbf9]", isDark: false },

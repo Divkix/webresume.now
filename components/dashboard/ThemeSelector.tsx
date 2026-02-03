@@ -173,10 +173,10 @@ export function ThemeSelector({
                 className={cn(
                   "relative shrink-0 w-28 md:w-36 rounded-lg overflow-hidden transition-all duration-200",
                   "border-2 bg-white",
-                  "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
+                  "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
                   isUnlocked
                     ? isSelected
-                      ? "border-indigo-600 ring-2 ring-indigo-100 shadow-lg"
+                      ? "border-red-500 ring-2 ring-red-100 shadow-lg"
                       : "border-slate-200 hover:border-slate-300 hover:shadow-md cursor-pointer"
                     : "border-slate-200 opacity-75 cursor-not-allowed",
                 )}
@@ -214,7 +214,7 @@ export function ThemeSelector({
                     {meta.name}
                   </span>
                   {isActive && isUnlocked && (
-                    <span className="inline-block mt-1 text-[10px] md:text-xs font-bold text-indigo-600 uppercase tracking-wide">
+                    <span className="inline-block mt-1 text-[10px] md:text-xs font-bold text-red-600 uppercase tracking-wide">
                       Active
                     </span>
                   )}
@@ -228,7 +228,7 @@ export function ThemeSelector({
 
                 {/* Selection Indicator */}
                 {isSelected && isUnlocked && (
-                  <div className="absolute top-2 right-2 w-5 h-5 bg-indigo-600 rounded-full flex items-center justify-center">
+                  <div className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <title>Selected</title>
                       <path
@@ -262,8 +262,8 @@ export function ThemeSelector({
             disabled={isUpdating}
             className={cn(
               "inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-semibold text-sm",
-              "bg-indigo-600 text-white hover:bg-indigo-700",
-              "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2",
+              "bg-red-500 text-white hover:bg-red-600",
+              "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               "transition-colors duration-200",
             )}

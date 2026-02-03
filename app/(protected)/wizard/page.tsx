@@ -433,9 +433,9 @@ export default function WizardPage() {
   // Loading state (including session loading)
   if (loading || sessionLoading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-red-50 via-rose-50 to-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-red-600 mx-auto mb-4" />
           <p className="text-slate-600 font-medium">Loading your resume...</p>
           <p className="text-slate-500 text-sm mt-2">
             This may take 30-60 seconds if we&apos;re parsing your PDF
@@ -448,7 +448,7 @@ export default function WizardPage() {
   // Error state (only for actual errors, not for "no resume" case which is handled by UploadStep)
   if (error && !needsUpload && state.currentStep === 1) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-indigo-50 via-blue-50 to-cyan-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-red-50 via-rose-50 to-orange-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-depth-md border border-red-200 p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg
@@ -474,7 +474,7 @@ export default function WizardPage() {
 
   // Main wizard UI
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-50 via-blue-50 to-cyan-50">
+    <div className="min-h-screen bg-linear-to-br from-red-50 via-rose-50 to-orange-50">
       {/* Celebration Effects */}
       {showCelebration && <Confetti />}
       <YouAreLiveModal

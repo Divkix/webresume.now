@@ -24,11 +24,11 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicon.ico",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    other: [{ rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#3b82f6" }],
+    other: [{ rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#FF6B6B" }],
   },
   manifest: "/manifest.webmanifest",
   other: {
-    "msapplication-TileColor": "#3b82f6",
+    "msapplication-TileColor": "#FF6B6B",
     "msapplication-config": "/browserconfig.xml",
   },
 };
@@ -43,7 +43,7 @@ export default function RootLayout({
       <body className="antialiased">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-md"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-red-500 focus:text-white focus:rounded-md"
         >
           Skip to main content
         </a>

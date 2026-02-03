@@ -142,8 +142,8 @@ export default function AdminResumesPage() {
             title="Queued"
             value={data?.stats.queued ?? 0}
             icon={Clock}
-            iconColorClass="text-blue-600"
-            iconBgClass="bg-linear-to-r from-blue-100 to-indigo-100"
+            iconColorClass="text-red-600"
+            iconBgClass="bg-linear-to-r from-red-100 to-rose-100"
           />
         </button>
         <button
@@ -167,7 +167,7 @@ export default function AdminResumesPage() {
         <select
           value={statusFilter}
           onChange={(e) => updateParams({ status: e.target.value as StatusFilter })}
-          className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
           aria-label="Filter by status"
         >
           {STATUS_OPTIONS.map((opt) => (

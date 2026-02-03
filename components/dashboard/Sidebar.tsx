@@ -161,7 +161,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             <div className="flex items-center gap-3">
               {user.image ? (
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 p-0.5">
+                  <div className="absolute inset-0 rounded-full bg-linear-to-r from-red-500 to-rose-500 p-0.5">
                     <div className="w-full h-full rounded-full bg-white" />
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -172,7 +172,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-linear-to-r from-indigo-600 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full bg-linear-to-r from-red-500 to-rose-500 flex items-center justify-center text-white font-semibold text-sm">
                   {getInitials()}
                 </div>
               )}
@@ -204,7 +204,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   transition-all duration-300
                   ${
                     active
-                      ? "bg-linear-to-r from-indigo-600 to-blue-600 text-white shadow-depth-sm"
+                      ? "bg-linear-to-r from-red-500 to-rose-500 text-white shadow-depth-sm"
                       : "text-slate-700 hover:bg-slate-100"
                   }
                 `}
@@ -265,8 +265,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <svg width="0" height="0" className="absolute">
           <defs>
             <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#4F46E5" />
-              <stop offset="100%" stopColor="#3B82F6" />
+              <stop offset="0%" stopColor="#EF4444" />
+              <stop offset="100%" stopColor="#F43F5E" />
             </linearGradient>
           </defs>
         </svg>

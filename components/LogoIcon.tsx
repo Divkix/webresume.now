@@ -22,12 +22,12 @@ const colorConfig: Record<
   LogoIconColorScheme,
   { document: string; lines: string; cursor: string; cursorStroke: string }
 > = {
-  dark: { document: "#2563EB", lines: "#FFFFFF", cursor: "#FFFFFF", cursorStroke: "#2563EB" },
-  light: { document: "#FFFFFF", lines: "#2563EB", cursor: "#FFFFFF", cursorStroke: "#2563EB" },
+  dark: { document: "#FF6B6B", lines: "#FFFFFF", cursor: "#FFFFFF", cursorStroke: "#FF6B6B" },
+  light: { document: "#FFFFFF", lines: "#FF6B6B", cursor: "#FFFFFF", cursorStroke: "#FF6B6B" },
 };
 
 /**
- * Icon-only version of the logo (blue document with cursor)
+ * Icon-only version of the logo (coral document with cursor)
  * Use for favicons, small spaces, or alongside text
  */
 export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: LogoIconProps) {
@@ -54,7 +54,7 @@ export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: 
         </filter>
       </defs>
 
-      {/* Blue document body */}
+      {/* Coral document body */}
       <rect x="5" y="5" width="40" height="50" rx="8" fill={colors.document} />
 
       {/* White text lines */}

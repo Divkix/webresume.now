@@ -20,7 +20,7 @@ const notHiddenFromSearch = or(
 const URLS_PER_SITEMAP = 50000; // Google's limit
 
 function getBaseUrl(): string {
-  return process.env.BETTER_AUTH_URL || "https://webresume.now";
+  return process.env.BETTER_AUTH_URL || "https://clickfolio.me";
 }
 
 /**

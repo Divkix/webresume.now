@@ -1,6 +1,6 @@
 import { generateSitemaps } from "../../sitemap";
 
-const BASE_URL = process.env.BETTER_AUTH_URL || "https://webresume.now";
+const BASE_URL = process.env.BETTER_AUTH_URL || "https://clickfolio.me";
 
 export async function GET(): Promise<Response> {
   const sitemaps = await generateSitemaps();

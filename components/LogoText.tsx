@@ -24,7 +24,7 @@ const colorConfig: Record<LogoTextColorScheme, { main: string; shadow: string; s
 };
 
 /**
- * Text-only portion of the logo (webresume + .now badge)
+ * Text-only portion of the logo (clickfolio + .me badge)
  * Use alongside LogoIcon or standalone
  */
 export function LogoText({ size = "md", colorScheme = "dark", className = "" }: LogoTextProps) {
@@ -38,7 +38,7 @@ export function LogoText({ size = "md", colorScheme = "dark", className = "" }: 
       viewBox="0 0 290 60"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="webresume.now"
+      aria-label="clickfolio.me"
       role="img"
     >
       <defs>
@@ -48,12 +48,12 @@ export function LogoText({ size = "md", colorScheme = "dark", className = "" }: 
         </style>
       </defs>
 
-      {/* Brand text "webresume" */}
+      {/* Brand text "clickfolio" */}
       <text x="0" y="40" className={`logotext-main-${colorScheme}`}>
-        webresume
+        clickfolio
       </text>
 
-      {/* .now badge shadow */}
+      {/* .me badge shadow */}
       <rect
         x="208"
         y="15"
@@ -64,7 +64,7 @@ export function LogoText({ size = "md", colorScheme = "dark", className = "" }: 
         fill={colors.shadow}
       />
 
-      {/* .now badge */}
+      {/* .me badge */}
       <rect
         x="204"
         y="11"
@@ -72,12 +72,12 @@ export function LogoText({ size = "md", colorScheme = "dark", className = "" }: 
         height="36"
         rx="4"
         transform="rotate(-3 204 11)"
-        fill="#FF6B6B"
+        fill="#3b82f6"
         stroke={colors.stroke}
         strokeWidth="3"
       />
       <text x="212" y="36" className="logotext-tld" transform="rotate(-3 212 36)">
-        .now
+        .me
       </text>
     </svg>
   );

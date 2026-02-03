@@ -125,10 +125,10 @@ export function ForgotPasswordForm({ onBackToSignIn }: ForgotPasswordFormProps) 
             duration-150
             disabled:opacity-50
             disabled:cursor-not-allowed
-            ${errors.email ? "border-coral" : ""}
+            ${errors.email ? "border-brand" : ""}
           `}
         />
-        {errors.email && <p className="text-sm text-coral font-medium">{errors.email.message}</p>}
+        {errors.email && <p className="text-sm text-brand font-medium">{errors.email.message}</p>}
       </div>
 
       {/* Submit Button */}

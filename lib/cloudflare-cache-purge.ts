@@ -28,7 +28,7 @@ interface CloudflarePurgeResponse {
  * (e.g., hiding phone number, address) where the user expects immediate effect.
  *
  * @param handle - The user's handle (username)
- * @param baseUrl - The base URL of the site (e.g., "https://webresume.now")
+ * @param baseUrl - The base URL of the site (e.g., "https://clickfolio.me")
  * @param zoneId - Cloudflare zone ID
  * @param apiToken - Cloudflare API token with Cache Purge permissions
  * @returns boolean indicating success (true) or failure (false)
@@ -37,7 +37,7 @@ interface CloudflarePurgeResponse {
  * ```typescript
  * const success = await purgeResumeCache(
  *   "johndoe",
- *   "https://webresume.now",
+ *   "https://clickfolio.me",
  *   env.CF_ZONE_ID,
  *   env.CF_CACHE_PURGE_API_TOKEN
  * );

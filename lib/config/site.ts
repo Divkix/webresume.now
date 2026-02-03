@@ -3,16 +3,16 @@
  * Change branding by updating NEXT_PUBLIC_* env vars
  */
 
-const name = process.env.NEXT_PUBLIC_SITE_NAME || "webresume";
-const tld = process.env.NEXT_PUBLIC_SITE_TLD || ".now";
-const domain = process.env.NEXT_PUBLIC_SITE_DOMAIN || "webresume.now";
+const name = process.env.NEXT_PUBLIC_SITE_NAME || "clickfolio";
+const tld = process.env.NEXT_PUBLIC_SITE_TLD || ".me";
+const domain = process.env.NEXT_PUBLIC_SITE_DOMAIN || "clickfolio.me";
 
 export const siteConfig = {
-  /** Main brand name (e.g., "webresume") */
+  /** Main brand name (e.g., "clickfolio") */
   name,
-  /** TLD/suffix (e.g., ".now") */
+  /** TLD/suffix (e.g., ".me") */
   tld,
-  /** Full domain (e.g., "webresume.now") */
+  /** Full domain (e.g., "clickfolio.me") */
   domain,
   /** Combined name + tld */
   fullName: `${name}${tld}`,

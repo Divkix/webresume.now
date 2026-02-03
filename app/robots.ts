@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 function getBaseUrl(): string {
-  return process.env.BETTER_AUTH_URL || "https://webresume.now";
+  return process.env.BETTER_AUTH_URL || "https://clickfolio.me";
 }
 
 export default function robots(): MetadataRoute.Robots {

@@ -9,7 +9,7 @@
   <rect x="7" y="3" width="44" height="52" rx="4" fill="#FDF8F3" stroke="#0D0D0D" stroke-width="3" />
 
   <!-- Red header bar -->
-  <path d="M 7 7 C 7 5 9 3 11 3 L 47 3 C 49 3 51 5 51 7 L 51 15 L 7 15 Z" fill="#FF6B6B" stroke="#0D0D0D" stroke-width="3" />
+  <path d="M 7 7 C 7 5 9 3 11 3 L 47 3 C 49 3 51 5 51 7 L 51 15 L 7 15 Z" fill="#3b82f6" stroke="#0D0D0D" stroke-width="3" />
 
   <!-- Window dots -->
   <circle cx="15" cy="9" r="2" fill="#0D0D0D" />

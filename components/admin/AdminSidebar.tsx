@@ -60,7 +60,7 @@ export function AdminSidebar({ isOpen, onClose, adminEmail }: AdminSidebarProps)
 
         {/* Logo Header */}
         <div className="p-4 border-b border-slate-200/60">
-          <Link href="/" aria-label="webresume.now home">
+          <Link href="/" aria-label="clickfolio.me home">
             <Logo size="xs" />
           </Link>
           <span className="ml-2 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
@@ -84,7 +84,7 @@ export function AdminSidebar({ isOpen, onClose, adminEmail }: AdminSidebarProps)
                   transition-all duration-200
                   ${
                     active
-                      ? "bg-slate-100 text-slate-900 border-l-2 border-coral"
+                      ? "bg-slate-100 text-slate-900 border-l-2 border-brand"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }
                 `}

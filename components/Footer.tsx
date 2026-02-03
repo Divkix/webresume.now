@@ -37,7 +37,7 @@ export function Footer() {
             <span>Powered by Cloudflare</span>
             <span className="text-ink">•</span>
             <a
-              href="https://github.com/divkix/webresume.now"
+              href="https://github.com/divkix/clickfolio.me"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 hover:text-ink underline-offset-4 hover:underline transition-colors"

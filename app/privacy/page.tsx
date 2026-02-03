@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
           <Link
             href="/"
             className="hover:opacity-80 transition-opacity"
-            aria-label="webresume.now home"
+            aria-label="clickfolio.me home"
           >
             <Logo size="sm" />
           </Link>

@@ -39,7 +39,7 @@ export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: 
       viewBox="0 0 64 72"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="webresume.now icon"
+      aria-label="clickfolio.me icon"
       role="img"
     >
       {/* Document shadow */}
@@ -57,10 +57,10 @@ export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: 
         strokeWidth="3"
       />
 
-      {/* Red header bar */}
+      {/* Blue header bar */}
       <path
         d="M 4 8 C 4 6 6 4 8 4 L 48 4 C 50 4 52 6 52 8 L 52 18 L 4 18 Z"
-        fill="#FF6B6B"
+        fill="#3b82f6"
         stroke={colors.stroke}
         strokeWidth="3"
       />

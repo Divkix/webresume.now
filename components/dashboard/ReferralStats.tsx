@@ -29,7 +29,7 @@ export function ReferralStats({ referralCount, clickCount, handle }: ReferralSta
   const referralUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/?ref=${handle}`
-      : `https://webresume.now/?ref=${handle}`;
+      : `https://clickfolio.me/?ref=${handle}`;
 
   const handleCopyLink = useCallback(async () => {
     try {
@@ -56,12 +56,12 @@ export function ReferralStats({ referralCount, clickCount, handle }: ReferralSta
               <h3 className="font-semibold text-slate-900">Help friends land jobs</h3>
             </div>
             <p className="text-sm text-slate-600">
-              Know someone job hunting? Share webresume.now with them.
+              Know someone job hunting? Share clickfolio.me with them.
             </p>
           </div>
           <div className="flex items-center gap-2">
             <code className="bg-white/80 px-3 py-2 rounded-lg text-sm font-mono text-slate-600 hidden sm:block">
-              webresume.now/?ref={handle}
+              clickfolio.me/?ref={handle}
             </code>
             <Button
               variant="default"

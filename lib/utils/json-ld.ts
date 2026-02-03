@@ -180,7 +180,7 @@ function buildAlumniOf(
  *
  * @example
  * const jsonLd = generateResumeJsonLd(content, {
- *   profileUrl: "https://webresume.now/@john-doe",
+ *   profileUrl: "https://clickfolio.me/@john-doe",
  *   avatarUrl: "https://example.com/avatar.jpg",
  * });
  */

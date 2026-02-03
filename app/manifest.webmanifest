@@ -1,11 +1,11 @@
 {
-  "name": "webresume.now",
-  "short_name": "webresume",
+  "name": "clickfolio.me",
+  "short_name": "clickfolio",
   "description": "Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FDF8F3",
-  "theme_color": "#FF6B6B",
+  "background_color": "#eff6ff",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icon-192.png",

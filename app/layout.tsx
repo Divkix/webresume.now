@@ -5,8 +5,8 @@ import "./globals.css";
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FDF8F3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0D0D0D" },
+    { media: "(prefers-color-scheme: light)", color: "#eff6ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
   ],
 };
 
@@ -24,11 +24,11 @@ export const metadata: Metadata = {
     ],
     shortcut: "/favicon.ico",
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-    other: [{ rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#FF6B6B" }],
+    other: [{ rel: "mask-icon", url: "/safari-pinned-tab.svg", color: "#3b82f6" }],
   },
   manifest: "/manifest.webmanifest",
   other: {
-    "msapplication-TileColor": "#FF6B6B",
+    "msapplication-TileColor": "#3b82f6",
     "msapplication-config": "/browserconfig.xml",
   },
 };

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**webresume.now** — Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.
+**clickfolio.me** — Turn a PDF resume into a hosted web portfolio. Upload → AI Parse → Publish.
 
 **Stack**: Next.js 16 (App Router) on Cloudflare Workers, D1 (SQLite) via Drizzle ORM, Better Auth (Google OAuth), R2 storage, AI parsing via utility workers (pdf-text-worker + ai-parser-worker).
 
@@ -31,8 +31,8 @@ bun run db:studio        # Drizzle Studio UI (port 4984)
 bun run db:reset         # Wipe local D1 and re-migrate
 
 # Direct D1 queries
-bunx wrangler d1 execute webresume-db --local --command "SELECT * FROM user"
-bunx wrangler d1 execute webresume-db --command "SELECT * FROM user"  # prod
+bunx wrangler d1 execute clickfolio-db --local --command "SELECT * FROM user"
+bunx wrangler d1 execute clickfolio-db --command "SELECT * FROM user"  # prod
 
 # CI
 bun run ci               # type-check + lint + build

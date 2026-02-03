@@ -13,8 +13,8 @@
  * @returns Encoded Twitter share URL
  *
  * @example
- * generateTwitterShareUrl("Check out my portfolio!", "https://webresume.now/john")
- * // => "https://twitter.com/intent/tweet?text=Check%20out%20my%20portfolio!&url=https%3A%2F%2Fwebresume.now%2Fjohn"
+ * generateTwitterShareUrl("Check out my portfolio!", "https://clickfolio.me/john")
+ * // => "https://twitter.com/intent/tweet?text=Check%20out%20my%20portfolio!&url=https%3A%2F%2Fclickfolio.me%2Fjohn"
  */
 export function generateTwitterShareUrl(text: string, url: string): string {
   const params = new URLSearchParams({
@@ -31,8 +31,8 @@ export function generateTwitterShareUrl(text: string, url: string): string {
  * @returns Encoded LinkedIn share URL
  *
  * @example
- * generateLinkedInShareUrl("https://webresume.now/john")
- * // => "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fwebresume.now%2Fjohn"
+ * generateLinkedInShareUrl("https://clickfolio.me/john")
+ * // => "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fclickfolio.me%2Fjohn"
  */
 export function generateLinkedInShareUrl(url: string): string {
   const params = new URLSearchParams({
@@ -49,8 +49,8 @@ export function generateLinkedInShareUrl(url: string): string {
  * @returns Encoded WhatsApp share URL
  *
  * @example
- * generateWhatsAppShareUrl("Check out my portfolio!", "https://webresume.now/john")
- * // => "https://wa.me/?text=Check%20out%20my%20portfolio!%20https%3A%2F%2Fwebresume.now%2Fjohn"
+ * generateWhatsAppShareUrl("Check out my portfolio!", "https://clickfolio.me/john")
+ * // => "https://wa.me/?text=Check%20out%20my%20portfolio!%20https%3A%2F%2Fclickfolio.me%2Fjohn"
  */
 export function generateWhatsAppShareUrl(text: string, url: string): string {
   const params = new URLSearchParams({

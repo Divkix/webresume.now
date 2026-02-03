@@ -55,12 +55,12 @@ export function YouAreLiveModal({ open, onOpenChange, handle, url }: YouAreLiveM
     url ||
     (typeof window !== "undefined"
       ? `${window.location.origin}/@${handle}`
-      : `https://webresume.now/@${handle}`);
+      : `https://clickfolio.me/@${handle}`);
 
   const referralUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/?ref=${handle}`
-      : `https://webresume.now/?ref=${handle}`;
+      : `https://clickfolio.me/?ref=${handle}`;
 
   const shareText = "Just published my professional resume! Check it out:";
 
@@ -115,7 +115,7 @@ export function YouAreLiveModal({ open, onOpenChange, handle, url }: YouAreLiveM
 
           {/* Resume URL */}
           <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <code className="flex-1 text-sm truncate font-mono">webresume.now/@{handle}</code>
+            <code className="flex-1 text-sm truncate font-mono">clickfolio.me/@{handle}</code>
             <button
               type="button"
               onClick={handleCopyLink}

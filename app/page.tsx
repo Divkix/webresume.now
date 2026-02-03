@@ -33,7 +33,7 @@ export default function Home() {
         {/* Header - Bold, minimal */}
         <header className="sticky top-0 z-50 border-b-3 border-ink bg-cream">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <a href="/" aria-label="webresume.now home">
+            <a href="/" aria-label="clickfolio.me home">
               <Logo size="md" />
             </a>
             <LoginButton />
@@ -43,7 +43,7 @@ export default function Home() {
         <main id="main-content" className="flex-1 relative overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute top-20 left-10 w-32 h-32 bg-amber rounded-full opacity-20 blur-3xl" />
-          <div className="absolute bottom-40 right-10 w-40 h-40 bg-coral rounded-full opacity-20 blur-3xl" />
+          <div className="absolute bottom-40 right-10 w-40 h-40 bg-brand rounded-full opacity-20 blur-3xl" />
           <div className="absolute top-1/2 left-1/4 w-24 h-24 bg-mint rounded-full opacity-15 blur-2xl" />
 
           {/* Hero Section - Asymmetric Bento Layout */}
@@ -83,12 +83,12 @@ export default function Home() {
                         borderTop: "60px solid #ffffff",
                       }}
                     />
-                    {/* Underside of fold (coral accent) */}
+                    {/* Underside of fold (brand accent) */}
                     <div
                       className="absolute bottom-0 left-0 w-0 h-0"
                       style={{
                         borderRight: "64px solid transparent",
-                        borderBottom: "64px solid #FF6B6B",
+                        borderBottom: "64px solid #3b82f6",
                       }}
                     />
                   </div>
@@ -99,7 +99,7 @@ export default function Home() {
                     <span className="relative inline-block">
                       is already a
                       <svg
-                        className="absolute -bottom-2 left-0 w-full h-3 text-coral"
+                        className="absolute -bottom-2 left-0 w-full h-3 text-brand"
                         viewBox="0 0 200 12"
                         preserveAspectRatio="none"
                       >
@@ -206,7 +206,7 @@ export default function Home() {
                 {/* Social Proof */}
                 <div
                   className="
-                  bg-coral
+                  bg-brand
                   border-3
                   border-ink
                   p-4
@@ -249,7 +249,7 @@ export default function Home() {
               <div className="flex flex-wrap justify-center gap-4">
                 {DEMO_PROFILES.map((profile, index) => {
                   const cardColors = [
-                    { avatar: "bg-coral text-white", badge: "bg-coral/10 text-coral" },
+                    { avatar: "bg-brand text-white", badge: "bg-brand/10 text-brand" },
                     { avatar: "bg-mint text-ink", badge: "bg-mint/10 text-ink" },
                     { avatar: "bg-lavender text-white", badge: "bg-lavender/10 text-lavender" },
                     { avatar: "bg-amber text-ink", badge: "bg-amber/10 text-ink" },
@@ -272,7 +272,7 @@ export default function Home() {
                       animate-fade-in-up
                       focus:outline-none
                       focus:ring-4
-                      focus:ring-coral
+                      focus:ring-brand
                       w-full
                       sm:w-[calc(50%-0.5rem)]
                       lg:w-[calc(25%-0.75rem)]
@@ -365,7 +365,7 @@ export default function Home() {
                     step: "03",
                     title: "Publish",
                     desc: "Get a beautiful shareable link in seconds.",
-                    color: "bg-coral",
+                    color: "bg-brand",
                   },
                 ].map((item, index) => (
                   <div
@@ -407,7 +407,7 @@ export default function Home() {
                 <h2 className="font-black text-3xl sm:text-4xl text-cream mb-4">
                   Your resume shouldn&apos;t
                   <br />
-                  <span className="inline-block bg-coral text-white px-3 py-1 rotate-1 mt-2">
+                  <span className="inline-block bg-brand text-white px-3 py-1 rotate-1 mt-2">
                     blend in.
                   </span>
                 </h2>
@@ -422,7 +422,7 @@ export default function Home() {
                     }}
                     className="
                     inline-block
-                    bg-coral
+                    bg-brand
                     text-white
                     font-black
                     text-lg
@@ -430,13 +430,13 @@ export default function Home() {
                     py-4
                     border-3
                     border-cream
-                    shadow-[5px_5px_0px_#FDF8F3]
+                    shadow-[5px_5px_0px_#eff6ff]
                     hover:-translate-x-0.5
                     hover:-translate-y-0.5
-                    hover:shadow-[7px_7px_0px_#FDF8F3]
+                    hover:shadow-[7px_7px_0px_#eff6ff]
                     active:translate-x-0
                     active:translate-y-0
-                    active:shadow-[3px_3px_0px_#FDF8F3]
+                    active:shadow-[3px_3px_0px_#eff6ff]
                     transition-all
                     duration-150
                   "

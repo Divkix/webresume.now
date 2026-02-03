@@ -8,12 +8,12 @@
 
 ## Reporting a Vulnerability
 
-We take security seriously. If you discover a security vulnerability in webresume.now, please report it responsibly.
+We take security seriously. If you discover a security vulnerability in clickfolio.me, please report it responsibly.
 
 ### How to Report
 
 1. **DO NOT** open a public GitHub issue for security vulnerabilities
-2. Email security concerns to: **security@webresume.now** (or the repository maintainer)
+2. Email security concerns to: **support@clickfolio.me**
 3. Include as much detail as possible:
    - Description of the vulnerability
    - Steps to reproduce

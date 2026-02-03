@@ -100,7 +100,7 @@ interface ShareBarProps extends VariantProps<typeof shareBarVariants> {
  * @example
  * ```tsx
  * <ShareBar
- *   url="https://webresume.now/john"
+ *   url="https://clickfolio.me/john"
  *   title="John Doe's Portfolio"
  *   name="John Doe"
  *   variant="minimalist-editorial"
@@ -117,7 +117,7 @@ export function ShareBar({ url, handle, title, name, variant, className }: Share
     url ||
     (typeof window !== "undefined" && handle
       ? `${window.location.origin}/@${handle}`
-      : `https://webresume.now/@${handle ?? ""}`);
+      : `https://clickfolio.me/@${handle ?? ""}`);
 
   const handleNativeShare = useCallback(async () => {
     try {

@@ -1,4 +1,4 @@
-# Contributing to webresume.now
+# Contributing to clickfolio.me
 
 Thank you for your interest in contributing! This document provides guidelines and information for contributors.
 
@@ -21,8 +21,8 @@ Be respectful, inclusive, and constructive. We're all here to build something us
 1. **Fork and clone the repository**
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/webresume.now.git
-   cd webresume.now
+   git clone https://github.com/YOUR_USERNAME/clickfolio.me.git
+   cd clickfolio.me
    ```
 
 2. **Install dependencies**
@@ -152,7 +152,7 @@ The Biome configuration is in `biome.json`. Run `bun run fix` to auto-format.
 ## Project Structure
 
 ```
-webresume.now/
+clickfolio.me/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/            # Auth API routes
 │   ├── (public)/          # Public pages (/, /[handle])
@@ -231,8 +231,8 @@ Remember these limitations when contributing:
 
 ## Questions?
 
-- Open a [GitHub Discussion](https://github.com/divkix/webresume.now/discussions) for questions
-- Open an [Issue](https://github.com/divkix/webresume.now/issues) for bugs
+- Open a [GitHub Discussion](https://github.com/divkix/clickfolio.me/discussions) for questions
+- Open an [Issue](https://github.com/divkix/clickfolio.me/issues) for bugs
 - Check existing issues before opening new ones
 
 ## License

@@ -73,7 +73,7 @@ function ResetPasswordForm() {
     return (
       <div className="text-center space-y-4">
         <div className="flex justify-center">
-          <XCircle className="w-12 h-12 text-coral" />
+          <XCircle className="w-12 h-12 text-brand" />
         </div>
         <div className="space-y-2">
           <h2 className="font-bold text-ink text-lg">Invalid Reset Link</h2>
@@ -189,11 +189,11 @@ function ResetPasswordForm() {
             duration-150
             disabled:opacity-50
             disabled:cursor-not-allowed
-            ${errors.newPassword ? "border-coral" : ""}
+            ${errors.newPassword ? "border-brand" : ""}
           `}
         />
         {errors.newPassword && (
-          <p className="text-sm text-coral font-medium">{errors.newPassword.message}</p>
+          <p className="text-sm text-brand font-medium">{errors.newPassword.message}</p>
         )}
       </div>
 
@@ -228,11 +228,11 @@ function ResetPasswordForm() {
             duration-150
             disabled:opacity-50
             disabled:cursor-not-allowed
-            ${errors.confirmPassword ? "border-coral" : ""}
+            ${errors.confirmPassword ? "border-brand" : ""}
           `}
         />
         {errors.confirmPassword && (
-          <p className="text-sm text-coral font-medium">{errors.confirmPassword.message}</p>
+          <p className="text-sm text-brand font-medium">{errors.confirmPassword.message}</p>
         )}
       </div>
 
@@ -318,7 +318,7 @@ export default function ResetPasswordPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b-3 border-ink bg-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/" aria-label="webresume.now home">
+          <Link href="/" aria-label="clickfolio.me home">
             <Logo size="md" />
           </Link>
         </div>

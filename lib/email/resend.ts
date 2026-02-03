@@ -34,14 +34,14 @@ function getFromEmail(): string {
       // In production, use your verified domain
       // For dev/testing, Resend provides onboarding@resend.dev
       if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
-        return "WebResume <onboarding@resend.dev>";
+        return "Clickfolio <onboarding@resend.dev>";
       }
-      return `WebResume <noreply@${url.hostname}>`;
+      return `Clickfolio <noreply@${url.hostname}>`;
     } catch {
       // Invalid URL, fall back to test domain
     }
   }
-  return "WebResume <onboarding@resend.dev>";
+  return "Clickfolio <onboarding@resend.dev>";
 }
 
 interface SendPasswordResetEmailParams {
@@ -86,7 +86,7 @@ export async function sendPasswordResetEmail({
 
     const textContent = `${greeting}
 
-You requested to reset your password for your WebResume account.
+You requested to reset your password for your Clickfolio account.
 
 Click the link below to set a new password:
 ${safeResetUrl}
@@ -95,7 +95,7 @@ This link will expire in 1 hour.
 
 If you didn't request this, you can safely ignore this email. Your password won't be changed.
 
-- The WebResume Team`;
+- The Clickfolio Team`;
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -110,7 +110,7 @@ If you didn't request this, you can safely ignore this email. Your password won'
 
     <p style="margin: 0 0 16px 0;">${greeting}</p>
 
-    <p style="margin: 0 0 24px 0;">You requested to reset your password for your WebResume account.</p>
+    <p style="margin: 0 0 24px 0;">You requested to reset your password for your Clickfolio account.</p>
 
     <a href="${safeResetUrl}" style="display: inline-block; background: #1a1a1a; color: #fffef5; padding: 12px 24px; text-decoration: none; font-weight: 600; border: 3px solid #1a1a1a; box-shadow: 4px 4px 0 #1a1a1a;">
       Reset Password
@@ -126,7 +126,7 @@ If you didn't request this, you can safely ignore this email. Your password won'
   </div>
 
   <p style="margin: 24px 0 0 0; font-size: 12px; color: #999; text-align: center;">
-    &copy; WebResume
+    &copy; Clickfolio
   </p>
 </body>
 </html>`;
@@ -140,7 +140,7 @@ If you didn't request this, you can safely ignore this email. Your password won'
       body: {
         from: getFromEmail(),
         to: email,
-        subject: "Reset your password - WebResume",
+        subject: "Reset your password - Clickfolio",
         html: htmlContent,
         text: textContent,
       },

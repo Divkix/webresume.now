@@ -145,7 +145,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
         {/* Logo Header */}
         <div className="p-4 border-b border-slate-200/60">
-          <a href="/" aria-label="webresume.now home">
+          <a href="/" aria-label="clickfolio.me home">
             <Logo size="xs" />
           </a>
         </div>

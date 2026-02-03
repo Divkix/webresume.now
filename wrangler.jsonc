@@ -1,7 +1,7 @@
 {
 	// Custom worker wraps OpenNext handler + adds queue consumer
 	"main": "worker.ts",
-	"name": "webresume-now",
+	"name": "clickfolio-me",
 	"compatibility_date": "2026-01-22",
 	// Explicitly enable workers.dev subdomain (set to false if using custom domain only)
 	"workers_dev": true,
@@ -28,7 +28,7 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "webresume-db",
+			"database_name": "clickfolio-db",
 			"database_id": "7187fbfb-168e-43bf-9217-dd29639fdcfe"
 		}
 	],
@@ -36,7 +36,7 @@
 	"r2_buckets": [
 		{
 			"binding": "R2_BUCKET",
-			"bucket_name": "webresume-bucket"
+			"bucket_name": "clickfolio-bucket"
 		}
 	],
 	// Service bindings for utility workers (remote: true uses deployed workers in dev)

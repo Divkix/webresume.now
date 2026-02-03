@@ -331,7 +331,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
           duration-200
           ${
             isDragging
-              ? "bg-amber/20 border-solid border-coral translate-x-[-2px] translate-y-[-2px] shadow-brutal-md"
+              ? "bg-amber/20 border-solid border-brand translate-x-[-2px] translate-y-[-2px] shadow-brutal-md"
               : "hover:bg-amber/10 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-brutal-sm"
           }
           ${uploading ? "pointer-events-none opacity-60" : ""}
@@ -360,7 +360,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               justify-center
               transition-all
               duration-200
-              ${isDragging ? "bg-coral rotate-3" : "bg-amber group-hover:rotate-3"}
+              ${isDragging ? "bg-brand rotate-3" : "bg-amber group-hover:rotate-3"}
             `}
           >
             <svg className="w-8 h-8 text-ink" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -408,8 +408,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
       {/* Error Message with Retry Button */}
       {error && (
-        <div className="bg-coral/10 border-3 border-coral p-4" role="alert">
-          <p className="font-bold text-sm text-coral mb-3">{error}</p>
+        <div className="bg-brand/10 border-3 border-brand p-4" role="alert">
+          <p className="font-bold text-sm text-brand mb-3">{error}</p>
           <button
             type="button"
             onClick={handleRetry}
@@ -422,7 +422,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               px-4
               border-2
               border-ink
-              hover:bg-coral
+              hover:bg-brand
               hover:text-white
               transition-colors
             "
@@ -498,7 +498,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
               className="
                 w-16
                 h-16
-                bg-coral
+                bg-brand
                 border-3
                 border-ink
                 flex
@@ -524,7 +524,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
 
             <div className="text-center">
               <h3 className="font-black text-lg text-ink mb-2">Something Went Wrong</h3>
-              <p className="font-bold text-sm text-coral mb-4">{error}</p>
+              <p className="font-bold text-sm text-brand mb-4">{error}</p>
             </div>
 
             <button
@@ -603,7 +603,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                   className="
                     w-full
                     max-w-xs
-                    bg-coral
+                    bg-brand
                     text-white
                     font-black
                     py-3

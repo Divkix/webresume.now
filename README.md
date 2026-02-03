@@ -1,4 +1,4 @@
-# webresume.now
+# clickfolio.me
 
 **Turn your PDF resume into a hosted web portfolio in under 60 seconds.**
 
@@ -76,8 +76,8 @@ We chose Cloudflare Workers over traditional hosting for several reasons:
 
 ```bash
 # Clone the repository
-git clone https://github.com/divkix/webresume.now.git
-cd webresume.now
+git clone https://github.com/divkix/clickfolio.me.git
+cd clickfolio.me
 
 # Install dependencies
 bun install
@@ -114,8 +114,8 @@ If you are not technical, follow this exact checklist. You only need a terminal 
 **Step 0: Get the code**
 1. Download the repo ZIP from GitHub and unzip it, **or** use:
    ```bash
-   git clone https://github.com/divkix/webresume.now.git
-   cd webresume.now
+   git clone https://github.com/divkix/clickfolio.me.git
+   cd clickfolio.me
    ```
 2. Install dependencies:
    ```bash
@@ -125,14 +125,14 @@ If you are not technical, follow this exact checklist. You only need a terminal 
 **Step 1: Create Cloudflare D1 database**
 1. In Terminal:
    ```bash
-   bunx wrangler d1 create webresume-db
+   bunx wrangler d1 create clickfolio-db
    ```
 2. Copy the `database_id` printed in the terminal.
 3. Open `wrangler.jsonc` and replace the `database_id` value.
 
 **Step 2: Create Cloudflare R2 bucket**
 1. Go to Cloudflare Dashboard → R2 → Create bucket.
-2. Name it **`webresume-bucket`**.
+2. Name it **`clickfolio-bucket`**.
 3. The bucket is accessed via binding in wrangler.jsonc - no API tokens needed.
 
 **Step 3: Configure R2 CORS**
@@ -198,13 +198,13 @@ If you followed the steps above, the site should be live at your domain.
 
 2. **Create D1 Database**
    ```bash
-   bunx wrangler d1 create webresume-db
+   bunx wrangler d1 create clickfolio-db
    ```
    Copy the `database_id` to `wrangler.jsonc`
 
 3. **Create R2 Bucket**
    - Go to Cloudflare Dashboard > R2
-   - Create bucket named `webresume-bucket`
+   - Create bucket named `clickfolio-bucket`
    - The bucket is accessed via binding in `wrangler.jsonc` - no API tokens needed
 
 4. **Configure R2 CORS**

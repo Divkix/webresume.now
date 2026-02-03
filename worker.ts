@@ -91,7 +91,7 @@ export default {
 
   // Cloudflare Cron trigger handler
   async scheduled(controller: ScheduledController, env: CloudflareEnv): Promise<void> {
-    const baseUrl = env.BETTER_AUTH_URL || "https://webresume-now.divkix.workers.dev";
+    const baseUrl = env.BETTER_AUTH_URL || "https://clickfolio-me.divkix.workers.dev";
 
     let endpoint: string;
     switch (controller.cron) {

@@ -8,9 +8,9 @@ import {
 
 describe("generateTwitterShareUrl", () => {
   it("generates correct URL with basic text and url", () => {
-    const result = generateTwitterShareUrl("Check out my portfolio!", "https://webresume.now/john");
+    const result = generateTwitterShareUrl("Check out my portfolio!", "https://clickfolio.me/john");
     expect(result).toBe(
-      "https://twitter.com/intent/tweet?text=Check+out+my+portfolio%21&url=https%3A%2F%2Fwebresume.now%2Fjohn",
+      "https://twitter.com/intent/tweet?text=Check+out+my+portfolio%21&url=https%3A%2F%2Fclickfolio.me%2Fjohn",
     );
   });
 
@@ -52,9 +52,9 @@ describe("generateTwitterShareUrl", () => {
 
 describe("generateLinkedInShareUrl", () => {
   it("generates correct URL with basic url", () => {
-    const result = generateLinkedInShareUrl("https://webresume.now/john");
+    const result = generateLinkedInShareUrl("https://clickfolio.me/john");
     expect(result).toBe(
-      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fwebresume.now%2Fjohn",
+      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fclickfolio.me%2Fjohn",
     );
   });
 
@@ -73,10 +73,10 @@ describe("generateWhatsAppShareUrl", () => {
   it("generates correct URL with text and url combined", () => {
     const result = generateWhatsAppShareUrl(
       "Check out my portfolio!",
-      "https://webresume.now/john",
+      "https://clickfolio.me/john",
     );
     expect(result).toContain("https://wa.me/?text=");
-    expect(result).toContain("Check+out+my+portfolio%21+https%3A%2F%2Fwebresume.now%2Fjohn");
+    expect(result).toContain("Check+out+my+portfolio%21+https%3A%2F%2Fclickfolio.me%2Fjohn");
   });
 
   it("encodes special characters to prevent XSS", () => {

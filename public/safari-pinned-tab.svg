@@ -1,14 +1,15 @@
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg width="64" height="64" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <!-- Monochrome version for Safari pinned tabs -->
-  <!-- Document silhouette -->
-  <rect x="7" y="3" width="44" height="52" rx="4" fill="black" />
-  <!-- Header bar cutout (creates visual separation) -->
-  <rect x="7" y="15" width="44" height="3" fill="black" />
-  <!-- Window dots -->
-  <circle cx="15" cy="9" r="2" fill="white" />
-  <circle cx="22" cy="9" r="2" fill="white" />
-  <!-- Text lines (inverted) -->
-  <rect x="14" y="24" width="28" height="4" rx="1" fill="white" />
-  <rect x="14" y="33" width="20" height="4" rx="1" fill="white" />
-  <rect x="14" y="42" width="24" height="4" rx="1" fill="white" />
+  <!-- Single color silhouette of clickfolio logo -->
+
+  <!-- Document body -->
+  <rect x="5" y="5" width="40" height="50" rx="8" fill="black" />
+
+  <!-- Text lines (cutout/inverted for contrast) -->
+  <path d="M17 18H33" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <path d="M17 26H33" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <path d="M17 34H25" stroke="white" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Cursor/pointer element -->
+  <path d="M33 32L41 50L45 40L55 36L33 32Z" fill="black" />
 </svg>

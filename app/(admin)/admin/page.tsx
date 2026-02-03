@@ -92,8 +92,8 @@ export default async function AdminOverviewPage() {
           title="Total Users"
           value={stats.totalUsers}
           icon={Users}
-          iconColorClass="text-indigo-600"
-          iconBgClass="bg-linear-to-r from-indigo-100 to-blue-100"
+          iconColorClass="text-red-600"
+          iconBgClass="bg-linear-to-r from-red-100 to-rose-100"
         />
         <StatCard
           title="Published Resumes"

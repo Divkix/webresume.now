@@ -51,7 +51,7 @@
   /* Neubrutalist Color Tokens */
   --color-cream: #eff6ff;
   --color-ink: #0D0D0D;
-  --color-brand: #3b82f6;
+  --color-brand: #FF6B6B;
   --color-amber: #FFB84D;
   --color-mint: #4ECDC4;
   --color-lavender: #A78BFA;
@@ -83,17 +83,17 @@
   --popover-foreground: #0D0D0D;
   --primary: #0D0D0D;
   --primary-foreground: #eff6ff;
-  --secondary: #dbeafe;
+  --secondary: #FFF0F0;
   --secondary-foreground: #0D0D0D;
-  --muted: #dbeafe;
+  --muted: #FFF0F0;
   --muted-foreground: #6B6B6B;
-  --accent: #3b82f6;
+  --accent: #FF6B6B;
   --accent-foreground: #FFFFFF;
   --destructive: #DC2626;
   --border: #0D0D0D;
   --input: #0D0D0D;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
+  --ring: #FF6B6B;
+  --chart-1: #FF6B6B;
   --chart-2: #FFB84D;
   --chart-3: #4ECDC4;
   --chart-4: #A78BFA;
@@ -102,10 +102,10 @@
   --sidebar-foreground: #0D0D0D;
   --sidebar-primary: #0D0D0D;
   --sidebar-primary-foreground: #eff6ff;
-  --sidebar-accent: #3b82f6;
+  --sidebar-accent: #FF6B6B;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #0D0D0D;
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #FF6B6B;
 }
 
 .dark {
@@ -121,13 +121,13 @@
   --secondary-foreground: #eff6ff;
   --muted: #334155;
   --muted-foreground: #94a3b8;
-  --accent: #3b82f6;
+  --accent: #FF6B6B;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
   --border: #eff6ff;
   --input: #eff6ff;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
+  --ring: #FF6B6B;
+  --chart-1: #FF6B6B;
   --chart-2: #FFB84D;
   --chart-3: #4ECDC4;
   --chart-4: #A78BFA;
@@ -136,10 +136,10 @@
   --sidebar-foreground: #eff6ff;
   --sidebar-primary: #eff6ff;
   --sidebar-primary-foreground: #0f172a;
-  --sidebar-accent: #3b82f6;
+  --sidebar-accent: #FF6B6B;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #eff6ff;
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #FF6B6B;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

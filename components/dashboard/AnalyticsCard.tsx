@@ -71,13 +71,13 @@ function buildChartOpts(width: number, height: number): uPlot.Options {
     series: [
       {},
       {
-        stroke: "#6366f1",
+        stroke: "#ef4444",
         width: 2,
         fill: (self: uPlot) => {
           const ctx = self.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, self.bbox.height / devicePixelRatio);
-          gradient.addColorStop(0, "#6366f180");
-          gradient.addColorStop(1, "#6366f100");
+          gradient.addColorStop(0, "#ef444480");
+          gradient.addColorStop(1, "#ef444400");
           return gradient;
         },
         paths: uPlot.paths.spline?.() ?? undefined,
@@ -320,9 +320,9 @@ function StatsContent({ stats }: { stats: AnalyticsStats }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-2.5">
           <div className="relative shrink-0">
-            <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-            <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
-              <Eye className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+            <div className="absolute inset-0 bg-linear-to-r from-red-400 to-rose-400 rounded-lg blur-md opacity-20" />
+            <div className="relative bg-linear-to-r from-red-100 to-rose-100 p-2 rounded-lg">
+              <Eye className="w-4 h-4 text-red-600" aria-hidden="true" />
             </div>
           </div>
           <div>
@@ -401,9 +401,9 @@ function EmptyState() {
   return (
     <div className="text-center py-8">
       <div className="relative inline-block mb-3">
-        <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-xl blur-lg opacity-20" />
-        <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-4 rounded-xl">
-          <Eye className="w-6 h-6 text-indigo-600" aria-hidden="true" />
+        <div className="absolute inset-0 bg-linear-to-r from-red-400 to-rose-400 rounded-xl blur-lg opacity-20" />
+        <div className="relative bg-linear-to-r from-red-100 to-rose-100 p-4 rounded-xl">
+          <Eye className="w-6 h-6 text-red-600" aria-hidden="true" />
         </div>
       </div>
       <p className="text-sm font-medium text-slate-700 mb-1">No views yet</p>

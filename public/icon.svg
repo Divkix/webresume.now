@@ -1,5 +1,5 @@
 <svg width="64" height="64" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-  <!-- Clickfolio favicon - blue document with cursor -->
+  <!-- Clickfolio favicon - coral document with cursor -->
 
   <!-- Drop shadow filter for cursor -->
   <defs>
@@ -8,8 +8,8 @@
     </filter>
   </defs>
 
-  <!-- Blue document body -->
-  <rect x="5" y="5" width="40" height="50" rx="8" fill="#2563EB" />
+  <!-- Coral document body -->
+  <rect x="5" y="5" width="40" height="50" rx="8" fill="#FF6B6B" />
 
   <!-- White text lines -->
   <path d="M17 18H33" stroke="white" stroke-width="3" stroke-linecap="round" />
@@ -17,6 +17,6 @@
   <path d="M17 34H25" stroke="white" stroke-width="3" stroke-linecap="round" />
 
   <!-- Cursor/pointer element -->
-  <path d="M33 32L41 50L45 40L55 36L33 32Z" fill="white" stroke="#2563EB"
+  <path d="M33 32L41 50L45 40L55 36L33 32Z" fill="white" stroke="#FF6B6B"
         stroke-width="2" stroke-linejoin="round" style="filter:url(#shadow);" />
 </svg>

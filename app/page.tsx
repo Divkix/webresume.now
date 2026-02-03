@@ -88,7 +88,7 @@ export default function Home() {
                       className="absolute bottom-0 left-0 w-0 h-0"
                       style={{
                         borderRight: "64px solid transparent",
-                        borderBottom: "64px solid #3b82f6",
+                        borderBottom: "64px solid #FF6B6B",
                       }}
                     />
                   </div>

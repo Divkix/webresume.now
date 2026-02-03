@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   },
   queued: {
     label: "Queued",
-    className: "bg-blue-100 text-blue-700",
+    className: "bg-red-100 text-red-700",
   },
   pending_claim: {
     label: "Pending",

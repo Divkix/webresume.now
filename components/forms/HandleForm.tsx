@@ -99,7 +99,7 @@ export function HandleForm({ currentHandle, variant = "default" }: HandleFormPro
             <div className="flex-1 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 font-mono text-sm min-w-0">
               <Link2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
               <span className="text-slate-600 truncate">{siteConfig.domain}/@</span>
-              <span className="font-semibold text-indigo-600 truncate">{currentHandle}</span>
+              <span className="font-semibold text-red-600 truncate">{currentHandle}</span>
             </div>
             <Button
               type="button"
@@ -143,7 +143,7 @@ export function HandleForm({ currentHandle, variant = "default" }: HandleFormPro
           </div>
           {errors.handle && <p className="text-xs text-red-600 mt-1">{errors.handle.message}</p>}
           {isDirty && newHandle !== currentHandle && !errors.handle && (
-            <p className="text-xs text-indigo-600 mt-1">
+            <p className="text-xs text-red-600 mt-1">
               Preview: {siteConfig.domain}/@{newHandle}
             </p>
           )}
@@ -156,7 +156,7 @@ export function HandleForm({ currentHandle, variant = "default" }: HandleFormPro
   return (
     <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <Link2 className="h-5 w-5 text-indigo-600" />
+        <Link2 className="h-5 w-5 text-red-600" />
         <h3 className="text-lg font-semibold text-slate-900">Public Handle</h3>
       </div>
 
@@ -170,7 +170,7 @@ export function HandleForm({ currentHandle, variant = "default" }: HandleFormPro
             <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-slate-200 bg-slate-50 font-mono text-sm">
               <Link2 className="h-4 w-4 text-slate-400" />
               <span className="text-slate-600">{siteConfig.domain}/@</span>
-              <span className="font-semibold text-indigo-600">{currentHandle}</span>
+              <span className="font-semibold text-red-600">{currentHandle}</span>
             </div>
             <Button
               type="button"
@@ -213,9 +213,9 @@ export function HandleForm({ currentHandle, variant = "default" }: HandleFormPro
 
         {/* URL Preview */}
         {isDirty && newHandle !== currentHandle && !errors.handle && (
-          <div className="rounded-lg bg-indigo-50 border border-indigo-200 p-3">
-            <p className="text-xs font-medium text-indigo-900 mb-1">New URL Preview:</p>
-            <p className="font-mono text-sm text-indigo-700">https://{publicUrl}</p>
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+            <p className="text-xs font-medium text-red-900 mb-1">New URL Preview:</p>
+            <p className="font-mono text-sm text-red-700">https://{publicUrl}</p>
           </div>
         )}
 

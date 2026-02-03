@@ -103,8 +103,8 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="mx-auto w-16 h-16 bg-linear-to-r from-indigo-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6">
-          <User className="w-8 h-8 text-indigo-600" />
+        <div className="mx-auto w-16 h-16 bg-linear-to-r from-red-100 to-rose-100 rounded-2xl flex items-center justify-center mb-6">
+          <User className="w-8 h-8 text-red-600" />
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3 leading-tight">
           Choose Your Handle
@@ -135,7 +135,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
               {isChecking && <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />}
               {!isChecking && isAvailable === true && (
                 <Check
-                  className={`w-5 h-5 ${isCurrentHandle ? "text-blue-600" : "text-green-600"}`}
+                  className={`w-5 h-5 ${isCurrentHandle ? "text-red-600" : "text-green-600"}`}
                 />
               )}
               {!isChecking && isAvailable === false && <X className="w-5 h-5 text-red-600" />}
@@ -146,7 +146,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
           {handle && (
             <p className="text-sm text-slate-500 font-medium">
               Your resume will be at:{" "}
-              <span className="text-indigo-600 font-semibold">
+              <span className="text-red-600 font-semibold">
                 {siteConfig.domain}/{handle}
               </span>
             </p>
@@ -166,7 +166,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
             </p>
           )}
           {!isChecking && isAvailable === true && isCurrentHandle && (
-            <p className="text-sm text-blue-600 font-medium flex items-center gap-1">
+            <p className="text-sm text-red-600 font-medium flex items-center gap-1">
               <Check className="w-4 h-4" />
               This is your current handle
             </p>
@@ -197,7 +197,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
         <Button
           onClick={handleSubmit}
           disabled={!canContinue}
-          className="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-linear-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           size="lg"
         >
           Continue

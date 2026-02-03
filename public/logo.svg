@@ -10,8 +10,8 @@
   </defs>
 
   <!-- Document icon - new design -->
-  <!-- Blue document body -->
-  <rect x="10" y="10" width="40" height="50" rx="8" fill="#2563EB" />
+  <!-- Coral document body -->
+  <rect x="10" y="10" width="40" height="50" rx="8" fill="#FF6B6B" />
 
   <!-- White text lines -->
   <path d="M22 23H38" stroke="white" stroke-width="3" stroke-linecap="round" />
@@ -19,7 +19,7 @@
   <path d="M22 39H30" stroke="white" stroke-width="3" stroke-linecap="round" />
 
   <!-- Cursor/pointer element -->
-  <path d="M38 37L46 55L50 45L60 41L38 37Z" fill="white" stroke="#2563EB"
+  <path d="M38 37L46 55L50 45L60 41L38 37Z" fill="white" stroke="#FF6B6B"
         stroke-width="2" stroke-linejoin="round" style="filter:url(#logo-shadow);" />
 
   <!-- Brand text -->

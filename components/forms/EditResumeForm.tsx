@@ -191,9 +191,9 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-                <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2 rounded-lg">
-                  <Save className="h-4 w-4 text-indigo-600" />
+                <div className="absolute inset-0 bg-linear-to-r from-red-400 to-rose-400 rounded-lg blur-md opacity-20" />
+                <div className="relative bg-linear-to-r from-red-100 to-rose-100 p-2 rounded-lg">
+                  <Save className="h-4 w-4 text-red-600" />
                 </div>
               </div>
               <SaveIndicator status={saveStatus} lastSaved={lastSaved} />
@@ -201,7 +201,7 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
             <Button
               type="submit"
               disabled={saveStatus === "saving"}
-              className="bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+              className="bg-linear-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
             >
               <Save className="h-4 w-4 mr-2" />
               Publish Changes
@@ -213,9 +213,9 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
         <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-6 hover:shadow-depth-md transition-all duration-300">
           <div className="flex items-center gap-3 mb-6">
             <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-linear-to-r from-indigo-500 to-blue-500 rounded-lg blur-md opacity-20" />
-              <div className="relative bg-linear-to-r from-indigo-100 to-blue-100 p-2.5 rounded-lg">
-                <User className="h-5 w-5 text-indigo-600" />
+              <div className="absolute inset-0 bg-linear-to-r from-red-400 to-rose-400 rounded-lg blur-md opacity-20" />
+              <div className="relative bg-linear-to-r from-red-100 to-rose-100 p-2.5 rounded-lg">
+                <User className="h-5 w-5 text-red-600" />
               </div>
             </div>
             <div>
@@ -1378,7 +1378,7 @@ export function EditResumeForm({ initialData, onSave }: EditResumeFormProps) {
             type="submit"
             size="lg"
             disabled={saveStatus === "saving"}
-            className="bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
+            className="bg-linear-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold shadow-depth-sm hover:shadow-depth-md transition-all duration-300"
           >
             <Save className="h-4 w-4 mr-2" />
             Publish Changes

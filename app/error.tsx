@@ -61,7 +61,7 @@ export default function ErrorPage({
           <button
             type="button"
             onClick={reset}
-            className="flex-1 px-4 py-2 bg-linear-to-r from-indigo-600 to-blue-600 text-white rounded-lg hover:from-indigo-700 hover:to-blue-700 transition-all font-semibold shadow-depth-sm hover:shadow-depth-md"
+            className="flex-1 px-4 py-2 bg-linear-to-r from-red-500 to-rose-500 text-white rounded-lg hover:from-red-600 hover:to-rose-600 transition-all font-semibold shadow-depth-sm hover:shadow-depth-md"
           >
             Try Again
           </button>

@@ -87,15 +87,15 @@ export function RealtimeStatusListener({ resumeId, currentStatus }: RealtimeStat
   }
 
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 mb-4">
+    <div className="rounded-lg border border-red-200 bg-red-50 p-4 mb-4">
       <div className="flex items-start gap-3">
-        <Loader2 className="h-5 w-5 animate-spin text-blue-600 shrink-0" />
+        <Loader2 className="h-5 w-5 animate-spin text-red-600 shrink-0" />
         <div className="flex-1">
-          <h3 className="font-semibold text-blue-900">Processing Your Resume</h3>
-          <p className="mt-1 text-sm text-blue-700">
+          <h3 className="font-semibold text-red-900">Processing Your Resume</h3>
+          <p className="mt-1 text-sm text-red-700">
             Our AI is analyzing your resume. This usually takes 30-40 seconds.
           </p>
-          <p className="mt-2 text-xs text-blue-600">
+          <p className="mt-2 text-xs text-red-600">
             This page will automatically refresh when processing completes.
           </p>
         </div>

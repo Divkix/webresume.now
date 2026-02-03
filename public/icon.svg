@@ -1,22 +1,22 @@
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <!-- Square favicon version of logo icon -->
-  <!-- Centered document with reduced shadow for small sizes -->
+<svg width="64" height="64" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Clickfolio favicon - blue document with cursor -->
 
-  <!-- Document shadow (smaller offset for favicon clarity) -->
-  <rect x="10" y="6" width="44" height="52" rx="4" fill="#0D0D0D" />
+  <!-- Drop shadow filter for cursor -->
+  <defs>
+    <filter id="shadow">
+      <feDropShadow dx="1" dy="2" stdDeviation="1" flood-color="#000" flood-opacity="0.3" />
+    </filter>
+  </defs>
 
-  <!-- Document body -->
-  <rect x="7" y="3" width="44" height="52" rx="4" fill="#FDF8F3" stroke="#0D0D0D" stroke-width="3" />
+  <!-- Blue document body -->
+  <rect x="5" y="5" width="40" height="50" rx="8" fill="#2563EB" />
 
-  <!-- Red header bar -->
-  <path d="M 7 7 C 7 5 9 3 11 3 L 47 3 C 49 3 51 5 51 7 L 51 15 L 7 15 Z" fill="#3b82f6" stroke="#0D0D0D" stroke-width="3" />
+  <!-- White text lines -->
+  <path d="M17 18H33" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <path d="M17 26H33" stroke="white" stroke-width="3" stroke-linecap="round" />
+  <path d="M17 34H25" stroke="white" stroke-width="3" stroke-linecap="round" />
 
-  <!-- Window dots -->
-  <circle cx="15" cy="9" r="2" fill="#0D0D0D" />
-  <circle cx="22" cy="9" r="2" fill="#0D0D0D" />
-
-  <!-- Text lines -->
-  <rect x="14" y="24" width="28" height="4" rx="1" fill="#0D0D0D" />
-  <rect x="14" y="33" width="20" height="4" rx="1" fill="#0D0D0D" />
-  <rect x="14" y="42" width="24" height="4" rx="1" fill="#0D0D0D" />
+  <!-- Cursor/pointer element -->
+  <path d="M33 32L41 50L45 40L55 36L33 32Z" fill="white" stroke="#2563EB"
+        stroke-width="2" stroke-linejoin="round" style="filter:url(#shadow);" />
 </svg>

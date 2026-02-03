@@ -18,61 +18,59 @@ const sizeConfig: Record<LogoIconSize, number> = {
   xl: 64,
 };
 
-const colorConfig: Record<LogoIconColorScheme, { text: string; document: string; stroke: string }> =
-  {
-    dark: { text: "#0D0D0D", document: "#FDF8F3", stroke: "#0D0D0D" },
-    light: { text: "#FFFFFF", document: "#FFFFFF", stroke: "#FFFFFF" },
-  };
+const colorConfig: Record<
+  LogoIconColorScheme,
+  { document: string; lines: string; cursor: string; cursorStroke: string }
+> = {
+  dark: { document: "#2563EB", lines: "#FFFFFF", cursor: "#FFFFFF", cursorStroke: "#2563EB" },
+  light: { document: "#FFFFFF", lines: "#2563EB", cursor: "#FFFFFF", cursorStroke: "#2563EB" },
+};
 
 /**
- * Icon-only version of the logo (document with header)
+ * Icon-only version of the logo (blue document with cursor)
  * Use for favicons, small spaces, or alongside text
  */
 export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: LogoIconProps) {
   const dimension = sizeConfig[size];
   const colors = colorConfig[colorScheme];
 
+  // Use unique filter ID to avoid conflicts when multiple icons render
+  const filterId = `shadow-${size}-${colorScheme}`;
+
   return (
     <svg
       width={dimension}
       height={dimension}
-      viewBox="0 0 64 72"
+      viewBox="0 0 60 60"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-label="clickfolio.me icon"
       role="img"
     >
-      {/* Document shadow */}
-      <rect x="8" y="8" width="48" height="56" rx="4" fill={colors.text} />
+      {/* Drop shadow filter for cursor */}
+      <defs>
+        <filter id={filterId}>
+          <feDropShadow dx="1" dy="2" stdDeviation="1" floodColor="#000" floodOpacity="0.3" />
+        </filter>
+      </defs>
 
-      {/* Document body */}
-      <rect
-        x="4"
-        y="4"
-        width="48"
-        height="56"
-        rx="4"
-        fill={colors.document}
-        stroke={colors.stroke}
-        strokeWidth="3"
-      />
+      {/* Blue document body */}
+      <rect x="5" y="5" width="40" height="50" rx="8" fill={colors.document} />
 
-      {/* Blue header bar */}
+      {/* White text lines */}
+      <path d="M17 18H33" stroke={colors.lines} strokeWidth="3" strokeLinecap="round" />
+      <path d="M17 26H33" stroke={colors.lines} strokeWidth="3" strokeLinecap="round" />
+      <path d="M17 34H25" stroke={colors.lines} strokeWidth="3" strokeLinecap="round" />
+
+      {/* Cursor/pointer element */}
       <path
-        d="M 4 8 C 4 6 6 4 8 4 L 48 4 C 50 4 52 6 52 8 L 52 18 L 4 18 Z"
-        fill="#3b82f6"
-        stroke={colors.stroke}
-        strokeWidth="3"
+        d="M33 32L41 50L45 40L55 36L33 32Z"
+        fill={colors.cursor}
+        stroke={colors.cursorStroke}
+        strokeWidth="2"
+        strokeLinejoin="round"
+        style={{ filter: `url(#${filterId})` }}
       />
-
-      {/* Window dots */}
-      <circle cx="14" cy="11" r="2.5" fill={colors.text} />
-      <circle cx="22" cy="11" r="2.5" fill={colors.text} />
-
-      {/* Text lines */}
-      <rect x="12" y="28" width="32" height="4" rx="1" fill={colors.text} />
-      <rect x="12" y="38" width="24" height="4" rx="1" fill={colors.text} />
-      <rect x="12" y="48" width="28" height="4" rx="1" fill={colors.text} />
     </svg>
   );
 }

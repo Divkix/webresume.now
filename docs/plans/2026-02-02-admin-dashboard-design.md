@@ -8,7 +8,7 @@
 
 ## Overview
 
-Add an admin dashboard to webresume.now for monitoring platform health, user activity, resume processing, and referral performance. Admin users can access both the normal user dashboard and the admin dashboard via a toggle.
+Add an admin dashboard to clickfolio.me for monitoring platform health, user activity, resume processing, and referral performance. Admin users can access both the normal user dashboard and the admin dashboard via a toggle.
 
 ### Goals
 

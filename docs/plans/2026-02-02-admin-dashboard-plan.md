@@ -39,7 +39,7 @@ Expected: Migration applied successfully.
 
 **Step 4: Verify schema**
 
-Run: `bunx wrangler d1 execute webresume-db --local --command "PRAGMA table_info(user)"`
+Run: `bunx wrangler d1 execute clickfolio-db --local --command "PRAGMA table_info(user)"`
 
 Expected: `is_admin` column appears in output.
 
@@ -267,7 +267,7 @@ export function AdminSidebar({ isOpen, onClose, adminEmail }: AdminSidebarProps)
 
         {/* Logo Header */}
         <div className="p-4 border-b border-slate-200/60">
-          <Link href="/" aria-label="webresume.now home">
+          <Link href="/" aria-label="clickfolio.me home">
             <Logo size="xs" />
           </Link>
           <span className="ml-2 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
@@ -3620,7 +3620,7 @@ Expected: Build succeeds.
 
 **Step 5: Manual testing checklist**
 
-1. Set yourself as admin: `bunx wrangler d1 execute webresume-db --local --command "UPDATE user SET is_admin = 1 WHERE email = 'your@email.com'"`
+1. Set yourself as admin: `bunx wrangler d1 execute clickfolio-db --local --command "UPDATE user SET is_admin = 1 WHERE email = 'your@email.com'"`
 2. Visit `/dashboard` - verify Admin link appears
 3. Click Admin link - verify redirect to `/admin`
 4. Test each page: Overview, Users, Resumes, Analytics, Referrals

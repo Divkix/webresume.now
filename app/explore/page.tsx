@@ -287,7 +287,7 @@ export default async function ExplorePage({
           </p>
           <Link
             href="/settings"
-            className="inline-flex items-center justify-center px-6 py-3 bg-coral text-white font-semibold rounded-lg hover:bg-coral/90 transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 bg-ink text-cream font-semibold rounded-lg hover:bg-ink/90 transition-colors"
           >
             Update Privacy Settings
           </Link>

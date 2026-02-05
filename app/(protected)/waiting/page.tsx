@@ -252,7 +252,7 @@ function WaitingContent() {
                 {canRetry && (
                   <Button
                     onClick={handleRetry}
-                    className="w-full border-2 border-ink shadow-brutal-sm hover:shadow-brutal-md transition-shadow bg-coral text-white hover:bg-coral/90"
+                    className="w-full border-2 border-ink shadow-brutal-sm hover:shadow-brutal-md transition-shadow bg-ink text-cream hover:bg-ink/90"
                   >
                     Try Again
                   </Button>

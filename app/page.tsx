@@ -443,8 +443,8 @@ export default function Home() {
                     }}
                     className="
                     inline-block
-                    bg-coral
-                    text-white
+                    bg-ink
+                    text-cream
                     font-black
                     text-lg
                     px-8

@@ -84,7 +84,7 @@ export function AdminSidebar({ isOpen, onClose, adminEmail }: AdminSidebarProps)
                   transition-all duration-200
                   ${
                     active
-                      ? "bg-slate-100 text-slate-900 border-l-2 border-brand"
+                      ? "bg-slate-100 text-slate-900 border-l-2 border-ink"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }
                 `}

@@ -618,8 +618,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
                   className="
                     w-full
                     max-w-xs
-                    bg-brand
-                    text-white
+                    bg-ink
+                    text-cream
                     font-black
                     py-3
                     px-6

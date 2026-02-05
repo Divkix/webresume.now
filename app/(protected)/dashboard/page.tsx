@@ -235,7 +235,7 @@ export default async function DashboardPage() {
             </p>
             <Button
               asChild
-              className="w-full bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
+              className="w-full bg-ink hover:bg-ink/90 text-cream font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
             >
               <Link href="/">
                 <Upload className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -313,11 +313,7 @@ export default async function DashboardPage() {
                             "An error occurred while processing your resume."}
                         </p>
                         <div className="mt-3 flex gap-2">
-                          <Button
-                            asChild
-                            size="sm"
-                            className="bg-coral hover:bg-coral/90 text-white"
-                          >
+                          <Button asChild size="sm" className="bg-ink hover:bg-ink/90 text-cream">
                             <Link href={`/waiting?resume_id=${resume.id}`}>Retry</Link>
                           </Button>
                           <DashboardUploadSection />
@@ -346,10 +342,10 @@ export default async function DashboardPage() {
                           aria-valuemin={0}
                           aria-valuemax={100}
                           aria-label={`Profile completeness: ${completeness}%`}
-                          className="w-full bg-coral/30 rounded-full h-2 mb-4"
+                          className="w-full bg-slate-200 rounded-full h-2 mb-4"
                         >
                           <div
-                            className="h-2 rounded-full bg-linear-to-r from-coral to-coral transition-all duration-500"
+                            className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
                             style={{ width: `${completeness}%` }}
                           />
                         </div>
@@ -371,7 +367,7 @@ export default async function DashboardPage() {
                           <Button
                             asChild
                             size="sm"
-                            className="mt-4 bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold"
+                            className="mt-4 bg-ink hover:bg-ink/90 text-cream font-semibold"
                           >
                             <Link href="/edit">
                               <Edit3 className="h-3 w-3 mr-2" aria-hidden="true" />
@@ -511,7 +507,7 @@ export default async function DashboardPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       asChild
-                      className="flex-1 bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold transition-colors duration-300 shadow-depth-sm hover:shadow-depth-md"
+                      className="flex-1 bg-ink hover:bg-ink/90 text-cream font-semibold transition-colors duration-300 shadow-depth-sm hover:shadow-depth-md"
                     >
                       <Link href="/edit">
                         <Edit3 className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -637,7 +633,7 @@ export default async function DashboardPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         asChild
-                        className="flex-1 bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
+                        className="flex-1 bg-ink hover:bg-ink/90 text-cream font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
                       >
                         <Link href={`/waiting?resume_id=${resume.id}`}>Try Again</Link>
                       </Button>

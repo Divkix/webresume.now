@@ -224,9 +224,7 @@ export default function TermsOfServicePage() {
                   </span>
                   Termination
                 </h2>
-                <p className="text-ink/70 leading-relaxed mb-4">
-                  Regarding account termination:
-                </p>
+                <p className="text-ink/70 leading-relaxed mb-4">Regarding account termination:</p>
                 <ul className="list-disc pl-6 space-y-2 text-ink/70">
                   <li>You may delete your account at any time through the Settings page</li>
                   <li>

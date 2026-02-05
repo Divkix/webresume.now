@@ -107,9 +107,7 @@ export default function PrivacyPolicyPage() {
                   We collect several types of information to provide and improve our Service:
                 </p>
 
-                <h3 className="text-lg font-semibold text-ink mb-3 mt-6">
-                  Account Information
-                </h3>
+                <h3 className="text-lg font-semibold text-ink mb-3 mt-6">Account Information</h3>
                 <ul className="list-disc pl-6 space-y-2 text-ink/70 mb-4">
                   <li>Email address (obtained from Google OAuth)</li>
                   <li>Name (obtained from Google OAuth)</li>
@@ -205,9 +203,7 @@ export default function PrivacyPolicyPage() {
                   </div>
 
                   <div className="bg-cream/50 border-2 border-ink rounded-lg p-4">
-                    <h4 className="font-semibold text-ink mb-1">
-                      Google Gemini (via OpenRouter)
-                    </h4>
+                    <h4 className="font-semibold text-ink mb-1">Google Gemini (via OpenRouter)</h4>
                     <p className="text-ink/70 text-sm mb-2">
                       Used for AI-powered PDF parsing and data extraction
                     </p>
@@ -259,11 +255,19 @@ export default function PrivacyPolicyPage() {
                   measures:
                 </p>
                 <ul className="list-disc pl-6 space-y-2 text-ink/70">
-                  <li>Your data is stored on Cloudflare&apos;s global network infrastructure</li>
-                  <li>All data is encrypted at rest using AES-256 encryption</li>
+                  <li>
+                    Your data is stored on Cloudflare&apos;s global network infrastructure (SOC 2
+                    Type II, ISO 27001 certified)
+                  </li>
+                  <li>
+                    Cloudflare provides infrastructure-level encryption at rest for all stored data
+                  </li>
                   <li>All data in transit is encrypted using TLS 1.3</li>
-                  <li>We implement access controls to limit who can access your data</li>
-                  <li>We regularly review and update our security practices</li>
+                  <li>
+                    Database access is restricted to our application only — no direct external
+                    access
+                  </li>
+                  <li>We implement access controls and regularly review our security practices</li>
                   <li>
                     <strong>We do not sell your personal information to third parties</strong>
                   </li>
@@ -393,9 +397,7 @@ export default function PrivacyPolicyPage() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-ink">Right to Portability</h4>
-                      <p className="text-ink/70 text-sm">
-                        Export your resume data (coming soon)
-                      </p>
+                      <p className="text-ink/70 text-sm">Export your resume data (coming soon)</p>
                     </div>
                   </div>
                 </div>

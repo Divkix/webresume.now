@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
             <h1 className="text-4xl sm:text-5xl font-extrabold text-ink mb-4 tracking-tight">
               Privacy Policy
             </h1>
-            <p className="text-ink/70 text-sm">Last updated: December 2025</p>
+            <p className="text-ink/70 text-sm">Last updated: February 2026</p>
           </div>
 
           {/* Content Card */}
@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
                   "Data Storage and Security",
                   "Data Retention",
                   "Your Rights (GDPR/CCPA)",
-                  "Cookies",
+                  "Cookies & Analytics",
                   "Children's Privacy",
                   "Changes to This Policy",
                   "Contact Us",
@@ -418,7 +418,7 @@ export default function PrivacyPolicyPage() {
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     8
                   </span>
-                  Cookies
+                  Cookies & Analytics
                 </h2>
                 <p className="text-ink/70 leading-relaxed mb-4">
                   We use only essential cookies necessary for the operation of our Service:
@@ -433,11 +433,29 @@ export default function PrivacyPolicyPage() {
                     with your account after login
                   </li>
                 </ul>
+
+                <h3 className="text-lg font-semibold text-ink mb-3 mt-6">First-Party Analytics</h3>
+                <p className="text-ink/70 leading-relaxed mb-4">
+                  We use self-hosted, privacy-focused analytics to understand how our service is
+                  used and to provide portfolio traffic insights to users:
+                </p>
+                <ul className="list-disc pl-6 space-y-2 text-ink/70">
+                  <li>Page views and referral sources (where visitors came from)</li>
+                  <li>Device type (mobile, tablet, or desktop)</li>
+                  <li>Aggregated visitor counts for your public portfolio</li>
+                </ul>
+
                 <div className="bg-coral/10 border-2 border-ink rounded-lg p-4 mt-4">
-                  <p className="text-ink text-sm font-medium">
-                    We do not use tracking cookies, advertising cookies, or any third-party
-                    analytics cookies.
-                  </p>
+                  <p className="text-ink text-sm font-medium mb-2">Privacy-preserving design:</p>
+                  <ul className="list-disc pl-6 space-y-1 text-ink/70 text-sm">
+                    <li>No raw IP addresses are stored</li>
+                    <li>Visitor identifiers rotate daily (no long-term tracking)</li>
+                    <li>No cross-site tracking or advertising cookies</li>
+                    <li>
+                      All analytics are self-hosted on our infrastructure — no data shared with
+                      third parties
+                    </li>
+                  </ul>
                 </div>
               </section>
 

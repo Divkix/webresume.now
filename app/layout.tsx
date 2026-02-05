@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
@@ -49,6 +50,12 @@ export default function RootLayout({
         </a>
         {children}
         <Toaster />
+        <Script
+          defer
+          src="https://analytics.divkix.me/s.js"
+          data-website-id="1a0515d6-8471-4a14-8581-3fdc3929ff0c"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

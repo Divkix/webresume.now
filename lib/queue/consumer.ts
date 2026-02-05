@@ -219,11 +219,10 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     throw new Error(errorMessage);
   }
 
-  // Validate JSON
-  let parsedContent = parseResult.parsedContent;
+  // Validate JSON syntax only (avoid parse-stringify round-trip for performance)
+  const parsedContent = parseResult.parsedContent;
   try {
-    const parsedJson = JSON.parse(parsedContent);
-    parsedContent = JSON.stringify(parsedJson);
+    JSON.parse(parsedContent);
   } catch {
     const errorMessage = "Invalid JSON response from AI";
     await db

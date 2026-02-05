@@ -3,6 +3,13 @@
  * Ensures sensitive information is properly filtered based on user preferences
  */
 
+// Pre-compiled regex patterns for extractCityState (avoid per-call compilation overhead)
+const FULL_ADDRESS_WITH_ZIP = /,\s*([^,]+),\s*([A-Z]{2})\s+\d{5}(-\d{4})?$/;
+const STATE_CODE = /^[A-Z]{2}$/;
+const CITY_STATE_PATTERN = /^([^,]+),\s*([A-Z]{2})$/;
+const CITY_STATE_ZIP = /^([^,]+),\s*([A-Z]{2})\s+\d{5}(-\d{4})?$/;
+const STREET_NUMBER = /^\d+\s/;
+
 /**
  * Extracts city and state from a full address string
  * Removes street address components while preserving city/state information
@@ -32,8 +39,7 @@ export function extractCityState(location: string | undefined): string {
 
   // Pattern 1: Full address with ZIP (e.g., "123 Main St, San Francisco, CA 94102")
   // Extract the city and state before the ZIP code
-  const fullAddressWithZip = /,\s*([^,]+),\s*([A-Z]{2})\s+\d{5}(-\d{4})?$/;
-  const matchWithZip = normalized.match(fullAddressWithZip);
+  const matchWithZip = normalized.match(FULL_ADDRESS_WITH_ZIP);
   if (matchWithZip) {
     return `${matchWithZip[1]}, ${matchWithZip[2]}`;
   }
@@ -47,29 +53,27 @@ export function extractCityState(location: string | undefined): string {
     const city = parts[parts.length - 2];
 
     // Validate state code (2 uppercase letters)
-    if (/^[A-Z]{2}$/.test(state)) {
+    if (STATE_CODE.test(state)) {
       return `${city}, ${state}`;
     }
   }
 
   // Pattern 3: Already city/state format (e.g., "San Francisco, CA")
   // Validate and return as-is
-  const cityStatePattern = /^([^,]+),\s*([A-Z]{2})$/;
-  const matchCityState = normalized.match(cityStatePattern);
+  const matchCityState = normalized.match(CITY_STATE_PATTERN);
   if (matchCityState) {
     return normalized;
   }
 
   // Pattern 4: City, State ZIP (e.g., "San Francisco, CA 94102")
-  const cityStateZip = /^([^,]+),\s*([A-Z]{2})\s+\d{5}(-\d{4})?$/;
-  const matchCityStateZip = normalized.match(cityStateZip);
+  const matchCityStateZip = normalized.match(CITY_STATE_ZIP);
   if (matchCityStateZip) {
     return `${matchCityStateZip[1]}, ${matchCityStateZip[2]}`;
   }
 
   // Pattern 5: City only (no state detected)
   // Return as-is if it doesn't look like a street address
-  const hasStreetNumber = /^\d+\s/.test(normalized);
+  const hasStreetNumber = STREET_NUMBER.test(normalized);
   if (!hasStreetNumber && parts.length === 1) {
     return normalized;
   }
@@ -81,7 +85,7 @@ export function extractCityState(location: string | undefined): string {
     const secondLast = parts[parts.length - 2];
 
     // If last part is a 2-letter code, it's likely a state
-    if (/^[A-Z]{2}$/.test(last)) {
+    if (STATE_CODE.test(last)) {
       return `${secondLast}, ${last}`;
     }
 

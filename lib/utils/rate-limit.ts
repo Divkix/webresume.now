@@ -38,15 +38,21 @@ interface RateLimitResult {
 /**
  * Checks if a user has exceeded the rate limit for a specific action
  * Uses Drizzle/D1 to count actions in the time window
+ *
+ * @param existingEnv - Optional pre-fetched CloudflareEnv to avoid redundant getCloudflareContext calls
  */
-async function checkRateLimit(userId: string, action: RateLimitAction): Promise<RateLimitResult> {
+async function checkRateLimit(
+  userId: string,
+  action: RateLimitAction,
+  existingEnv?: Pick<CloudflareEnv, "DB">,
+): Promise<RateLimitResult> {
   const config = RATE_LIMITS[action];
   const windowMs = config.windowHours * 60 * 60 * 1000;
   const windowStart = new Date(Date.now() - windowMs);
   const resetAt = new Date(Date.now() + windowMs);
 
   try {
-    const { env } = await getCloudflareContext({ async: true });
+    const env = existingEnv ?? (await getCloudflareContext({ async: true })).env;
     const db = getDb(env.DB);
 
     // Determine which table and column to query based on action
@@ -138,17 +144,20 @@ async function checkRateLimit(userId: string, action: RateLimitAction): Promise<
 /**
  * Helper function to enforce rate limits in API routes
  * Returns a Response object if rate limit is exceeded, null otherwise
+ *
+ * @param env - Optional pre-fetched CloudflareEnv to avoid redundant getCloudflareContext calls
  */
 export async function enforceRateLimit(
   userId: string,
   action: RateLimitAction,
+  env?: Pick<CloudflareEnv, "DB">,
 ): Promise<Response | null> {
   // Skip rate limiting in development
   if (process.env.NODE_ENV !== "production") {
     return null;
   }
 
-  const result = await checkRateLimit(userId, action);
+  const result = await checkRateLimit(userId, action, env);
 
   if (!result.allowed) {
     return new Response(

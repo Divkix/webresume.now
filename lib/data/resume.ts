@@ -1,5 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "@/lib/db";
 import { user } from "@/lib/db/schema";
@@ -61,6 +61,7 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
       image: true,
       privacySettings: true,
       isPro: true,
+      referralCount: true, // Denormalized field, avoids separate COUNT query
     },
     with: {
       siteData: true,
@@ -113,11 +114,8 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
 
     // Only check referral count if theme requires referrals
     if (themeMetadata.referralsRequired > 0) {
-      const referralCountResult = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(user)
-        .where(eq(user.referredBy, userData.id));
-      const referralCount = referralCountResult[0]?.count ?? 0;
+      // Use denormalized field instead of COUNT query (saves ~15ms D1 roundtrip)
+      const referralCount = userData.referralCount ?? 0;
       const isPro = userData.isPro ?? false;
 
       if (!isThemeUnlocked(themeId as ThemeId, referralCount, isPro)) {

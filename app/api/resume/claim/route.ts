@@ -140,7 +140,12 @@ export async function POST(request: Request) {
     }
 
     // 4. Rate limiting check (5 uploads per 24 hours)
-    const rateLimitResponse = await enforceRateLimit(userId, "resume_upload");
+    // Pass env to avoid redundant getCloudflareContext call
+    const rateLimitResponse = await enforceRateLimit(
+      userId,
+      "resume_upload",
+      typedEnv as CloudflareEnv,
+    );
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
@@ -229,9 +234,9 @@ export async function POST(request: Request) {
 
     // 5b. Check for cached parse result (same file uploaded before BY THIS USER)
     // SECURITY: Only look up cache for current user's own resumes to prevent cross-user data access
-    // Step 1: Existence check - only fetch id to avoid loading 100KB+ parsedContent unnecessarily
-    const hasCache = await db
-      .select({ id: resumes.id })
+    // Single query to fetch both existence and content (saves one D1 roundtrip)
+    const cached = await db
+      .select({ id: resumes.id, parsedContent: resumes.parsedContent })
       .from(resumes)
       .where(
         and(
@@ -244,30 +249,21 @@ export async function POST(request: Request) {
       )
       .limit(1);
 
-    // Step 2: Only fetch content if cache exists
-    let cachedContent: string | null = null;
-    if (hasCache.length > 0) {
-      const result = await db
-        .select({ parsedContent: resumes.parsedContent })
-        .from(resumes)
-        .where(eq(resumes.id, hasCache[0].id))
-        .limit(1);
-      cachedContent = result[0]?.parsedContent as string | null;
-    }
+    const cachedContent = cached[0]?.parsedContent as string | null;
 
     if (cachedContent) {
       // DATA INTEGRITY FIX: Store file to user's folder using existing buffer
       // No need to copy from temp - we already have the file in memory
       let r2PutSucceeded = false;
       try {
-        await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
+        // Parallelize R2 operations: put must succeed, delete is best-effort
+        await Promise.all([
+          R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" }),
+          R2.delete(r2Binding, key).catch((err) =>
+            console.warn("R2 delete failed for cached resume path:", err),
+          ),
+        ]);
         r2PutSucceeded = true;
-        // Clean up temp file (best effort)
-        try {
-          await R2.delete(r2Binding, key);
-        } catch (deleteError) {
-          console.warn("R2 delete failed for cached resume path:", deleteError);
-        }
       } catch (r2Error) {
         console.error("R2 operations failed for cached resume:", r2Error);
         // R2 failed - don't update DB, fall through to normal processing
@@ -326,14 +322,14 @@ export async function POST(request: Request) {
       // Store file to user's folder using existing buffer
       let r2PutSucceeded = false;
       try {
-        await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
+        // Parallelize R2 operations: put must succeed, delete is best-effort
+        await Promise.all([
+          R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" }),
+          R2.delete(r2Binding, key).catch((err) =>
+            console.warn("R2 delete failed for waiting_for_cache path:", err),
+          ),
+        ]);
         r2PutSucceeded = true;
-        // Clean up temp file (best effort)
-        try {
-          await R2.delete(r2Binding, key);
-        } catch (deleteError) {
-          console.warn("R2 delete failed for waiting_for_cache path:", deleteError);
-        }
       } catch (error) {
         console.error("R2 operations failed for waiting resume:", error);
       }
@@ -372,10 +368,13 @@ export async function POST(request: Request) {
       return createErrorResponse(errorMessage, errorCode, statusCode);
     };
 
-    // 6. Store file to user's folder using already-fetched buffer
-    // (File size and PDF validation already done in step 4b)
+    // 6-7. Store file and cleanup temp in parallel
+    // R2.put must succeed, R2.delete is best-effort (can be cleaned by lifecycle rules if fails)
     try {
-      await R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" });
+      await Promise.all([
+        R2.put(r2Binding, newKey, fileBuffer, { contentType: "application/pdf" }),
+        R2.delete(r2Binding, key).catch((err) => console.error("R2 delete error:", err)),
+      ]);
     } catch (error) {
       console.error("R2 put error:", error);
       return await failResume(
@@ -383,15 +382,6 @@ export async function POST(request: Request) {
         ERROR_CODES.EXTERNAL_SERVICE_ERROR,
         500,
       );
-    }
-
-    // 7. Delete temp object (best effort - not critical if fails)
-    // Can be cleaned up by R2 lifecycle rules if this fails
-    try {
-      await R2.delete(r2Binding, key);
-    } catch (error) {
-      console.error("R2 delete error:", error);
-      // Continue - temp file cleanup failure is not critical
     }
 
     // 8. Publish to queue for background processing

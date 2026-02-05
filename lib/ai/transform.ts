@@ -1,6 +1,9 @@
 import { sanitizeEmail } from "@/lib/utils/sanitization";
 import type { ResumeSchema } from "./schema";
 
+// Pre-compiled regex for URL validation (avoid per-call compilation overhead)
+const REPEATING_SEGMENT_PATTERN = /\/([^/]+)\/\1(?:\/|$)/;
+
 /**
  * Normalize URL - add protocol if missing, return empty string if invalid
  */
@@ -38,8 +41,7 @@ export function validateUrl(url: unknown): string {
   if (trimmed.length > 500) return "";
 
   // Detect repeating path segments
-  const repeatingSegmentPattern = /\/([^/]+)\/\1(?:\/|$)/;
-  if (repeatingSegmentPattern.test(trimmed)) return "";
+  if (REPEATING_SEGMENT_PATTERN.test(trimmed)) return "";
 
   // Check for excessive path depth
   const pathSegments = trimmed.split("/").filter(Boolean);
@@ -52,7 +54,7 @@ export function validateUrl(url: unknown): string {
     const urlObj = new URL(normalized);
     if (!urlObj.hostname.includes(".")) return "";
     if (urlObj.hostname.length > 253) return "";
-    if (repeatingSegmentPattern.test(urlObj.pathname)) return "";
+    if (REPEATING_SEGMENT_PATTERN.test(urlObj.pathname)) return "";
     return normalized;
   } catch {
     return "";

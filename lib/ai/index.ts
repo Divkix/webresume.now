@@ -24,11 +24,9 @@ export async function parseResumeWithAi(
 ): Promise<ParseResumeResult> {
   try {
     // Step 1: Extract text from PDF
-    // Convert Uint8Array to ArrayBuffer properly
-    const arrayBuffer = pdfBuffer.buffer.slice(
-      pdfBuffer.byteOffset,
-      pdfBuffer.byteOffset + pdfBuffer.byteLength,
-    ) as ArrayBuffer;
+    // Create a new ArrayBuffer with only the bytes from pdfBuffer
+    // This is necessary when Uint8Array is a view into a larger buffer
+    const arrayBuffer = new Uint8Array(pdfBuffer).buffer;
 
     const extractResult = await extractPdfText(arrayBuffer);
 

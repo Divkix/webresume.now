@@ -98,16 +98,13 @@ export async function parseWithAi(
     const provider = createAiProvider(env);
     const modelId = model || env.AI_MODEL || DEFAULT_AI_MODEL;
 
-    // Truncate text to avoid token limits (60k chars ~= 15-20k tokens)
-    const truncatedText = text.substring(0, 60000);
-
     const { output } = await generateText({
       model: provider(modelId),
       output: Output.object({
         schema: resumeSchema,
       }),
       system: SYSTEM_PROMPT,
-      prompt: truncatedText,
+      prompt: text,
       temperature: 0,
     });
 

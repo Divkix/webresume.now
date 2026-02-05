@@ -172,7 +172,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   />
                 </div>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-linear-to-r from-coral to-coral flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full bg-coral flex items-center justify-center text-white font-semibold text-sm">
                   {getInitials()}
                 </div>
               )}

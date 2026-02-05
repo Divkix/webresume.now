@@ -52,3 +52,6 @@ worker-configuration.d.ts
 
 # playwright
 .playwright-mcp/
+
+# Localflare generated files
+.localflare/

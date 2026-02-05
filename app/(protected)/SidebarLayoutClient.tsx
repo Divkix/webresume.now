@@ -35,7 +35,7 @@ export function SidebarLayoutClient({ children }: { children: React.ReactNode })
   }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-cream">
       {/* Sidebar - Desktop: always visible, Mobile: controlled by state */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

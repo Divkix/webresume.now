@@ -1,5 +1,5 @@
 import { and, eq, isNotNull } from "drizzle-orm";
-import { parseResumeWithAi } from "../ai-parser";
+import { parseResumeWithAi } from "../ai";
 import { resumes, siteData } from "../db/schema";
 import { getSessionDbForWebhook } from "../db/session";
 import { getR2Binding, R2 } from "../r2";

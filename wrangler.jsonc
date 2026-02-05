@@ -39,19 +39,6 @@
 			"bucket_name": "clickfolio-bucket"
 		}
 	],
-	// Service bindings for utility workers (remote: true uses deployed workers in dev)
-	"services": [
-		{
-			"binding": "PDF_TEXT_WORKER",
-			"service": "pdf-text-worker",
-			"remote": true
-		},
-		{
-			"binding": "AI_PARSER_WORKER",
-			"service": "ai-parser-worker",
-			"remote": true
-		}
-	],
 	// Cloudflare Queues for async processing
 	"queues": {
 		"producers": [
@@ -119,8 +106,15 @@
 		//   wrangler secret put ALERT_CHANNEL       # logpush | webhook | email
 		//   wrangler secret put ALERT_WEBHOOK_URL   # Slack/Discord webhook URL
 		//
+		// ===== AI PROVIDER (resume parsing) =====
+		// Option A: Cloudflare AI Gateway (recommended)
+		//   wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID
+		//   wrangler secret put CF_AI_GATEWAY_ID
+		//   wrangler secret put CF_AIG_AUTH_TOKEN
+		// Option B: Direct OpenRouter
+		//   wrangler secret put OPENROUTER_API_KEY
+		//
 		// Note: R2 is accessed via binding (R2_BUCKET) - no API credentials needed
-		// Note: AI Gateway secrets are configured in ai-parser-worker, not here
 		// Optional: For edge cache purge (set via wrangler secret put in production)
 		"CF_ZONE_ID": "67b153979964d5eafc441643acb1fc14",
 		"NODE_ENV": "production",

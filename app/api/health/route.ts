@@ -18,8 +18,7 @@ interface HealthResponse {
   services: {
     d1: ServiceHealth;
     r2: ServiceHealth;
-    pdfWorker: ServiceHealth;
-    aiParser: ServiceHealth;
+    aiProvider: ServiceHealth;
   };
 }
 
@@ -51,38 +50,29 @@ async function checkR2(r2: R2Bucket): Promise<ServiceHealth> {
   }
 }
 
-async function checkServiceBinding(
-  worker: Fetcher | undefined,
-  name: string,
-): Promise<ServiceHealth> {
-  if (!worker) {
-    return { status: "unhealthy", error: `${name} binding not available` };
-  }
+/**
+ * Check if AI provider is configured
+ * We can't actually test the provider without making an API call,
+ * so we just verify the required env vars are present
+ */
+function checkAiProviderConfig(env: Record<string, unknown>): ServiceHealth {
+  // Check for Cloudflare AI Gateway config
+  const hasGateway = env.CF_AI_GATEWAY_ACCOUNT_ID && env.CF_AI_GATEWAY_ID && env.CF_AIG_AUTH_TOKEN;
 
-  const start = Date.now();
-  try {
-    // Attempt to call a health endpoint or simple request
-    const response = await worker.fetch("https://internal/health", {
-      method: "GET",
-    });
+  // Check for direct OpenRouter config
+  const hasOpenRouter = env.OPENROUTER_API_KEY;
 
-    // Even a 404 means the worker is responding
-    if (response.status === 404 || response.ok) {
-      return { status: "healthy", latencyMs: Date.now() - start };
-    }
-
+  if (hasGateway || hasOpenRouter) {
     return {
-      status: "degraded",
-      latencyMs: Date.now() - start,
-      error: `Unexpected status: ${response.status}`,
-    };
-  } catch (error) {
-    return {
-      status: "unhealthy",
-      latencyMs: Date.now() - start,
-      error: error instanceof Error ? error.message : "Unknown error",
+      status: "healthy",
+      error: hasGateway ? "Using Cloudflare AI Gateway" : "Using OpenRouter",
     };
   }
+
+  return {
+    status: "unhealthy",
+    error: "No AI provider configured (need CF_AI_GATEWAY_* or OPENROUTER_API_KEY)",
+  };
 }
 
 function aggregateStatus(services: HealthResponse["services"]): ServiceStatus {
@@ -95,11 +85,10 @@ function aggregateStatus(services: HealthResponse["services"]): ServiceStatus {
 /**
  * GET /api/health
  *
- * Returns health status of all service bindings:
+ * Returns health status of all services:
  * - D1 database
  * - R2 bucket
- * - PDF text worker
- * - AI parser worker
+ * - AI provider configuration
  */
 export async function GET() {
   try {
@@ -109,20 +98,20 @@ export async function GET() {
     const r2Binding = getR2Binding(typedEnv);
 
     // Run all health checks in parallel
-    const [d1Health, r2Health, pdfHealth, aiHealth] = await Promise.all([
+    const [d1Health, r2Health] = await Promise.all([
       checkD1(env.DB),
       r2Binding
         ? checkR2(r2Binding)
         : Promise.resolve({ status: "unhealthy" as const, error: "R2 binding not available" }),
-      checkServiceBinding(typedEnv.PDF_TEXT_WORKER, "PDF_TEXT_WORKER"),
-      checkServiceBinding(typedEnv.AI_PARSER_WORKER, "AI_PARSER_WORKER"),
     ]);
+
+    // Check AI provider config (synchronous)
+    const aiHealth = checkAiProviderConfig(env as unknown as Record<string, unknown>);
 
     const services = {
       d1: d1Health,
       r2: r2Health,
-      pdfWorker: pdfHealth,
-      aiParser: aiHealth,
+      aiProvider: aiHealth,
     };
 
     const response: HealthResponse = {

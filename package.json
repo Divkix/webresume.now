@@ -27,6 +27,7 @@
     "generate:favicons": "bun run scripts/generate-favicons.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.27",
     "@hookform/resolvers": "^5.2.2",
     "@neoconfetti/react": "^1.0.0",
     "@opennextjs/cloudflare": "^1.16.2",
@@ -39,6 +40,7 @@
     "@zxcvbn-ts/core": "^3.0.4",
     "@zxcvbn-ts/language-common": "^3.0.4",
     "@zxcvbn-ts/language-en": "^3.0.2",
+    "ai": "^6.0.70",
     "better-auth": "^1.4.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -52,6 +54,7 @@
     "react-hook-form": "^7.71.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
+    "unpdf": "^1.4.0",
     "uplot": "^1.6.32",
     "zod": "^4.3.6"
   },

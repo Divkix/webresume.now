@@ -353,7 +353,7 @@ async function extractPdfText(
   return response.json() as Promise<PdfExtractResponse>;
 }
 
-const DEFAULT_AI_MODEL = "google/gemini-2.5-flash-lite";
+const DEFAULT_AI_MODEL = "openai/gpt-oss-120b";
 
 /**
  * Parse text with AI using ai-parser-worker
@@ -660,7 +660,7 @@ function transformAiResponse(raw: unknown): unknown {
   return data;
 }
 
-function transformGeminiOutput(raw: ResumeSchema): ResumeSchema {
+function transformAiOutput(raw: ResumeSchema): ResumeSchema {
   const result = structuredClone(raw);
 
   const trimStrings = (obj: Record<string, unknown>): void => {
@@ -742,7 +742,7 @@ function transformGeminiOutput(raw: ResumeSchema): ResumeSchema {
   return result;
 }
 
-export async function parseResumeWithGemini(
+export async function parseResumeWithAi(
   pdfBuffer: Uint8Array,
   env: Partial<CloudflareEnv>,
 ): Promise<{ success: boolean; parsedContent: string; error?: string }> {
@@ -784,7 +784,7 @@ export async function parseResumeWithGemini(
     const transformedData = transformAiResponse(parseResult.data);
 
     // Step 3: Final cleanup and return
-    const transformed = transformGeminiOutput(transformedData as ResumeSchema);
+    const transformed = transformAiOutput(transformedData as ResumeSchema);
 
     return {
       success: true,
@@ -799,4 +799,4 @@ export async function parseResumeWithGemini(
   }
 }
 
-export { RESUME_EXTRACTION_SCHEMA, transformGeminiOutput };
+export { RESUME_EXTRACTION_SCHEMA, transformAiOutput };

@@ -30,7 +30,7 @@ Upload a PDF. AI parses it. Get a shareable link.
 | **Database** | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) + [Drizzle ORM](https://orm.drizzle.team) |
 | **Auth** | [Better Auth](https://better-auth.com) (Google OAuth) |
 | **Storage** | [Cloudflare R2](https://developers.cloudflare.com/r2/) (S3-compatible) |
-| **AI Parsing** | [Gemini 2.5 Flash Lite](https://ai.google.dev/gemini-api) via [OpenRouter](https://openrouter.ai) |
+| **AI Parsing** | [OpenAI GPT](https://openai.com) via [OpenRouter](https://openrouter.ai) |
 | **Styling** | [shadcn/ui](https://ui.shadcn.com) + [Tailwind CSS 4](https://tailwindcss.com) |
 
 ---
@@ -70,7 +70,7 @@ We chose Cloudflare Workers over traditional hosting for several reasons:
 - [Bun](https://bun.sh) v1.0+ (package manager)
 - [Cloudflare Account](https://cloudflare.com) with R2 and D1 enabled
 - [Google Cloud Console](https://console.cloud.google.com) project for OAuth
-- [OpenRouter](https://openrouter.ai) account for AI parsing (Gemini 2.5 Flash Lite)
+- [OpenRouter](https://openrouter.ai) account for AI parsing
 
 ### Installation
 
@@ -240,7 +240,7 @@ If you followed the steps above, the site should be live at your domain.
 4. Get your OpenRouter HTTP Referer and App Title from the dashboard
 
 **Cloudflare AI Gateway**
-This project uses Cloudflare AI Gateway for Gemini calls.
+This project uses Cloudflare AI Gateway for AI calls.
 1. Go to Cloudflare Dashboard > AI > AI Gateway
 2. Create a gateway
 3. Store your OpenRouter token in Cloudflare Secrets Store
@@ -460,7 +460,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [Drizzle ORM](https://orm.drizzle.team) - Type-safe database
 - [Cloudflare](https://cloudflare.com) - Edge infrastructure
 - [OpenRouter](https://openrouter.ai) - AI API gateway
-- [Google Gemini](https://ai.google.dev/gemini-api) - AI inference
+- [OpenAI](https://openai.com) - AI inference
 - [shadcn/ui](https://ui.shadcn.com) - UI components (built on Radix UI + Tailwind CSS)
 
 ---

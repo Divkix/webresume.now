@@ -14,7 +14,7 @@ Be respectful, inclusive, and constructive. We're all here to build something us
 - [Node.js](https://nodejs.org) v20+ (for some tooling)
 - [Cloudflare Account](https://cloudflare.com) with R2 and D1 enabled
 - [Google Cloud Console](https://console.cloud.google.com) project for OAuth
-- [OpenRouter](https://openrouter.ai) account for AI parsing (uses Gemini)
+- [OpenRouter](https://openrouter.ai) account for AI parsing (uses OpenAI)
 
 ### Development Setup
 

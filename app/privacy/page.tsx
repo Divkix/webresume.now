@@ -20,7 +20,7 @@ export default function PrivacyPolicyPage() {
             className="hover:opacity-80 transition-opacity"
             aria-label="clickfolio.me home"
           >
-            <Logo size="sm" />
+            <Logo size="md" />
           </Link>
           <Link
             href="/"
@@ -203,7 +203,7 @@ export default function PrivacyPolicyPage() {
                   </div>
 
                   <div className="bg-cream/50 border-2 border-ink rounded-lg p-4">
-                    <h4 className="font-semibold text-ink mb-1">Google Gemini (via OpenRouter)</h4>
+                    <h4 className="font-semibold text-ink mb-1">OpenAI (via OpenRouter)</h4>
                     <p className="text-ink/70 text-sm mb-2">
                       Used for AI-powered PDF parsing and data extraction
                     </p>
@@ -217,12 +217,12 @@ export default function PrivacyPolicyPage() {
                     </a>
                     <span className="mx-2 text-ink/50">|</span>
                     <a
-                      href="https://policies.google.com/privacy"
+                      href="https://openai.com/policies/privacy-policy"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-coral hover:text-coral text-sm font-medium transition-colors duration-300"
                     >
-                      View Google Privacy Policy
+                      View OpenAI Privacy Policy
                     </a>
                   </div>
 

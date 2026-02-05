@@ -86,7 +86,7 @@ async function upsertSiteData(
  */
 export async function POST(request: Request) {
   try {
-    // Get Cloudflare env bindings for R2/Gemini secrets
+    // Get Cloudflare env bindings for R2/AI secrets
     const { env } = await getCloudflareContext({ async: true });
     const typedEnv = env as Partial<CloudflareEnv>;
 

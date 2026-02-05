@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
             className="hover:opacity-80 transition-opacity"
             aria-label="clickfolio.me home"
           >
-            <Logo size="sm" />
+            <Logo size="md" />
           </Link>
           <Link
             href="/"
@@ -185,9 +185,9 @@ export default function TermsOfServicePage() {
                 </h2>
                 <p className="text-ink/70 leading-relaxed">
                   Your uploaded PDF resumes are processed using artificial intelligence
-                  (specifically, Google Gemini via OpenRouter) to extract structured information
-                  such as your name, contact details, work experience, education, and skills. By
-                  using the Service, you explicitly consent to this automated processing. The AI may
+                  (specifically, OpenAI via OpenRouter) to extract structured information such as
+                  your name, contact details, work experience, education, and skills. By using the
+                  Service, you explicitly consent to this automated processing. The AI may
                   occasionally make errors in extraction; you have the ability to review and edit
                   all extracted information before publishing.
                 </p>

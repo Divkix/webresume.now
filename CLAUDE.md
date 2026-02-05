@@ -85,7 +85,7 @@ Anonymous users upload before auth:
 1. `POST /api/upload` → Upload file directly to Worker, stored in R2 via binding
 2. Worker returns temp key, stored in `localStorage` as `temp_upload_id`
 3. User authenticates via Google OAuth
-4. `POST /api/resume/claim` → links upload to user, triggers Gemini parsing
+4. `POST /api/resume/claim` → links upload to user, triggers AI parsing
 5. Status polling at `/api/resume/status` (3s intervals, ~30-40s parse time)
 
 ### Database Schema
@@ -157,7 +157,7 @@ All receive `content` (ResumeContent) and `user` props, must respect privacy set
 - `lib/auth/index.ts` — Better Auth server config
 - `lib/auth/client.ts` — Client hooks (useSession, signIn, signOut)
 - `lib/r2.ts` — R2 binding wrapper functions
-- `lib/gemini.ts` — AI parsing client (uses pdf-text-worker and ai-parser-worker via service bindings)
+- `lib/ai-parser.ts` — AI parsing client (uses pdf-text-worker and ai-parser-worker via service bindings)
 - `lib/schemas/resume.ts` — Zod validation with XSS sanitization
 - `wrangler.jsonc` — Cloudflare Workers config (D1 binding: `DB`)
 - `drizzle.config.ts` — Drizzle config pointing to local D1

@@ -1,7 +1,7 @@
 import { and, eq, isNotNull } from "drizzle-orm";
+import { parseResumeWithAi } from "../ai-parser";
 import { resumes, siteData } from "../db/schema";
 import { getSessionDbForWebhook } from "../db/session";
-import { parseResumeWithGemini } from "../gemini";
 import { getR2Binding, R2 } from "../r2";
 import type { ResumeContent } from "../types/database";
 import { extractPreviewFields } from "../utils/preview-fields";
@@ -197,8 +197,8 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     throw error;
   }
 
-  // Parse with Gemini
-  const parseResult = await parseResumeWithGemini(pdfBuffer, env);
+  // Parse with AI
+  const parseResult = await parseResumeWithAi(pdfBuffer, env);
 
   if (!parseResult.success) {
     const errorMessage = parseResult.error || "Parsing failed";

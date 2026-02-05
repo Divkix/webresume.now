@@ -242,7 +242,7 @@ export default function Home() {
                 {/* Tech Badges */}
                 <div className="text-center text-xs text-[#6B6B6B] mt-2">
                   Powered by <span className="font-semibold">Cloudflare</span> •{" "}
-                  <span className="font-semibold">Google AI</span>
+                  <span className="font-semibold">OpenAI</span>
                 </div>
               </div>
             </div>
@@ -366,7 +366,7 @@ export default function Home() {
                   {
                     step: "02",
                     title: "AI Parses",
-                    desc: "Google AI extracts your experience, skills, and achievements.",
+                    desc: "AI extracts your experience, skills, and achievements.",
                     color: "bg-mint",
                   },
                   {

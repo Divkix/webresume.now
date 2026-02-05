@@ -331,12 +331,12 @@ export default async function DashboardPage() {
               {/* Profile Completeness - Shown at top when incomplete */}
               {completeness < 100 && suggestions.length > 0 && (
                 <div className="col-span-full">
-                  <Alert className="border-coral/30 bg-coral/10 rounded-2xl shadow-depth-sm hover:shadow-depth-md transition-all duration-300">
+                  <Alert className="border-slate-200 bg-white rounded-2xl shadow-depth-md hover:shadow-depth-lg transition-all duration-300">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-3">
-                          <CheckCircle2 className="h-5 w-5 text-coral" aria-hidden="true" />
-                          <h3 className="font-semibold text-coral">Complete Your Profile</h3>
+                          <CheckCircle2 className="h-5 w-5 text-ink" aria-hidden="true" />
+                          <h3 className="font-semibold text-ink">Complete Your Profile</h3>
                         </div>
 
                         {/* Progress Bar */}
@@ -346,22 +346,22 @@ export default async function DashboardPage() {
                           aria-valuemin={0}
                           aria-valuemax={100}
                           aria-label={`Profile completeness: ${completeness}%`}
-                          className="w-full bg-coral/30 rounded-full h-2 mb-4"
+                          className="w-full bg-slate-200 rounded-full h-2 mb-4"
                         >
                           <div
-                            className="h-2 rounded-full bg-linear-to-r from-coral to-coral transition-all duration-500"
+                            className="h-2 rounded-full bg-coral transition-all duration-500"
                             style={{ width: `${completeness}%` }}
                           />
                         </div>
 
-                        <AlertDescription className="text-coral">
+                        <AlertDescription className="text-slate-700">
                           <p className="text-sm font-medium mb-2">
                             Your profile is {completeness}% complete. Add these to reach 100%:
                           </p>
                           <ul className="space-y-1.5">
                             {suggestions.map((suggestion, index) => (
                               <li key={index} className="text-sm flex items-start gap-2">
-                                <span className="text-coral mt-0.5" aria-hidden="true">
+                                <span className="text-slate-400 mt-0.5" aria-hidden="true">
                                   •
                                 </span>
                                 <span>{suggestion}</span>
@@ -371,7 +371,7 @@ export default async function DashboardPage() {
                           <Button
                             asChild
                             size="sm"
-                            className="mt-4 bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold"
+                            className="mt-4 bg-ink hover:bg-ink/90 text-cream font-semibold"
                           >
                             <Link href="/edit">
                               <Edit3 className="h-3 w-3 mr-2" aria-hidden="true" />

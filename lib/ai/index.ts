@@ -1,6 +1,6 @@
 import { parseWithAi } from "./ai-parser";
 import { extractPdfText } from "./pdf-extract";
-import type { ResumeSchema } from "./schema";
+import { resumeSchema } from "./schema";
 import { transformAiOutput, transformAiResponse } from "./transform";
 
 export interface ParseResumeResult {
@@ -62,8 +62,18 @@ export async function parseResumeWithAi(
     // Step 3: Transform - lenient validation with XSS protection
     const transformedData = transformAiResponse(parseResult.data);
 
-    // Step 4: Final cleanup
-    const finalData = transformAiOutput(transformedData as ResumeSchema);
+    // Step 4: Validate against schema
+    const validationResult = resumeSchema.safeParse(transformedData);
+    if (!validationResult.success) {
+      return {
+        success: false,
+        parsedContent: "",
+        error: "AI response failed schema validation",
+      };
+    }
+
+    // Step 5: Final cleanup
+    const finalData = transformAiOutput(validationResult.data);
 
     return {
       success: true,

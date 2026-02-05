@@ -21,10 +21,7 @@ export async function GET() {
     const [referrerCount, clickStats, sourceBreakdown, topReferrers, recentConversions] =
       await Promise.all([
         // Count users with at least 1 referral
-        db
-          .select({ count: count() })
-          .from(user)
-          .where(gt(user.referralCount, 0)),
+        db.select({ count: count() }).from(user).where(gt(user.referralCount, 0)),
 
         // Click and conversion stats
         db

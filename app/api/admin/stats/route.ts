@@ -41,10 +41,7 @@ export async function GET() {
         .groupBy(resumes.status),
 
       // Views today
-      db
-        .select({ count: count() })
-        .from(pageViews)
-        .where(gte(pageViews.createdAt, todayStart)),
+      db.select({ count: count() }).from(pageViews).where(gte(pageViews.createdAt, todayStart)),
 
       // Recent signups (last 10)
       db

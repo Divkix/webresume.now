@@ -15,8 +15,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check for Better Auth session cookie
-  // Better Auth uses "better-auth.session_token" as the default cookie name
-  const sessionCookie = request.cookies.get("better-auth.session_token");
+  // In production over HTTPS, Better Auth may prefix the cookie with "__Secure-"
+  const sessionCookie =
+    request.cookies.get("__Secure-better-auth.session_token") ??
+    request.cookies.get("better-auth.session_token");
 
   if (!sessionCookie) {
     // No session, redirect to home

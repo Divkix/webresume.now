@@ -2,7 +2,7 @@
 
 import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type ChangeEvent, type DragEvent, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -58,13 +58,13 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   const isModal = open !== undefined && onOpenChange !== undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, isPending: sessionLoading } = useSession();
   const user = session?.user ?? null;
 
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadComplete, setUploadComplete] = useState(false);
+  const [uploadedKey, setUploadedKey] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -167,13 +167,8 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
       await setPendingUploadCookie(key);
 
       setUploadProgress(100);
-      setUploadComplete(true);
+      setUploadedKey(key);
       toast.success("File uploaded successfully!");
-
-      // Step 3: If user is authenticated, auto-claim the upload
-      if (user) {
-        await claimUpload(key);
-      }
     } catch (err) {
       let errorMessage = "Failed to upload file";
 
@@ -208,91 +203,112 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
     }
   };
 
-  const claimUpload = async (key: string) => {
-    setClaiming(true);
-    setError(null);
+  const claimUpload = useCallback(
+    async (key: string) => {
+      setClaiming(true);
+      setError(null);
 
-    try {
-      // Include referral code if present
-      const referralRef = getStoredReferralCode();
-      const claimResponse = await fetch("/api/resume/claim", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key,
-          referral_code: referralRef || undefined,
-        }),
-      });
+      try {
+        // Include referral code if present
+        const referralRef = getStoredReferralCode();
+        const claimResponse = await fetch("/api/resume/claim", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            key,
+            referral_code: referralRef || undefined,
+          }),
+        });
 
-      if (!claimResponse.ok) {
-        const data = (await claimResponse.json()) as ClaimResponse;
-        throw new Error(data.error || "Failed to claim resume");
-      }
-
-      await claimResponse.json();
-
-      // Clear temp data from sessionStorage
-      sessionStorage.removeItem("temp_upload");
-
-      // Clear HTTP-only cookie
-      await clearPendingUploadCookie();
-
-      // Clear referral data after successful claim
-      clearStoredReferralCode();
-
-      toast.success("Resume claimed successfully! Processing...");
-
-      // Close modal if in modal mode
-      if (onOpenChange) {
-        onOpenChange(false);
-      }
-
-      // Brief delay to ensure session cookie is fully established after OAuth
-      // This prevents a race condition where navigation happens before the
-      // browser has fully processed the Set-Cookie header from the OAuth response
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Use replace() to prevent back-button returning to upload flow
-      // Note: router.refresh() was intentionally removed - it caused a race
-      // condition where the server-side session check would fire mid-transition
-      router.replace("/dashboard");
-    } catch (err) {
-      let errorMessage = "Failed to claim resume";
-
-      // Differentiate error types by status code
-      if (err instanceof Response || (err as { status?: number })?.status) {
-        const status = err instanceof Response ? err.status : (err as { status?: number }).status;
-        if (status === 429) {
-          errorMessage = "Upload limit reached (5 per day). Try again tomorrow.";
-        } else if (status === 401) {
-          errorMessage = "Session expired. Please sign in again.";
-        } else if (status === 404) {
-          errorMessage = "Upload not found. Please try uploading again.";
-        } else if (status === 409) {
-          errorMessage = "This resume was already claimed.";
+        if (!claimResponse.ok) {
+          const data = (await claimResponse.json()) as ClaimResponse;
+          throw new Error(data.error || "Failed to claim resume");
         }
-      } else if (err instanceof Error) {
-        if (err.message.includes("network") || err.message.includes("Network")) {
-          errorMessage = "Network error. Check your connection.";
-        } else if (err.message) {
-          errorMessage = err.message;
+
+        await claimResponse.json();
+
+        // Clear uploaded key to prevent useEffect re-triggering
+        setUploadedKey(null);
+
+        // Clear temp data from sessionStorage
+        sessionStorage.removeItem("temp_upload");
+
+        // Clear HTTP-only cookie
+        await clearPendingUploadCookie();
+
+        // Clear referral data after successful claim
+        clearStoredReferralCode();
+
+        toast.success("Resume claimed successfully! Processing...");
+
+        // Close modal if in modal mode
+        if (onOpenChange) {
+          onOpenChange(false);
         }
+
+        // Brief delay to ensure session cookie is fully established after OAuth
+        // This prevents a race condition where navigation happens before the
+        // browser has fully processed the Set-Cookie header from the OAuth response
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Use replace() to prevent back-button returning to upload flow
+        // Note: router.refresh() was intentionally removed - it caused a race
+        // condition where the server-side session check would fire mid-transition
+        router.replace("/dashboard");
+      } catch (err) {
+        let errorMessage = "Failed to claim resume";
+
+        // Differentiate error types by status code
+        if (err instanceof Response || (err as { status?: number })?.status) {
+          const status = err instanceof Response ? err.status : (err as { status?: number }).status;
+          if (status === 429) {
+            errorMessage = "Upload limit reached (5 per day). Try again tomorrow.";
+          } else if (status === 401) {
+            errorMessage = "Session expired. Please sign in again.";
+          } else if (status === 404) {
+            errorMessage = "Upload not found. Please try uploading again.";
+          } else if (status === 409) {
+            errorMessage = "This resume was already claimed.";
+          }
+        } else if (err instanceof Error) {
+          if (err.message.includes("network") || err.message.includes("Network")) {
+            errorMessage = "Network error. Check your connection.";
+          } else if (err.message) {
+            errorMessage = err.message;
+          }
+        }
+
+        // Clear uploaded key to prevent useEffect re-triggering
+        setUploadedKey(null);
+
+        // Clean up temp storage on error (both sessionStorage and cookie)
+        sessionStorage.removeItem("temp_upload");
+        await clearPendingUploadCookie();
+
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setClaiming(false);
       }
+    },
+    [router, onOpenChange],
+  );
 
-      // Clean up temp storage on error (both sessionStorage and cookie)
-      sessionStorage.removeItem("temp_upload");
-      await clearPendingUploadCookie();
+  // Auto-claim upload when session loads and upload is complete
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!uploadedKey) return;
+    const currentUser = session?.user;
+    if (!currentUser) return;
+    if (claiming) return;
 
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setClaiming(false);
-    }
-  };
+    claimUpload(uploadedKey);
+  }, [sessionLoading, uploadedKey, session?.user, claiming, claimUpload]);
 
   const handleReset = () => {
     setFile(null);
-    setUploadComplete(false);
+    setUploadedKey(null);
     setClaiming(false);
     setError(null);
     setUploadProgress(0);
@@ -670,7 +686,7 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
   );
 
   // Select content based on upload state
-  const content = uploadComplete ? uploadCompleteContent : dropzoneContent;
+  const content = uploadedKey !== null ? uploadCompleteContent : dropzoneContent;
 
   // When in modal mode, wrap in Dialog
   if (isModal) {

@@ -50,19 +50,19 @@ export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: 
     <svg
       width={dimension}
       height={dimension}
-      viewBox="0 0 45 45"
+      viewBox="0 0 44 44"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-label="clickfolio.me icon"
       role="img"
     >
       {/* Shadow layer */}
-      <rect x="5" y="5" width="40" height="40" rx="4" fill={colors.shadow} />
+      <rect x="3" y="3" width="40" height="40" rx="4" fill={colors.shadow} />
 
       {/* Cream document */}
       <rect
-        x="2"
-        y="2"
+        x="0"
+        y="0"
         width="40"
         height="40"
         rx="4"
@@ -72,19 +72,19 @@ export function LogoIcon({ size = "md", colorScheme = "dark", className = "" }: 
       />
 
       {/* Fold line diagonal */}
-      <path d="m24 2-8 40" stroke={colors.documentStroke} strokeWidth="3" />
+      <path d="m22 0-8 40" stroke={colors.documentStroke} strokeWidth="3" />
 
       {/* Black text lines */}
       <path
         stroke={colors.lines}
         strokeWidth="2.5"
         strokeLinecap="round"
-        d="M8 12h10M8 20h8M8 28h6"
+        d="M6 10h10M6 18h8M6 26h6"
       />
 
       {/* Coral lightning bolt */}
       <path
-        d="m28 8 6 12h-6l6 12"
+        d="m26 6 6 12h-6l6 12"
         stroke={colors.lightning}
         strokeWidth="3"
         strokeLinecap="round"

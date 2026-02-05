@@ -1,18 +1,18 @@
-<svg width="45" height="45" viewBox="0 0 45 45" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Clickfolio favicon - cream document with lightning bolt -->
 
   <!-- Shadow layer -->
-  <rect x="5" y="5" width="40" height="40" rx="4" fill="#0d0d0d"/>
+  <rect x="3" y="3" width="40" height="40" rx="4" fill="#0d0d0d"/>
 
   <!-- Cream document -->
-  <rect x="2" y="2" width="40" height="40" rx="4" fill="#fdf8f3" stroke="#0d0d0d" stroke-width="3"/>
+  <rect x="0" y="0" width="40" height="40" rx="4" fill="#fdf8f3" stroke="#0d0d0d" stroke-width="3"/>
 
   <!-- Fold line diagonal -->
-  <path d="m24 2-8 40" stroke="#0d0d0d" stroke-width="3"/>
+  <path d="m22 0-8 40" stroke="#0d0d0d" stroke-width="3"/>
 
   <!-- Black text lines -->
-  <path stroke="#0d0d0d" stroke-width="2.5" stroke-linecap="round" d="M8 12h10M8 20h8M8 28h6"/>
+  <path stroke="#0d0d0d" stroke-width="2.5" stroke-linecap="round" d="M6 10h10M6 18h8M6 26h6"/>
 
   <!-- Coral lightning bolt -->
-  <path d="m28 8 6 12h-6l6 12" stroke="#ff6b6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m26 6 6 12h-6l6 12" stroke="#ff6b6b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

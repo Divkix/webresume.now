@@ -49,7 +49,7 @@ export function LogoText({ size = "md", colorScheme = "dark", className = "" }: 
       </defs>
 
       {/* Brand text "clickfolio" */}
-      <text x="0" y="40" className={`logotext-main-${colorScheme}`}>
+      <text x="-6" y="40" className={`logotext-main-${colorScheme}`}>
         clickfolio
       </text>
 

@@ -28,12 +28,11 @@ let cachedZxcvbn: ((password: string, userInputs?: string[]) => ZxcvbnResult) | 
 async function getZxcvbn() {
   if (cachedZxcvbn) return cachedZxcvbn;
 
-  const [{ zxcvbn, zxcvbnOptions }, zxcvbnCommonPackage, zxcvbnEnPackage] =
-    await Promise.all([
-      import("@zxcvbn-ts/core"),
-      import("@zxcvbn-ts/language-common"),
-      import("@zxcvbn-ts/language-en"),
-    ]);
+  const [{ zxcvbn, zxcvbnOptions }, zxcvbnCommonPackage, zxcvbnEnPackage] = await Promise.all([
+    import("@zxcvbn-ts/core"),
+    import("@zxcvbn-ts/language-common"),
+    import("@zxcvbn-ts/language-en"),
+  ]);
 
   zxcvbnOptions.setOptions({
     translations: zxcvbnEnPackage.translations,

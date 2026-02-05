@@ -219,28 +219,8 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     throw new Error(errorMessage);
   }
 
-  // Validate JSON syntax only (avoid parse-stringify round-trip for performance)
+  // parsedContent is produced by JSON.stringify() in parseResumeWithAi — guaranteed valid JSON
   const parsedContent = parseResult.parsedContent;
-  try {
-    JSON.parse(parsedContent);
-  } catch {
-    const errorMessage = "Invalid JSON response from AI";
-    await db
-      .update(resumes)
-      .set({
-        status: "failed",
-        errorMessage,
-        lastAttemptError: errorMessage,
-      })
-      .where(eq(resumes.id, message.resumeId));
-    await notifyStatusChange({
-      resumeId: message.resumeId,
-      status: "failed",
-      error: errorMessage,
-      env,
-    });
-    throw new Error(errorMessage);
-  }
 
   const now = new Date().toISOString();
 

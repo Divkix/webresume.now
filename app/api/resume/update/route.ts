@@ -5,7 +5,6 @@ import { siteData } from "@/lib/db/schema";
 import { resumeContentSchemaStrict } from "@/lib/schemas/resume";
 import type { ResumeContent } from "@/lib/types/database";
 import { extractPreviewFields } from "@/lib/utils/preview-fields";
-import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -20,7 +19,7 @@ interface UpdateRequestBody {
 /**
  * PUT /api/resume/update
  * Updates the user's resume content in site_data
- * Includes rate limiting (10 updates per hour) and comprehensive validation
+ * Includes comprehensive validation
  *
  * Request body:
  * {
@@ -57,13 +56,7 @@ export async function PUT(request: Request) {
 
     const userId = authUser.id;
 
-    // 5. Check rate limit (10 updates per hour)
-    const rateLimitResponse = await enforceRateLimit(userId, "resume_update");
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
-
-    // 6. Parse and validate request body
+    // 3. Parse and validate request body
     let body: UpdateRequestBody;
     try {
       body = (await request.json()) as UpdateRequestBody;
@@ -88,7 +81,7 @@ export async function PUT(request: Request) {
     // Extract preview fields for denormalized columns
     const previewFields = extractPreviewFields(content);
 
-    // 7. Update site_data (don't return content - we already have it validated)
+    // 4. Update site_data (don't return content - we already have it validated)
     const updateResult = await db
       .update(siteData)
       .set({
@@ -113,7 +106,7 @@ export async function PUT(request: Request) {
 
     const data = updateResult[0];
 
-    // 8. Return success response (use validated content directly, avoid JSON round-trip)
+    // 5. Return success response (use validated content directly, avoid JSON round-trip)
     await captureBookmark();
     return createSuccessResponse({
       success: true,

@@ -38,37 +38,31 @@ export async function GET(request: Request) {
     const nowIso = new Date().toISOString();
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Delete expired rate limits (expiresAt is TEXT/ISO string)
+    // Delete expired rate limits
     const rateLimitsResult = await db
       .delete(uploadRateLimits)
-      .where(lt(uploadRateLimits.expiresAt, nowIso))
-      .returning({ id: uploadRateLimits.id });
+      .where(lt(uploadRateLimits.expiresAt, nowIso));
 
-    // Delete expired sessions (expiresAt is TEXT/ISO string)
-    const sessionsResult = await db
-      .delete(session)
-      .where(lt(session.expiresAt, nowIso))
-      .returning({ id: session.id });
+    // Delete expired sessions
+    const sessionsResult = await db.delete(session).where(lt(session.expiresAt, nowIso));
 
     // Archive old handleChanges (keep 90 days)
     const handleChangesResult = await db
       .delete(handleChanges)
-      .where(lt(handleChanges.createdAt, ninetyDaysAgo))
-      .returning({ id: handleChanges.id });
+      .where(lt(handleChanges.createdAt, ninetyDaysAgo));
 
     // Delete page views older than 90 days
     const pageViewsResult = await db
       .delete(pageViews)
-      .where(lt(pageViews.createdAt, ninetyDaysAgo))
-      .returning({ id: pageViews.id });
+      .where(lt(pageViews.createdAt, ninetyDaysAgo));
 
     return Response.json({
       ok: true,
       deleted: {
-        rateLimits: rateLimitsResult.length,
-        sessions: sessionsResult.length,
-        handleChanges: handleChangesResult.length,
-        pageViews: pageViewsResult.length,
+        rateLimits: rateLimitsResult.meta.changes,
+        sessions: sessionsResult.meta.changes,
+        handleChanges: handleChangesResult.meta.changes,
+        pageViews: pageViewsResult.meta.changes,
       },
       timestamp: nowIso,
     });

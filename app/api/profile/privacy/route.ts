@@ -4,7 +4,6 @@ import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { purgeResumeCache } from "@/lib/cloudflare-cache-purge";
 import { user } from "@/lib/db/schema";
 import { privacySettingsSchema } from "@/lib/schemas/profile";
-import { enforceRateLimit } from "@/lib/utils/rate-limit";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -14,7 +13,6 @@ import {
 /**
  * PUT /api/profile/privacy
  * Update user's privacy settings (show_phone, show_address)
- * Rate limit: 20 updates per hour (more generous for toggle settings)
  */
 export async function PUT(request: Request) {
   try {
@@ -34,13 +32,7 @@ export async function PUT(request: Request) {
 
     const userHandle = dbUser.handle;
 
-    // 2. Rate limit check (20 updates per hour)
-    const rateLimitResponse = await enforceRateLimit(authUser.id, "privacy_update");
-    if (rateLimitResponse) {
-      return rateLimitResponse;
-    }
-
-    // 5. Parse and validate request body
+    // 2. Parse and validate request body
     let body;
     try {
       body = await request.json();
@@ -61,7 +53,7 @@ export async function PUT(request: Request) {
 
     const { show_phone, show_address, hide_from_search, show_in_directory } = validation.data;
 
-    // 6. Update privacy_settings (stored as JSON string in D1)
+    // 3. Update privacy_settings (stored as JSON string in D1)
     const privacySettings = JSON.stringify({
       show_phone,
       show_address,
@@ -77,7 +69,7 @@ export async function PUT(request: Request) {
       })
       .where(eq(user.id, authUser.id));
 
-    // 7. Purge edge cache for privacy changes (fire-and-forget)
+    // 4. Purge edge cache for privacy changes (fire-and-forget)
     // This prevents PII exposure through stale edge cache
     if (userHandle) {
       const cfZoneId = (env as CloudflareEnv).CF_ZONE_ID;

@@ -195,8 +195,7 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
   }
 
   // Use denormalized columns instead of parsing full content JSON
-  const fullName =
-    userData.siteData.previewName?.trim() || userData.name?.trim() || null;
+  const fullName = userData.siteData.previewName?.trim() || userData.name?.trim() || null;
 
   if (!fullName) {
     return null;

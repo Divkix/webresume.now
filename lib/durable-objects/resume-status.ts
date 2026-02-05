@@ -55,9 +55,10 @@ export class ResumeStatusDO extends DurableObject {
     // Accept via hibernation API (DO can be evicted while WS stays open)
     this.ctx.acceptWebSocket(server);
 
-    // Send cached status immediately if available
-    const cachedStatus = await this.ctx.storage.get<string>("lastStatus");
-    const cachedError = await this.ctx.storage.get<string>("lastError");
+    // Send cached status immediately if available (batched read)
+    const cached = await this.ctx.storage.get<string>(["lastStatus", "lastError"]);
+    const cachedStatus = cached.get("lastStatus");
+    const cachedError = cached.get("lastError");
 
     if (cachedStatus) {
       const msg: StatusMessage = {
@@ -91,12 +92,14 @@ export class ResumeStatusDO extends DurableObject {
       return new Response("Missing status", { status: 400 });
     }
 
-    // Store in DO storage (survives hibernation)
-    await this.ctx.storage.put("lastStatus", status);
+    // Store in DO storage (survives hibernation) — batched write
     if (error) {
-      await this.ctx.storage.put("lastError", error);
+      await this.ctx.storage.put({ lastStatus: status, lastError: error });
     } else {
-      await this.ctx.storage.delete("lastError");
+      await Promise.all([
+        this.ctx.storage.put("lastStatus", status),
+        this.ctx.storage.delete("lastError"),
+      ]);
     }
 
     // Broadcast to all connected WebSockets
@@ -138,10 +141,11 @@ export class ResumeStatusDO extends DurableObject {
       return;
     }
 
-    // Handle explicit status request
+    // Handle explicit status request (batched read)
     if (message === "status") {
-      const cachedStatus = await this.ctx.storage.get<string>("lastStatus");
-      const cachedError = await this.ctx.storage.get<string>("lastError");
+      const cached = await this.ctx.storage.get<string>(["lastStatus", "lastError"]);
+      const cachedStatus = cached.get("lastStatus");
+      const cachedError = cached.get("lastError");
 
       if (cachedStatus) {
         const msg: StatusMessage = {

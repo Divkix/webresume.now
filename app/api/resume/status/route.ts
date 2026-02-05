@@ -40,9 +40,21 @@ export async function GET(request: Request) {
       return createErrorResponse("resume_id parameter is required", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    // 4. Fetch resume from database (include fileHash for fan-out)
+    // 4. Fetch resume from database — lightweight polling query
+    //    Only select columns needed for status checks. Excludes parsedContent
+    //    and parsedContentStaged (10-100KB JSON blobs) to avoid transferring
+    //    them on every 3-second poll.
     const resume = await db.query.resumes.findFirst({
       where: eq(resumes.id, resumeId),
+      columns: {
+        id: true,
+        userId: true,
+        status: true,
+        errorMessage: true,
+        retryCount: true,
+        totalAttempts: true,
+        createdAt: true,
+      },
     });
 
     if (!resume) {
@@ -60,7 +72,7 @@ export async function GET(request: Request) {
 
     // 6. Handle waiting_for_cache status with timeout check
     if (resume.status === "waiting_for_cache") {
-      const createdAt = new Date(resume.createdAt as string);
+      const createdAt = new Date(resume.createdAt);
       const waitingTime = Date.now() - createdAt.getTime();
 
       if (waitingTime > WAITING_FOR_CACHE_TIMEOUT_MS) {
@@ -79,7 +91,7 @@ export async function GET(request: Request) {
           status: "failed",
           progress_pct: 0,
           error: "Parsing timed out while waiting for cached result. Please try uploading again.",
-          can_retry: (resume.retryCount as number) < 2,
+          can_retry: resume.retryCount < 2,
         });
       }
 
@@ -104,7 +116,17 @@ export async function GET(request: Request) {
       });
     }
 
-    const buildCompletedResponse = (parsedContent: string | null) => {
+    if (resume.status === "completed") {
+      // Only fetch parsedContent when we actually need it (status is completed).
+      // This second query is a one-time cost on completion, not repeated every poll.
+      const resumeContent = await db.query.resumes.findFirst({
+        where: eq(resumes.id, resumeId),
+        columns: {
+          parsedContent: true,
+        },
+      });
+
+      const parsedContent = (resumeContent?.parsedContent as string | null) ?? null;
       let parsedJson: unknown = null;
 
       if (parsedContent) {
@@ -127,18 +149,14 @@ export async function GET(request: Request) {
         can_retry: false,
         parsed_content: parsedJson,
       });
-    };
-
-    if (resume.status === "completed") {
-      return buildCompletedResponse((resume.parsedContent as string | null) ?? null);
     }
 
     if (resume.status === "failed") {
       return createSuccessResponse({
         status: "failed",
         progress_pct: 0,
-        error: (resume.errorMessage as string | undefined | null) ?? null,
-        can_retry: (resume.retryCount as number) < 2,
+        error: resume.errorMessage ?? null,
+        can_retry: resume.retryCount < 2,
       });
     }
 

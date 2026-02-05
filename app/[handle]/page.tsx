@@ -210,8 +210,9 @@ export default async function HandlePage({ params }: PageProps) {
         }}
       />
       <AnalyticsBeacon handle={handle} />
-      {/* Floating share bar for visitors */}
-      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 print:hidden">
+      {/* Floating actions for visitors */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3 print:hidden">
+        <CreateYoursCTA handle={handle} variant={ctaVariant} />
         <ShareBar
           handle={handle}
           name={content.full_name}
@@ -219,7 +220,6 @@ export default async function HandlePage({ params }: PageProps) {
           variant={shareBarVariant}
         />
       </div>
-      <CreateYoursCTA handle={handle} variant={ctaVariant} />
       <AttributionWidget theme={theme_id ?? DEFAULT_THEME} />
     </>
   );

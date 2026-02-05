@@ -13,7 +13,7 @@ const SHOW_DELAY_MS = 3000; // 3 seconds
 const SCROLL_THRESHOLD = 0.3; // 30% of page
 
 const ctaVariants = cva(
-  "fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 rounded-full shadow-lg animate-fade-in-up",
+  "flex items-center gap-3 px-4 py-3 rounded-full shadow-lg animate-fade-in-up",
   {
     variants: {
       variant: {

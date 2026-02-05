@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-cream paper-texture flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/60 bg-white/80 backdrop-blur-md shadow-depth-sm">
+      <header className="sticky top-0 z-50 border-b-3 border-ink bg-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <Link
             href="/"
@@ -24,7 +24,7 @@ export default function TermsOfServicePage() {
           </Link>
           <Link
             href="/"
-            className="text-sm font-medium text-slate-600 hover:text-coral transition-colors duration-300"
+            className="text-sm font-medium text-ink/70 hover:text-coral transition-colors duration-300"
           >
             Back to Home
           </Link>
@@ -36,20 +36,20 @@ export default function TermsOfServicePage() {
         <article className="max-w-3xl mx-auto">
           {/* Page Header */}
           <div className="mb-12 text-center">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-ink mb-4 tracking-tight">
               Terms of Service
             </h1>
-            <p className="text-slate-600 text-sm">Last updated: December 2025</p>
+            <p className="text-ink/70 text-sm">Last updated: December 2025</p>
           </div>
 
           {/* Content Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-depth-md p-8 sm:p-12">
+          <div className="bg-cream border-3 border-ink shadow-brutal-md p-8 sm:p-12">
             {/* Table of Contents */}
             <nav
-              className="mb-10 p-6 bg-slate-50 rounded-xl border border-slate-200/60"
+              className="mb-10 p-6 bg-cream/50 border-2 border-ink"
               aria-label="Table of contents"
             >
-              <h2 className="text-sm font-semibold text-slate-900 mb-4 uppercase tracking-wide">
+              <h2 className="text-sm font-semibold text-ink mb-4 uppercase tracking-wide">
                 Contents
               </h2>
               <ol className="space-y-2 text-sm">
@@ -69,7 +69,7 @@ export default function TermsOfServicePage() {
                   <li key={index}>
                     <a
                       href={`#section-${index + 1}`}
-                      className="text-slate-600 hover:text-coral transition-colors duration-300"
+                      className="text-ink/70 hover:text-coral transition-colors duration-300"
                     >
                       {index + 1}. {item}
                     </a>
@@ -79,15 +79,15 @@ export default function TermsOfServicePage() {
             </nav>
 
             {/* Sections */}
-            <div className="prose prose-slate max-w-none">
+            <div className="prose max-w-none">
               <section id="section-1" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     1
                   </span>
                   Service Description
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   {siteConfig.fullName} (&quot;Service&quot;) provides a platform to convert PDF
                   resumes into hosted web portfolios. By using our Service, you agree to these
                   Terms. The Service allows users to upload PDF documents, which are then processed
@@ -97,13 +97,13 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-2" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     2
                   </span>
                   Eligibility
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   You must be at least 13 years old to use this Service. By using the Service, you
                   represent that you meet this requirement. If you are under 18, you represent that
                   you have obtained parental or guardian consent to use the Service.
@@ -111,16 +111,16 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-3" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     3
                   </span>
                   Account Responsibilities
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-4">
+                <p className="text-ink/70 leading-relaxed mb-4">
                   When you create an account with us, you agree to the following:
                 </p>
-                <ul className="list-disc pl-6 space-y-2 text-slate-600">
+                <ul className="list-disc pl-6 space-y-2 text-ink/70">
                   <li>
                     You are responsible for maintaining the security of your account credentials
                   </li>
@@ -132,14 +132,14 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-4" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     4
                   </span>
                   Acceptable Use
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-4">You agree NOT to:</p>
-                <ul className="list-disc pl-6 space-y-2 text-slate-600">
+                <p className="text-ink/70 leading-relaxed mb-4">You agree NOT to:</p>
+                <ul className="list-disc pl-6 space-y-2 text-ink/70">
                   <li>Upload content that violates any laws or regulations</li>
                   <li>Upload content that infringes on intellectual property rights</li>
                   <li>Use the Service for harassment, spam, or impersonation</li>
@@ -152,14 +152,14 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-5" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     5
                   </span>
                   Content Ownership
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-4">Your content remains yours:</p>
-                <ul className="list-disc pl-6 space-y-2 text-slate-600">
+                <p className="text-ink/70 leading-relaxed mb-4">Your content remains yours:</p>
+                <ul className="list-disc pl-6 space-y-2 text-ink/70">
                   <li>
                     You retain all ownership rights to your resume content and any information you
                     upload
@@ -177,13 +177,13 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-6" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     6
                   </span>
                   AI Processing
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   Your uploaded PDF resumes are processed using artificial intelligence
                   (specifically, Google Gemini via OpenRouter) to extract structured information
                   such as your name, contact details, work experience, education, and skills. By
@@ -194,21 +194,21 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-7" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     7
                   </span>
                   Limitation of Liability
                 </h2>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-                  <p className="text-slate-700 leading-relaxed font-medium">
+                <div className="bg-coral/10 border-2 border-ink rounded-lg p-4 mb-4">
+                  <p className="text-ink leading-relaxed font-medium">
                     THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT
                     WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
                     WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
                     NON-INFRINGEMENT.
                   </p>
                 </div>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   We are not liable for any damages arising from your use of the Service, including
                   but not limited to: loss of data, business interruption, loss of profits, or any
                   indirect, incidental, special, consequential, or punitive damages. Our total
@@ -218,16 +218,16 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-8" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     8
                   </span>
                   Termination
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-4">
+                <p className="text-ink/70 leading-relaxed mb-4">
                   Regarding account termination:
                 </p>
-                <ul className="list-disc pl-6 space-y-2 text-slate-600">
+                <ul className="list-disc pl-6 space-y-2 text-ink/70">
                   <li>You may delete your account at any time through the Settings page</li>
                   <li>
                     We reserve the right to suspend or terminate accounts that violate these Terms
@@ -245,13 +245,13 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-9" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     9
                   </span>
                   Changes to Terms
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   We reserve the right to modify these Terms at any time. We will provide notice of
                   material changes at least 30 days in advance by posting the updated Terms on this
                   page and updating the &quot;Last updated&quot; date. Your continued use of the
@@ -261,13 +261,13 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-10" className="mb-10">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     10
                   </span>
                   Governing Law
                 </h2>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-ink/70 leading-relaxed">
                   These Terms shall be governed by and construed in accordance with the laws of the
                   State of Wyoming, United States of America, without regard to its conflict of law
                   provisions. Any disputes arising under or in connection with these Terms shall be
@@ -276,16 +276,16 @@ export default function TermsOfServicePage() {
               </section>
 
               <section id="section-11" className="mb-4">
-                <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-ink mb-4 flex items-center gap-3">
                   <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-linear-to-r from-coral/20 to-coral/20 text-coral text-sm font-bold">
                     11
                   </span>
                   Contact
                 </h2>
-                <p className="text-slate-600 leading-relaxed mb-4">
+                <p className="text-ink/70 leading-relaxed mb-4">
                   For questions about these Terms of Service, please contact us at:
                 </p>
-                <div className="bg-slate-50 border border-slate-200/60 rounded-lg p-4">
+                <div className="bg-cream/50 border-2 border-ink rounded-lg p-4">
                   <a
                     href={`mailto:${siteConfig.supportEmail}`}
                     className="text-coral hover:text-coral font-medium transition-colors duration-300"
@@ -301,7 +301,7 @@ export default function TermsOfServicePage() {
           <div className="mt-8 text-center">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-coral transition-colors duration-300"
+              className="inline-flex items-center gap-2 text-sm font-medium text-ink/70 hover:text-coral transition-colors duration-300"
             >
               <svg
                 className="w-4 h-4"

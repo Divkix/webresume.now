@@ -19,6 +19,7 @@ import { redirect } from "next/navigation";
 import { AnalyticsCard } from "@/components/dashboard/AnalyticsCard";
 import { CopyLinkButton } from "@/components/dashboard/CopyLinkButton";
 import { DashboardUploadSection } from "@/components/dashboard/DashboardUploadSection";
+import { EmailVerificationBanner } from "@/components/dashboard/EmailVerificationBanner";
 import { RealtimeStatusListener } from "@/components/dashboard/RealtimeStatusListener";
 import { ReferralStats } from "@/components/dashboard/ReferralStats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -162,12 +163,14 @@ export default async function DashboardPage() {
         limit: 1,
       },
       siteData: true,
+      accounts: true, // For checking OAuth vs email/password
     },
     columns: {
       id: true,
       handle: true,
       name: true,
       email: true,
+      emailVerified: true, // For email verification banner
       image: true,
       headline: true,
       privacySettings: true,
@@ -181,6 +184,10 @@ export default async function DashboardPage() {
   const profile = userData ?? null;
   const resume = (userData?.resumes?.[0] ?? null) as Resume | null;
   const siteDataResult = (userData?.siteData ?? null) as typeof siteData.$inferSelect | null;
+
+  // Email verification state
+  const emailVerified = userData?.emailVerified ?? false;
+  const isOAuthUser = userData?.accounts?.some((a) => a.providerId === "google") ?? false;
 
   // Use pre-computed referralCount from user table, fetch click count separately
   const referralCount = userData?.referralCount ?? 0;
@@ -263,6 +270,17 @@ export default async function DashboardPage() {
               </Button>
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Email Verification Banner (client component) */}
+        {profile?.email && (
+          <div className="mb-6">
+            <EmailVerificationBanner
+              email={profile.email}
+              emailVerified={emailVerified}
+              isOAuthUser={isOAuthUser}
+            />
+          </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">

@@ -15,7 +15,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/lib/db/schema";
-import { sendPasswordResetEmail } from "@/lib/email/resend";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email/resend";
 
 /**
  * Wraps a D1Database to automatically convert Date objects to ISO strings.
@@ -176,6 +176,21 @@ export async function getAuth() {
           console.error("[AUTH] Failed to send reset email:", err);
         });
       },
+    },
+    emailVerification: {
+      sendVerificationEmail: async ({ user, url }) => {
+        // Fire-and-forget to prevent timing attacks
+        sendVerificationEmail({
+          email: user.email,
+          verificationUrl: url,
+          userName: user.name,
+        }).catch((err) => {
+          console.error("[AUTH] Failed to send verification email:", err);
+        });
+      },
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      expiresIn: 60 * 60 * 24, // 24 hours
     },
   });
 }

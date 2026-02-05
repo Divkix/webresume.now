@@ -3,11 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { signUp } from "@/lib/auth/client";
+import type { PasswordStrengthResult } from "@/lib/password/strength";
 import { type SignUpFormData, signUpSchema } from "@/lib/schemas/auth";
+import { PasswordInput } from "./PasswordInput";
 
 interface SignUpFormProps {
   /** Callback when sign up succeeds, before redirect */
@@ -18,11 +20,14 @@ interface SignUpFormProps {
 
 export function SignUpForm({ onSuccess, callbackURL }: SignUpFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrengthResult | null>(null);
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -33,7 +38,27 @@ export function SignUpForm({ onSuccess, callbackURL }: SignUpFormProps) {
     },
   });
 
+  const email = watch("email");
+  const name = watch("name");
+
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue("password", e.target.value, { shouldValidate: true });
+    },
+    [setValue],
+  );
+
+  const handleStrengthChange = useCallback((result: PasswordStrengthResult | null) => {
+    setPasswordStrength(result);
+  }, []);
+
   const onSubmit = async (data: SignUpFormData) => {
+    // Check password strength before submitting
+    if (!passwordStrength?.isAcceptable) {
+      toast.error("Please choose a stronger password");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -59,6 +84,8 @@ export function SignUpForm({ onSuccess, callbackURL }: SignUpFormProps) {
         return;
       }
 
+      // Notify user about verification email (soft requirement)
+      toast.success("Account created! Check your email to verify your address.");
       onSuccess?.();
       router.push(redirectURL);
     } catch (err) {
@@ -145,39 +172,24 @@ export function SignUpForm({ onSuccess, callbackURL }: SignUpFormProps) {
         {errors.email && <p className="text-sm text-brand font-medium">{errors.email.message}</p>}
       </div>
 
-      {/* Password Field */}
+      {/* Password Field with Strength Meter */}
       <div className="space-y-1.5">
         <label htmlFor="signup-password" className="block text-sm font-bold text-ink">
           Password
         </label>
-        <input
+        <PasswordInput
           id="signup-password"
-          type="password"
           autoComplete="new-password"
           placeholder="Min. 8 characters"
           disabled={isSubmitting}
-          {...register("password")}
-          className={`
-            w-full
-            px-4
-            py-2.5
-            bg-cream
-            text-ink
-            font-medium
-            border-3
-            border-ink
-            shadow-brutal-sm
-            placeholder:text-ink/40
-            focus:outline-none
-            focus:shadow-brutal-md
-            focus:translate-x-[-2px]
-            focus:translate-y-[-2px]
-            transition-all
-            duration-150
-            disabled:opacity-50
-            disabled:cursor-not-allowed
-            ${errors.password ? "border-brand" : ""}
-          `}
+          value={watch("password")}
+          onChange={handlePasswordChange}
+          showStrengthMeter
+          email={email}
+          name={name}
+          checkBreach
+          onStrengthChange={handleStrengthChange}
+          hasError={!!errors.password}
         />
         {errors.password && (
           <p className="text-sm text-brand font-medium">{errors.password.message}</p>

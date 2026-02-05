@@ -136,3 +136,19 @@ export const { resetPassword } = authClient;
  * ```
  */
 export const { useSession } = authClient;
+
+/**
+ * Request email verification to be (re)sent
+ *
+ * Triggers the server to send a verification email to the user.
+ * Use this for "resend verification email" functionality.
+ *
+ * @example
+ * ```tsx
+ * const { data, error } = await sendVerificationEmail({
+ *   email: "user@example.com",
+ *   callbackURL: "/dashboard",
+ * });
+ * ```
+ */
+export const { sendVerificationEmail } = authClient;

@@ -4,13 +4,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Footer } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 import { Toaster } from "@/components/ui/sonner";
 import { resetPassword } from "@/lib/auth/client";
+import type { PasswordStrengthResult } from "@/lib/password/strength";
 import { type ResetPasswordFormData, resetPasswordSchema } from "@/lib/schemas/auth";
 
 function ResetPasswordForm() {
@@ -19,10 +21,13 @@ function ResetPasswordForm() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrengthResult | null>(null);
 
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -32,9 +37,26 @@ function ResetPasswordForm() {
     },
   });
 
+  const handlePasswordChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue("newPassword", e.target.value, { shouldValidate: true });
+    },
+    [setValue],
+  );
+
+  const handleStrengthChange = useCallback((result: PasswordStrengthResult | null) => {
+    setPasswordStrength(result);
+  }, []);
+
   const onSubmit = async (data: ResetPasswordFormData) => {
     if (!token) {
       toast.error("Invalid reset link. Please request a new one.");
+      return;
+    }
+
+    // Check password strength before submitting
+    if (!passwordStrength?.isAcceptable) {
+      toast.error("Please choose a stronger password");
       return;
     }
 
@@ -158,39 +180,22 @@ function ResetPasswordForm() {
         <p className="text-ink/70 text-sm">Enter your new password below.</p>
       </div>
 
-      {/* New Password Field */}
+      {/* New Password Field with Strength Meter */}
       <div className="space-y-1.5">
         <label htmlFor="reset-new-password" className="block text-sm font-bold text-ink">
           New Password
         </label>
-        <input
+        <PasswordInput
           id="reset-new-password"
-          type="password"
           autoComplete="new-password"
           placeholder="Min. 8 characters"
           disabled={isSubmitting}
-          {...register("newPassword")}
-          className={`
-            w-full
-            px-4
-            py-2.5
-            bg-cream
-            text-ink
-            font-medium
-            border-3
-            border-ink
-            shadow-brutal-sm
-            placeholder:text-ink/40
-            focus:outline-none
-            focus:shadow-brutal-md
-            focus:translate-x-[-2px]
-            focus:translate-y-[-2px]
-            transition-all
-            duration-150
-            disabled:opacity-50
-            disabled:cursor-not-allowed
-            ${errors.newPassword ? "border-brand" : ""}
-          `}
+          value={watch("newPassword")}
+          onChange={handlePasswordChange}
+          showStrengthMeter
+          checkBreach
+          onStrengthChange={handleStrengthChange}
+          hasError={!!errors.newPassword}
         />
         {errors.newPassword && (
           <p className="text-sm text-brand font-medium">{errors.newPassword.message}</p>

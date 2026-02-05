@@ -160,3 +160,125 @@ If you didn't request this, you can safely ignore this email. Your password won'
     return { success: false, error: message };
   }
 }
+
+interface SendVerificationEmailParams {
+  email: string;
+  verificationUrl: string;
+  userName?: string;
+}
+
+/**
+ * Sends an email verification email via the Resend HTTP API
+ *
+ * IMPORTANT: This function should NOT be awaited in the Better Auth
+ * sendVerificationEmail callback to prevent timing attacks. Fire-and-forget.
+ *
+ * @param params.email - Recipient email address
+ * @param params.verificationUrl - Email verification URL with token
+ * @param params.userName - Optional user name for personalization
+ * @returns Promise resolving to success boolean and optional error message
+ */
+export async function sendVerificationEmail({
+  email,
+  verificationUrl,
+  userName,
+}: SendVerificationEmailParams): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    const message =
+      "Missing RESEND_API_KEY. Set it via .env.local (dev) or 'wrangler secret put RESEND_API_KEY' (prod).";
+    console.error("[EMAIL]", message);
+    return { success: false, error: message };
+  }
+
+  try {
+    // Escape user-controlled values for HTML safety
+    const safeUserName = userName ? escapeHtml(userName) : null;
+    const greeting = safeUserName ? `Hi ${safeUserName},` : "Hi,";
+    // Encode URL to prevent injection via URL parameters
+    const safeVerificationUrl = encodeURI(verificationUrl);
+
+    const textContent = `${greeting}
+
+Thanks for signing up for Clickfolio! Please verify your email address to complete your registration.
+
+Click the link below to verify your email:
+${safeVerificationUrl}
+
+This link will expire in 24 hours.
+
+If you didn't create a Clickfolio account, you can safely ignore this email.
+
+- The Clickfolio Team`;
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="border: 3px solid #1a1a1a; padding: 32px; background: #fffef5;">
+    <h1 style="font-size: 24px; font-weight: 700; margin: 0 0 24px 0;">Verify your email</h1>
+
+    <p style="margin: 0 0 16px 0;">${greeting}</p>
+
+    <p style="margin: 0 0 24px 0;">Thanks for signing up for Clickfolio! Please verify your email address to complete your registration.</p>
+
+    <a href="${safeVerificationUrl}" style="display: inline-block; background: #1a1a1a; color: #fffef5; padding: 12px 24px; text-decoration: none; font-weight: 600; border: 3px solid #1a1a1a; box-shadow: 4px 4px 0 #1a1a1a;">
+      Verify Email
+    </a>
+
+    <p style="margin: 24px 0 0 0; font-size: 14px; color: #666;">
+      This link will expire in 24 hours.
+    </p>
+
+    <p style="margin: 16px 0 0 0; font-size: 14px; color: #666;">
+      If you didn't create a Clickfolio account, you can safely ignore this email.
+    </p>
+  </div>
+
+  <p style="margin: 24px 0 0 0; font-size: 12px; color: #999; text-align: center;">
+    &copy; Clickfolio
+  </p>
+</body>
+</html>`;
+
+    // Use native fetch instead of ofetch for test compatibility
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: getFromEmail(),
+        to: email,
+        subject: "Verify your email - Clickfolio",
+        html: htmlContent,
+        text: textContent,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+      const message = errorData.message || `API error: ${response.status}`;
+      console.error("[EMAIL] Resend API error:", message);
+      return { success: false, error: message };
+    }
+
+    const data = (await response.json()) as { id: string };
+    console.log(`[EMAIL] Verification email sent to ${email}, id: ${data.id}`);
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[EMAIL] Error sending verification email:", message);
+    return { success: false, error: message };
+  }
+}

@@ -55,6 +55,7 @@
   --color-amber: #FFB84D;
   --color-mint: #4ECDC4;
   --color-lavender: #A78BFA;
+  --color-brand: #FF6B6B;  /* Primary brand color - matches coral/accent */
 
   /* Neubrutalist Shadows - Solid offset, not soft */
   --shadow-brutal-sm: 3px 3px 0px var(--color-ink);

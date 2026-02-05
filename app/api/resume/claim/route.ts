@@ -1,4 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import type { NewResume } from "@/lib/db/schema";
@@ -21,8 +20,8 @@ interface ClaimRequestBody {
 }
 
 /**
- * Upsert site_data with UNIQUE constraint handling
- * Handles race conditions where another request may have inserted between SELECT and INSERT
+ * Upsert site_data using onConflictDoUpdate on the UNIQUE userId column.
+ * Eliminates the SELECT roundtrip and race-condition fallback logic.
  */
 async function upsertSiteData(
   db: Awaited<ReturnType<typeof getSessionDb>>["db"],
@@ -31,52 +30,26 @@ async function upsertSiteData(
   content: string,
   now: string,
 ): Promise<void> {
-  // First try to update existing record
-  const existingSiteData = await db
-    .select({ id: siteData.id })
-    .from(siteData)
-    .where(eq(siteData.userId, userId))
-    .limit(1);
-
-  if (existingSiteData[0]) {
-    await db
-      .update(siteData)
-      .set({
+  await db
+    .insert(siteData)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      resumeId,
+      content,
+      lastPublishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: siteData.userId,
+      set: {
         resumeId,
         content,
         lastPublishedAt: now,
         updatedAt: now,
-      })
-      .where(eq(siteData.userId, userId));
-  } else {
-    // Try to insert, handle UNIQUE constraint race condition
-    try {
-      await db.insert(siteData).values({
-        id: crypto.randomUUID(),
-        userId,
-        resumeId,
-        content,
-        lastPublishedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
-        // Another request inserted between our SELECT and INSERT, update instead
-        await db
-          .update(siteData)
-          .set({
-            resumeId,
-            content,
-            lastPublishedAt: now,
-            updatedAt: now,
-          })
-          .where(eq(siteData.userId, userId));
-      } else {
-        throw error;
-      }
-    }
-  }
+      },
+    });
 }
 
 /**
@@ -86,20 +59,6 @@ async function upsertSiteData(
  */
 export async function POST(request: Request) {
   try {
-    // Get Cloudflare env bindings for R2/AI secrets
-    const { env } = await getCloudflareContext({ async: true });
-    const typedEnv = env as Partial<CloudflareEnv>;
-
-    // Get R2 binding for direct operations
-    const r2Binding = getR2Binding(typedEnv);
-    if (!r2Binding) {
-      return createErrorResponse(
-        "Storage service unavailable",
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        500,
-      );
-    }
-
     // 1. Validate request size before parsing (prevent DoS)
     const sizeCheck = validateRequestSize(request);
     if (!sizeCheck.valid) {
@@ -111,17 +70,29 @@ export async function POST(request: Request) {
     }
 
     // 2. Check authentication and validate user exists in database
+    // env is returned from requireAuthWithUserValidation, no separate getCloudflareContext needed
     const {
       user: authUser,
       db,
       captureBookmark,
+      env,
       error: authError,
-    } = await requireAuthWithUserValidation("You must be logged in to claim a resume", env.DB);
+    } = await requireAuthWithUserValidation("You must be logged in to claim a resume");
     if (authError) return authError;
 
     const userId = authUser.id;
 
-    // 3. Parse request body
+    // 3. Get R2 binding for direct operations (uses env from auth result)
+    const r2Binding = getR2Binding(env);
+    if (!r2Binding) {
+      return createErrorResponse(
+        "Storage service unavailable",
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        500,
+      );
+    }
+
+    // 4. Parse request body
     let body: ClaimRequestBody;
     try {
       body = (await request.json()) as ClaimRequestBody;
@@ -139,18 +110,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Rate limiting check (5 uploads per 24 hours)
-    // Pass env to avoid redundant getCloudflareContext call
-    const rateLimitResponse = await enforceRateLimit(
-      userId,
-      "resume_upload",
-      typedEnv as CloudflareEnv,
-    );
+    // 5. Rate limiting check (5 uploads per 24 hours)
+    // Pass env to avoid redundant getCloudflareContext call in rate limiter
+    const rateLimitResponse = await enforceRateLimit(userId, "resume_upload", env);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // 4b. Fetch file and compute SHA-256 hash server-side (early fetch for validation + caching)
+    // 5b. Fetch file and compute SHA-256 hash server-side (early fetch for validation + caching)
     let fileBuffer: ArrayBuffer;
     let computedFileHash: string;
 
@@ -194,7 +161,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Generate new key and insert DB record FIRST
+    // 6. Generate new key and insert DB record FIRST
     // This ensures we always have a record for tracking, even if R2 operations fail
     const timestamp = Date.now();
     const filename = key.split("/").pop();
@@ -219,7 +186,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5a. Link referral if provided (best effort - don't fail claim on referral errors)
+    // 6a. Link referral if provided (best effort - don't fail claim on referral errors)
     if (body.referral_code) {
       try {
         const referralResult = await writeReferral(userId, body.referral_code, request);
@@ -232,7 +199,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5b. Check for cached parse result (same file uploaded before BY THIS USER)
+    // 6b. Check for cached parse result (same file uploaded before BY THIS USER)
     // SECURITY: Only look up cache for current user's own resumes to prevent cross-user data access
     // Single query to fetch both existence and content (saves one D1 roundtrip)
     const cached = await db
@@ -301,7 +268,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5c. Check if another resume with same hash is currently processing
+    // 6c. Check if another resume with same hash is currently processing
     // If so, wait for it instead of triggering duplicate parsing
     // SECURITY: Only look for processing resumes from the same user
     const processing = await db
@@ -368,7 +335,7 @@ export async function POST(request: Request) {
       return createErrorResponse(errorMessage, errorCode, statusCode);
     };
 
-    // 6-7. Store file and cleanup temp in parallel
+    // 7. Store file and cleanup temp in parallel
     // R2.put must succeed, R2.delete is best-effort (can be cleaned by lifecycle rules if fails)
     try {
       await Promise.all([
@@ -385,7 +352,7 @@ export async function POST(request: Request) {
     }
 
     // 8. Publish to queue for background processing
-    const queue = typedEnv.RESUME_PARSE_QUEUE;
+    const queue = env.RESUME_PARSE_QUEUE;
     if (!queue) {
       return await failResume("Queue service unavailable", ERROR_CODES.INTERNAL_ERROR, 500);
     }

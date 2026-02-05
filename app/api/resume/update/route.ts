@@ -1,4 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { siteData } from "@/lib/db/schema";
@@ -45,13 +44,12 @@ export async function PUT(request: Request) {
     }
 
     // 2. Authenticate user and validate existence in database
-    const { env } = await getCloudflareContext({ async: true });
     const {
       user: authUser,
       db,
       captureBookmark,
       error: authError,
-    } = await requireAuthWithUserValidation("You must be logged in to update your resume", env.DB);
+    } = await requireAuthWithUserValidation("You must be logged in to update your resume");
     if (authError) return authError;
 
     const userId = authUser.id;

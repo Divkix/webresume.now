@@ -58,34 +58,37 @@ export default async function ExplorePage({
     whereConditions.push(eq(user.role, roleFilter as (typeof user.role.enumValues)[number]));
   }
 
-  // Get total count for pagination
-  const countResult = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(user)
-    .innerJoin(siteData, eq(user.id, siteData.userId))
-    .where(and(...whereConditions));
+  // Run count and data queries in parallel (independent D1 reads)
+  const [countResult, usersWithData] = await Promise.all([
+    // Total count for pagination
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(user)
+      .innerJoin(siteData, eq(user.id, siteData.userId))
+      .where(and(...whereConditions)),
+
+    // Paginated users with their site data preview columns
+    db
+      .select({
+        handle: user.handle,
+        role: user.role,
+        previewName: siteData.previewName,
+        previewHeadline: siteData.previewHeadline,
+        previewLocation: siteData.previewLocation,
+        previewExpCount: siteData.previewExpCount,
+        previewEduCount: siteData.previewEduCount,
+        previewSkills: siteData.previewSkills,
+      })
+      .from(user)
+      .innerJoin(siteData, eq(user.id, siteData.userId))
+      .where(and(...whereConditions))
+      .orderBy(desc(siteData.updatedAt))
+      .limit(ITEMS_PER_PAGE)
+      .offset((currentPage - 1) * ITEMS_PER_PAGE),
+  ]);
 
   const totalCount = countResult[0]?.count ?? 0;
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
-
-  // Get paginated users with their site data preview columns
-  const usersWithData = await db
-    .select({
-      handle: user.handle,
-      role: user.role,
-      previewName: siteData.previewName,
-      previewHeadline: siteData.previewHeadline,
-      previewLocation: siteData.previewLocation,
-      previewExpCount: siteData.previewExpCount,
-      previewEduCount: siteData.previewEduCount,
-      previewSkills: siteData.previewSkills,
-    })
-    .from(user)
-    .innerJoin(siteData, eq(user.id, siteData.userId))
-    .where(and(...whereConditions))
-    .orderBy(desc(siteData.updatedAt))
-    .limit(ITEMS_PER_PAGE)
-    .offset((currentPage - 1) * ITEMS_PER_PAGE);
 
   const directoryUsers: DirectoryUser[] = usersWithData
     .filter((u) => u.handle !== null)

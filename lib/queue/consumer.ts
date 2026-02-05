@@ -1,5 +1,4 @@
 import { and, eq, isNotNull } from "drizzle-orm";
-import { parseResumeWithAi } from "../ai";
 import { resumes, siteData } from "../db/schema";
 import { getSessionDbForWebhook } from "../db/session";
 import { getR2Binding, R2 } from "../r2";
@@ -10,8 +9,9 @@ import { notifyStatusChange, notifyStatusChangeBatch } from "./notify-status";
 import type { QueueMessage, ResumeParseMessage } from "./types";
 
 /**
- * Upsert site_data with UNIQUE constraint handling
- * Extracts preview fields from content for denormalized columns
+ * Upsert site_data using onConflictDoUpdate on the UNIQUE userId column.
+ * Eliminates the SELECT roundtrip and race-condition fallback logic.
+ * Extracts preview fields from content for denormalized columns.
  */
 async function upsertSiteData(
   db: ReturnType<typeof getSessionDbForWebhook>["db"],
@@ -31,52 +31,28 @@ async function upsertSiteData(
 
   const previewFields = extractPreviewFields(parsedContent);
 
-  const existingSiteData = await db
-    .select({ id: siteData.id })
-    .from(siteData)
-    .where(eq(siteData.userId, userId))
-    .limit(1);
-
-  if (existingSiteData[0]) {
-    await db
-      .update(siteData)
-      .set({
+  await db
+    .insert(siteData)
+    .values({
+      id: crypto.randomUUID(),
+      userId,
+      resumeId,
+      content,
+      ...previewFields,
+      lastPublishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: siteData.userId,
+      set: {
         resumeId,
         content,
         ...previewFields,
         lastPublishedAt: now,
         updatedAt: now,
-      })
-      .where(eq(siteData.userId, userId));
-  } else {
-    try {
-      await db.insert(siteData).values({
-        id: crypto.randomUUID(),
-        userId,
-        resumeId,
-        content,
-        ...previewFields,
-        lastPublishedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("UNIQUE constraint failed")) {
-        await db
-          .update(siteData)
-          .set({
-            resumeId,
-            content,
-            ...previewFields,
-            lastPublishedAt: now,
-            updatedAt: now,
-          })
-          .where(eq(siteData.userId, userId));
-      } else {
-        throw error;
-      }
-    }
-  }
+      },
+    });
 }
 
 /**
@@ -196,6 +172,10 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
       .where(eq(resumes.id, message.resumeId));
     throw error;
   }
+
+  // Lazy-load AI modules only when actually needed for parsing.
+  // Normal HTTP requests (page views, API calls) never evaluate unpdf/Vercel AI SDK.
+  const { parseResumeWithAi } = await import("../ai");
 
   // Parse with AI
   const parseResult = await parseResumeWithAi(pdfBuffer, env);

@@ -1,4 +1,3 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { purgeResumeCache } from "@/lib/cloudflare-cache-purge";
@@ -17,17 +16,15 @@ import {
 export async function PUT(request: Request) {
   try {
     // 1. Authenticate user and validate existence in database
-    const { env } = await getCloudflareContext({ async: true });
+    // env is returned from requireAuthWithUserValidation, no separate getCloudflareContext needed
     const {
       user: authUser,
       db,
       captureBookmark,
       dbUser,
+      env,
       error: authError,
-    } = await requireAuthWithUserValidation(
-      "You must be logged in to update privacy settings",
-      env.DB,
-    );
+    } = await requireAuthWithUserValidation("You must be logged in to update privacy settings");
     if (authError) return authError;
 
     const userHandle = dbUser.handle;
@@ -72,8 +69,8 @@ export async function PUT(request: Request) {
     // 4. Purge edge cache for privacy changes (fire-and-forget)
     // This prevents PII exposure through stale edge cache
     if (userHandle) {
-      const cfZoneId = (env as CloudflareEnv).CF_ZONE_ID;
-      const cfApiToken = (env as CloudflareEnv).CF_CACHE_PURGE_API_TOKEN;
+      const cfZoneId = env.CF_ZONE_ID;
+      const cfApiToken = env.CF_CACHE_PURGE_API_TOKEN;
       const baseUrl = process.env.BETTER_AUTH_URL;
 
       if (cfZoneId && cfApiToken && baseUrl) {

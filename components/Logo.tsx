@@ -34,11 +34,11 @@ const textSizeMap: Record<LogoSize, "xs" | "sm" | "md" | "lg" | "xl"> = {
 };
 
 const gapMap: Record<LogoSize, string> = {
-  xs: "gap-1",
-  sm: "gap-1.5",
-  md: "gap-2",
-  lg: "gap-2.5",
-  xl: "gap-3",
+  xs: "gap-0",
+  sm: "gap-0",
+  md: "gap-0",
+  lg: "gap-0",
+  xl: "gap-0.5",
 };
 
 /**

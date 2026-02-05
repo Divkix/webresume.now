@@ -7,6 +7,19 @@
 	"workers_dev": true,
 	// Disable preview URLs to avoid confusion
 	"preview_urls": false,
+	// Custom domains (kept in config so CI deploy doesn't remove them)
+	"routes": [
+		{
+			"pattern": "clickfolio.me",
+			"zone_name": "clickfolio.me",
+			"custom_domain": true
+		},
+		{
+			"pattern": "www.clickfolio.me",
+			"zone_name": "clickfolio.me",
+			"custom_domain": true
+		}
+	],
 	// Minify to reduce bundle size (saves ~400KB gzipped)
 	"minify": true,
 	"compatibility_flags": [

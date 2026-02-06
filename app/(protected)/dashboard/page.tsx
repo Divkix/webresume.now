@@ -141,15 +141,13 @@ export default async function DashboardPage() {
               Upload your first PDF to get started and create your professional web resume in
               minutes.
             </p>
-            <Button
-              asChild
+            <DashboardUploadSection
+              variant="default"
               className="w-full bg-linear-to-r from-coral to-coral hover:from-coral/90 hover:to-coral/90 text-white font-semibold transition-all duration-300 shadow-depth-sm hover:shadow-depth-md"
             >
-              <Link href="/">
-                <Upload className="h-4 w-4 mr-2" aria-hidden="true" />
-                Upload Your Resume
-              </Link>
-            </Button>
+              <Upload className="h-4 w-4 mr-2" aria-hidden="true" />
+              Upload Your Resume
+            </DashboardUploadSection>
           </div>
         </main>
       </div>
@@ -175,7 +173,9 @@ export default async function DashboardPage() {
           {hasPublishedSite && content ? (
             <>
               {/* Show RealtimeStatusListener when a new resume is processing */}
-              {(resume.status === "processing" || resume.status === "pending_claim") && (
+              {(resume.status === "processing" ||
+                resume.status === "pending_claim" ||
+                resume.status === "queued") && (
                 <div className="col-span-full">
                   <RealtimeStatusListener
                     resumeId={resume.id as string}
@@ -500,7 +500,9 @@ export default async function DashboardPage() {
             /* Show processing/failed state in main content area */
             <div className="col-span-full">
               <div className="bg-white rounded-2xl shadow-depth-sm border border-slate-200/60 p-8 hover:shadow-depth-md hover:-translate-y-0.5 transition-all duration-300">
-                {(resume.status === "processing" || resume.status === "pending_claim") && (
+                {(resume.status === "processing" ||
+                  resume.status === "pending_claim" ||
+                  resume.status === "queued") && (
                   <div>
                     <RealtimeStatusListener
                       resumeId={resume.id as string}

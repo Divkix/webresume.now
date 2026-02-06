@@ -24,7 +24,9 @@ export function RealtimeStatusListener({ resumeId, currentStatus }: RealtimeStat
   const refreshDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [detected, setDetected] = useState<DetectedState>({
     status:
-      currentStatus === "processing" ? "processing" : (currentStatus as DetectedState["status"]),
+      currentStatus === "processing" || currentStatus === "queued"
+        ? "processing"
+        : (currentStatus as DetectedState["status"]),
   });
 
   const handleStatusChange = useCallback((newStatus: string, errorMessage?: string) => {
@@ -49,7 +51,7 @@ export function RealtimeStatusListener({ resumeId, currentStatus }: RealtimeStat
 
   // Connect WebSocket only when currently processing
   useResumeWebSocket({
-    resumeId: currentStatus === "processing" ? resumeId : null,
+    resumeId: currentStatus === "processing" || currentStatus === "queued" ? resumeId : null,
     onStatusChange: handleStatusChange,
   });
 

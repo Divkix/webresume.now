@@ -229,9 +229,10 @@ export function FileDropzone({ open, onOpenChange }: FileDropzoneProps = {}) {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Use replace() to prevent back-button returning to upload flow
-        // Note: router.refresh() was intentionally removed - it caused a race
-        // condition where the server-side session check would fire mid-transition
+        // refresh() forces RSC re-fetch when already on /dashboard (modal upload flow)
+        // The 100ms delay above handles the OAuth cookie race condition for both calls
         router.replace("/dashboard");
+        router.refresh();
       } catch (err) {
         let errorMessage = "Failed to claim resume";
 

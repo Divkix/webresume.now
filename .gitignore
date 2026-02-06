@@ -49,6 +49,7 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 worker-configuration.d.ts
+d1-backup-*.sql
 
 # playwright
 .playwright-mcp/

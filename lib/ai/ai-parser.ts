@@ -135,7 +135,6 @@ interface AiEnvVars {
   CF_AI_GATEWAY_ACCOUNT_ID?: string;
   CF_AI_GATEWAY_ID?: string;
   CF_AIG_AUTH_TOKEN?: string;
-  OPENROUTER_API_KEY?: string;
   AI_MODEL?: string;
 }
 
@@ -144,8 +143,8 @@ interface AiProviderOptions {
 }
 
 /**
- * Create AI provider based on environment configuration
- * Prefers Cloudflare AI Gateway if configured, falls back to direct OpenRouter
+ * Create AI provider via Cloudflare AI Gateway.
+ * Gateway vars are required — no direct OpenRouter fallback.
  */
 export function createAiProvider(
   env: Partial<CloudflareEnv> & AiEnvVars,
@@ -153,32 +152,22 @@ export function createAiProvider(
 ) {
   const supportsStructuredOutputs = options?.structuredOutputs ?? false;
 
-  // Check for Cloudflare AI Gateway configuration
   const gatewayAccountId = env.CF_AI_GATEWAY_ACCOUNT_ID;
   const gatewayId = env.CF_AI_GATEWAY_ID;
   const gatewayAuthToken = env.CF_AIG_AUTH_TOKEN;
 
-  if (gatewayAccountId && gatewayId && gatewayAuthToken) {
-    return createOpenAICompatible({
-      name: "openrouter",
-      baseURL: `https://gateway.ai.cloudflare.com/v1/${gatewayAccountId}/${gatewayId}/openrouter`,
-      headers: {
-        "cf-aig-authorization": `Bearer ${gatewayAuthToken}`,
-      },
-      supportsStructuredOutputs,
-    });
-  }
-
-  // Fallback to direct OpenRouter
-  const openrouterApiKey = env.OPENROUTER_API_KEY;
-  if (!openrouterApiKey) {
-    throw new Error("Neither Cloudflare AI Gateway nor OPENROUTER_API_KEY configured");
+  if (!gatewayAccountId || !gatewayId || !gatewayAuthToken) {
+    throw new Error(
+      "Cloudflare AI Gateway not configured (need CF_AI_GATEWAY_ACCOUNT_ID, CF_AI_GATEWAY_ID, CF_AIG_AUTH_TOKEN)",
+    );
   }
 
   return createOpenAICompatible({
     name: "openrouter",
-    apiKey: openrouterApiKey,
-    baseURL: "https://openrouter.ai/api/v1",
+    baseURL: `https://gateway.ai.cloudflare.com/v1/${gatewayAccountId}/${gatewayId}/openrouter`,
+    headers: {
+      "cf-aig-authorization": `Bearer ${gatewayAuthToken}`,
+    },
     supportsStructuredOutputs,
   });
 }
@@ -571,10 +560,7 @@ export async function parseWithAi(
   try {
     const modelId = model || env.AI_MODEL || DEFAULT_AI_MODEL;
     const prompt = buildPrompt(text);
-    const providerLabel =
-      env.CF_AI_GATEWAY_ACCOUNT_ID && env.CF_AI_GATEWAY_ID && env.CF_AIG_AUTH_TOKEN
-        ? "cf-ai-gateway"
-        : "openrouter";
+    const providerLabel = "cf-ai-gateway";
 
     // Attempt structured output first (schema-enforced).
     // Uses the minimal system prompt since Output.object() already enforces the schema.

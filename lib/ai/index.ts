@@ -81,8 +81,14 @@ export async function parseResumeWithAi(
     // Step 3: Transform - lenient validation with XSS protection
     const transformedData = transformAiResponse(parseResult.data);
 
-    // Step 4: Validate against schema
-    const validationResult = resumeSchema.safeParse(transformedData);
+    // Step 4: Default missing array fields for fallback path (no schema enforcement)
+    const withDefaults = transformedData as Record<string, unknown>;
+    for (const key of ["education", "skills", "certifications", "projects"]) {
+      if (!Array.isArray(withDefaults[key])) withDefaults[key] = [];
+    }
+
+    // Step 5: Validate against schema
+    const validationResult = resumeSchema.safeParse(withDefaults);
     if (!validationResult.success) {
       return {
         success: false,
@@ -91,7 +97,7 @@ export async function parseResumeWithAi(
       };
     }
 
-    // Step 5: Final cleanup
+    // Step 6: Final cleanup
     const finalData = transformAiOutput(validationResult.data);
 
     return {

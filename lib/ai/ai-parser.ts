@@ -84,7 +84,8 @@ Rules:
 - Descriptions: preserve original wording. Do not embellish.
 - If bullet points exist, include them in highlights and summarize in description.
 - Skills MUST be an array of { category, items } (not an object).
-- Use empty arrays [] only for truly absent sections.
+- ALWAYS extract education, skills, certifications, and projects when present in the resume.
+- Return empty arrays [] only for sections truly absent from the resume text.
 - Do not add fields not in the schema.`;
 
 /**
@@ -105,7 +106,8 @@ Rules:
 - Descriptions: preserve original wording. Do not embellish.
 - If bullet points exist, include them in highlights and summarize in description.
 - Skills MUST be an array of { category, items } (not an object).
-- Use empty arrays [] only for truly absent sections.
+- ALWAYS extract education, skills, certifications, and projects when present in the resume.
+- Return empty arrays [] only for sections truly absent from the resume text.
 - Do not add fields not in the schema.`;
 
 export interface AiParseResult {

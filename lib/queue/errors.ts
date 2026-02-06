@@ -234,7 +234,7 @@ function extractErrorMessage(error: unknown): string {
 /**
  * Type guard to check if an error is a QueueError
  */
-export function isQueueError(error: unknown): error is QueueError {
+function isQueueError(error: unknown): error is QueueError {
   return error instanceof QueueError;
 }
 

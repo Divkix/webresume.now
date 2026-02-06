@@ -6,8 +6,8 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { toast } from "sonner";
 import { siteConfig } from "@/lib/config/site";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import {
-  copyToClipboard,
   generateLinkedInShareUrl,
   generateShareText,
   generateTwitterShareUrl,

@@ -18,7 +18,7 @@ import {
   type PrivacySettingsType,
 } from "@/lib/utils/privacy";
 
-export interface ResumeData {
+interface ResumeData {
   profile: {
     id: string;
     handle: string;
@@ -31,7 +31,7 @@ export interface ResumeData {
   privacy_settings: PrivacySettingsType;
 }
 
-export interface ResumeMetadata {
+interface ResumeMetadata {
   full_name: string;
   headline?: string | null;
   summary?: string | null;

@@ -59,29 +59,6 @@ export function clearStoredReferralCode(): void {
 // =============================================================================
 
 /**
- * Resolve a referral code to a user ID (server-side only)
- *
- * @param code - The referral code to resolve
- * @returns The user ID or null if not found
- */
-export async function resolveReferralCode(code: string): Promise<string | null> {
-  if (!code || code.trim().length === 0) {
-    return null;
-  }
-
-  const { env } = await getCloudflareContext({ async: true });
-  const db = getDb(env.DB);
-
-  const result = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(user.referralCode, code.trim().toUpperCase()))
-    .limit(1);
-
-  return result[0]?.id ?? null;
-}
-
-/**
  * Write referredBy to user record (server-side only)
  *
  * Uses atomic conditional UPDATE to prevent TOCTOU race conditions.

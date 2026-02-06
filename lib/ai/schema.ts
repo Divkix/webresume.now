@@ -124,10 +124,4 @@ export const resumeSchema = z.object({
 /**
  * TypeScript types derived from schema
  */
-export type ResumeContact = z.infer<typeof contactSchema>;
-export type ResumeExperience = z.infer<typeof experienceSchema>;
-export type ResumeEducation = z.infer<typeof educationSchema>;
-export type ResumeSkill = z.infer<typeof skillSchema>;
-export type ResumeCertification = z.infer<typeof certificationSchema>;
-export type ResumeProject = z.infer<typeof projectSchema>;
 export type ResumeSchema = z.infer<typeof resumeSchema>;

@@ -1,10 +1,11 @@
 const DEFAULT_MAX_FILE_SIZE_MB = 5;
 export const MAX_FILE_SIZE =
   (Number(process.env.MAX_UPLOAD_SIZE_MB) || DEFAULT_MAX_FILE_SIZE_MB) * 1024 * 1024;
+export const MAX_FILE_SIZE_LABEL = `${DEFAULT_MAX_FILE_SIZE_MB}MB`;
 
 export function validatePDF(file: File): { valid: boolean; error?: string } {
   if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: "File size must be less than 5MB" };
+    return { valid: false, error: `File size must be less than ${MAX_FILE_SIZE_LABEL}` };
   }
   if (file.type !== "application/pdf") {
     return { valid: false, error: "Only PDF files are allowed" };

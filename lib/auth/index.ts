@@ -178,19 +178,17 @@ export async function getAuth() {
         privacySettings: {
           type: "string",
           required: false,
-          defaultValue: '{"show_phone":false,"show_address":false}',
-          input: true,
+          defaultValue:
+            '{"show_phone":false,"show_address":false,"hide_from_search":false,"show_in_directory":false}',
         },
         onboardingCompleted: {
           type: "boolean",
           required: false,
           defaultValue: false,
-          input: true,
         },
         role: {
           type: "string",
           required: false,
-          input: true,
         },
       },
     },

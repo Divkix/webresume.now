@@ -12,7 +12,7 @@ import {
   createSuccessResponse,
   ERROR_CODES,
 } from "@/lib/utils/security-headers";
-import { MAX_FILE_SIZE, validateRequestSize } from "@/lib/utils/validation";
+import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL, validateRequestSize } from "@/lib/utils/validation";
 
 interface ClaimRequestBody {
   key?: string;
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
       // Validate file size using buffer
       if (fileBuffer.byteLength > MAX_FILE_SIZE) {
         return createErrorResponse(
-          `File size exceeds 5MB limit (${Math.round(fileBuffer.byteLength / 1024 / 1024)}MB)`,
+          `File size exceeds ${MAX_FILE_SIZE_LABEL} limit (${Math.round(fileBuffer.byteLength / 1024 / 1024)}MB)`,
           ERROR_CODES.VALIDATION_ERROR,
           400,
         );

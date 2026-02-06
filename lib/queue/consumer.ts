@@ -93,17 +93,35 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
     throw new Error("R2 binding not available");
   }
 
-  // Check for staged content from previous attempt (idempotency)
-  const currentResume = await db
-    .select({
-      status: resumes.status,
-      parsedContent: resumes.parsedContent,
-      parsedContentStaged: resumes.parsedContentStaged,
-      totalAttempts: resumes.totalAttempts,
-    })
-    .from(resumes)
-    .where(eq(resumes.id, message.resumeId))
-    .limit(1);
+  // Run status check and cache-by-fileHash lookup in parallel.
+  // The cache query is cheap (indexed on fileHash+status) and rarely wasted.
+  const [currentResume, cached] = await Promise.all([
+    // Check for staged content from previous attempt (idempotency)
+    db
+      .select({
+        status: resumes.status,
+        parsedContent: resumes.parsedContent,
+        parsedContentStaged: resumes.parsedContentStaged,
+        totalAttempts: resumes.totalAttempts,
+      })
+      .from(resumes)
+      .where(eq(resumes.id, message.resumeId))
+      .limit(1),
+
+    // Check for cached result with same fileHash (deduplication)
+    db
+      .select({ id: resumes.id, parsedContent: resumes.parsedContent })
+      .from(resumes)
+      .where(
+        and(
+          eq(resumes.userId, message.userId),
+          eq(resumes.fileHash, message.fileHash),
+          eq(resumes.status, "completed"),
+          isNotNull(resumes.parsedContent),
+        ),
+      )
+      .limit(1),
+  ]);
 
   // If already completed with parsed content, skip (full idempotency)
   if (currentResume[0]?.status === "completed" && currentResume[0]?.parsedContent) {
@@ -138,20 +156,6 @@ async function handleResumeParse(message: ResumeParseMessage, env: CloudflareEnv
 
   // M7: Fold totalAttempts increment into later updates to eliminate standalone UPDATE.
   const nextAttemptCount = (currentResume[0]?.totalAttempts || 0) + 1;
-
-  // Check for cached result with same fileHash (deduplication)
-  const cached = await db
-    .select({ id: resumes.id, parsedContent: resumes.parsedContent })
-    .from(resumes)
-    .where(
-      and(
-        eq(resumes.userId, message.userId),
-        eq(resumes.fileHash, message.fileHash),
-        eq(resumes.status, "completed"),
-        isNotNull(resumes.parsedContent),
-      ),
-    )
-    .limit(1);
 
   if (cached[0]?.parsedContent) {
     // Use cached result — M7: include totalAttempts increment in same UPDATE

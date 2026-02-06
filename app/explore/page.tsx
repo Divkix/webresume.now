@@ -47,9 +47,8 @@ export default async function ExplorePage({
   // Build where conditions
   const whereConditions = [
     isNotNull(user.handle),
-    // Filter for users who opted into directory
-    // Privacy settings are stored as JSON TEXT, so we use LIKE to check
-    sql`json_extract(${user.privacySettings}, '$.show_in_directory') = 1`,
+    // Denormalized boolean column — indexed, no json_extract() needed
+    eq(user.showInDirectory, true),
     // Must have completed onboarding
     eq(user.onboardingCompleted, true),
   ];

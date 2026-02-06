@@ -145,6 +145,7 @@ export async function POST(request: Request) {
         .set({
           handle: body.handle,
           privacySettings,
+          showInDirectory: body.privacy_settings.show_in_directory,
           onboardingCompleted: true,
           updatedAt: new Date().toISOString(),
         })

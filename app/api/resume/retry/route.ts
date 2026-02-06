@@ -1,11 +1,8 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { getAuth } from "@/lib/auth";
+import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { hasExceededMaxAttempts, isPermanentErrorType, RETRY_LIMITS } from "@/lib/config/retry";
 import type { NewResume } from "@/lib/db/schema";
 import { resumes } from "@/lib/db/schema";
-import { getSessionDb } from "@/lib/db/session";
 import { publishResumeParse } from "@/lib/queue/resume-parse";
 import { getR2Binding, R2 } from "@/lib/r2";
 import {
@@ -20,24 +17,18 @@ interface RetryRequestBody {
 
 export async function POST(request: Request) {
   try {
-    // 1. Get D1 database binding and typed env for R2/Replicate
-    const { env } = await getCloudflareContext({ async: true });
+    // 1. Check authentication and validate user exists in database
+    const {
+      user: authUser,
+      db,
+      captureBookmark,
+      env,
+      error: authError,
+    } = await requireAuthWithUserValidation("You must be logged in to retry resume parsing");
+    if (authError) return authError;
+
+    const userId = authUser.id;
     const typedEnv = env as Partial<CloudflareEnv>;
-    const { db, captureBookmark } = await getSessionDb(env.DB);
-
-    // 2. Check authentication via Better Auth
-    const auth = await getAuth();
-    const session = await auth.api.getSession({ headers: await headers() });
-
-    if (!session?.user) {
-      return createErrorResponse(
-        "You must be logged in to retry resume parsing",
-        ERROR_CODES.UNAUTHORIZED,
-        401,
-      );
-    }
-
-    const userId = session.user.id;
 
     const body = (await request.json()) as RetryRequestBody;
     const { resume_id } = body;
@@ -50,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Fetch resume from database including idempotency fields and fileHash
+    // 2. Fetch resume from database including idempotency fields and fileHash
     const resume = await db.query.resumes.findFirst({
       where: eq(resumes.id, resume_id),
       columns: {
@@ -69,7 +60,7 @@ export async function POST(request: Request) {
       return createErrorResponse("Resume not found", ERROR_CODES.NOT_FOUND, 404);
     }
 
-    // 4. Verify ownership
+    // 3. Verify ownership
     if (resume.userId !== userId) {
       return createErrorResponse(
         "You do not have permission to retry this resume",
@@ -78,7 +69,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5a. Check if max total attempts exceeded
+    // 4a. Check if max total attempts exceeded
     if (hasExceededMaxAttempts(resume.totalAttempts ?? 0)) {
       return createErrorResponse(
         "Maximum retry attempts exceeded. This resume cannot be retried.",
@@ -91,7 +82,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5b. Check if last error was permanent (shouldn't retry)
+    // 4b. Check if last error was permanent (shouldn't retry)
     if (resume.lastAttemptError) {
       try {
         const lastError = JSON.parse(resume.lastAttemptError);
@@ -108,7 +99,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5c. Verify retry eligibility - status check
+    // 4c. Verify retry eligibility - status check
     if (resume.status !== "failed") {
       return createErrorResponse(
         "Can only retry failed resumes",
@@ -118,7 +109,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5d. Check manual retry limit
+    // 4d. Check manual retry limit
     if ((resume.retryCount as number) >= RETRY_LIMITS.MANUAL_MAX_RETRIES) {
       return createErrorResponse(
         "Maximum retry limit reached. Please upload a new resume.",
@@ -131,7 +122,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Get file hash — use stored hash if available, fall back to R2 download for legacy rows
+    // 5. Get file hash -- use stored hash if available, fall back to R2 download for legacy rows
     let fileHash: string;
 
     if (resume.fileHash) {

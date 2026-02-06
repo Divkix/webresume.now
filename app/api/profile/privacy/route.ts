@@ -62,6 +62,7 @@ export async function PUT(request: Request) {
       .update(user)
       .set({
         privacySettings,
+        showInDirectory: show_in_directory,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(user.id, authUser.id));

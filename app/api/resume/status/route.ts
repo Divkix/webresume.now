@@ -1,9 +1,6 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { getAuth } from "@/lib/auth";
+import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import { resumes } from "@/lib/db/schema";
-import { getSessionDbWithPrimaryFirst } from "@/lib/db/session";
 import {
   createErrorResponse,
   createSuccessResponse,
@@ -15,24 +12,18 @@ const WAITING_FOR_CACHE_TIMEOUT_MS = 10 * 60 * 1000;
 
 export async function GET(request: Request) {
   try {
-    const { env } = await getCloudflareContext({ async: true });
-    const { db, captureBookmark } = await getSessionDbWithPrimaryFirst(env.DB);
+    // 1. Check authentication and validate user exists in database
+    const {
+      user: authUser,
+      db,
+      captureBookmark,
+      error: authError,
+    } = await requireAuthWithUserValidation("You must be logged in to check resume status");
+    if (authError) return authError;
 
-    // 2. Check authentication via Better Auth
-    const auth = await getAuth();
-    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = authUser.id;
 
-    if (!session?.user) {
-      return createErrorResponse(
-        "You must be logged in to check resume status",
-        ERROR_CODES.UNAUTHORIZED,
-        401,
-      );
-    }
-
-    const userId = session.user.id;
-
-    // 3. Get resume_id from query params
+    // 2. Get resume_id from query params
     const { searchParams } = new URL(request.url);
     const resumeId = searchParams.get("resume_id");
 
@@ -40,7 +31,7 @@ export async function GET(request: Request) {
       return createErrorResponse("resume_id parameter is required", ERROR_CODES.BAD_REQUEST, 400);
     }
 
-    // 4. Fetch resume from database — lightweight polling query
+    // 3. Fetch resume from database -- lightweight polling query
     //    Only select columns needed for status checks. Excludes parsedContent
     //    and parsedContentStaged (10-100KB JSON blobs) to avoid transferring
     //    them on every 3-second poll.
@@ -61,7 +52,7 @@ export async function GET(request: Request) {
       return createErrorResponse("Resume not found", ERROR_CODES.NOT_FOUND, 404);
     }
 
-    // 5. Verify ownership
+    // 4. Verify ownership
     if (resume.userId !== userId) {
       return createErrorResponse(
         "You do not have permission to access this resume",
@@ -70,7 +61,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // 6. Handle waiting_for_cache status with timeout check
+    // 5. Handle waiting_for_cache status with timeout check
     if (resume.status === "waiting_for_cache") {
       const createdAt = new Date(resume.createdAt);
       const waitingTime = Date.now() - createdAt.getTime();

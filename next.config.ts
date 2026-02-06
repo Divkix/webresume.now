@@ -148,6 +148,18 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Content-Security-Policy for all routes
+        // 'unsafe-inline' required for Next.js hydration on Cloudflare Workers (no nonce support in edge middleware)
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' https://analytics.divkix.me; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://analytics.divkix.me https://accounts.google.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+          },
+        ],
+      },
     ];
   },
 };

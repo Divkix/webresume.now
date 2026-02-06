@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { getDb } from "@/lib/db";
 import { user } from "@/lib/db/schema";
+import type { PrivacySettings } from "@/lib/schemas/profile";
 import {
   DEFAULT_THEME,
   isThemeUnlocked,
@@ -11,12 +12,7 @@ import {
   type ThemeId,
 } from "@/lib/templates/theme-ids";
 import type { ResumeContent } from "@/lib/types/database";
-import {
-  extractCityState,
-  isValidPrivacySettings,
-  normalizePrivacySettings,
-  type PrivacySettingsType,
-} from "@/lib/utils/privacy";
+import { extractCityState, parsePrivacySettings } from "@/lib/utils/privacy";
 
 interface ResumeData {
   profile: {
@@ -28,7 +24,7 @@ interface ResumeData {
   };
   content: ResumeContent;
   theme_id: string | null;
-  privacy_settings: PrivacySettingsType;
+  privacy_settings: PrivacySettings;
 }
 
 interface ResumeMetadata {
@@ -89,21 +85,7 @@ async function fetchResumeDataRaw(handle: string): Promise<ResumeData | null> {
   }
 
   // Parse privacy settings from JSON string
-  let parsedPrivacySettings: {
-    show_phone: boolean;
-    show_address: boolean;
-    hide_from_search?: boolean;
-  } | null = null;
-  try {
-    parsedPrivacySettings = userData.privacySettings ? JSON.parse(userData.privacySettings) : null;
-  } catch {
-    parsedPrivacySettings = null;
-  }
-
-  // Apply privacy filtering with type guard and normalization
-  const privacySettings = normalizePrivacySettings(
-    isValidPrivacySettings(parsedPrivacySettings) ? parsedPrivacySettings : null,
-  );
+  const privacySettings = parsePrivacySettings(userData.privacySettings);
 
   // Defense-in-depth: Validate theme is unlocked before returning
   // This catches edge cases where theme was set directly in DB or via API bypass
@@ -202,15 +184,8 @@ async function fetchResumeMetadataRaw(handle: string): Promise<ResumeMetadata | 
   }
 
   // Parse privacy settings for hide_from_search
-  let hideFromSearch = false;
-  if (userData.privacySettings) {
-    try {
-      const parsedSettings = JSON.parse(userData.privacySettings);
-      hideFromSearch = parsedSettings?.hide_from_search === true;
-    } catch {
-      // Keep default false
-    }
-  }
+  const parsedSettings = parsePrivacySettings(userData.privacySettings);
+  const hideFromSearch = parsedSettings.hide_from_search;
 
   return {
     full_name: fullName,

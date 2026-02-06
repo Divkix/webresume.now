@@ -6,12 +6,15 @@ const DEFAULT_AI_MODEL = "openai/gpt-oss-120b:nitro";
 
 /**
  * Structured output: fail fast if no provider supports json_schema.
- * allow_fallbacks: false prevents silent routing to providers that ignore the schema.
+ * - quantizations: fp16 (Cerebras 694tps) and bf16 (DeepInfra 228tps, Crusoe 108tps)
+ * - excludes fp4 providers for better JSON schema compliance
+ * - allow_fallbacks: false prevents silent routing to providers that ignore the schema
  */
 const STRUCTURED_PROVIDER_ROUTING = {
   openrouter: {
     plugins: [{ id: "response-healing" }],
     provider: {
+      quantizations: ["fp16", "bf16"],
       require_parameters: true,
       allow_fallbacks: false,
     },
@@ -19,12 +22,13 @@ const STRUCTURED_PROVIDER_ROUTING = {
 };
 
 /**
- * Text fallback: maximum availability, no structured output requirement.
+ * Text fallback: prefer fp16/bf16 for quality, fall back to any provider if unavailable.
  */
 const TEXT_PROVIDER_ROUTING = {
   openrouter: {
     plugins: [{ id: "response-healing" }],
     provider: {
+      quantizations: ["fp16", "bf16"],
       allow_fallbacks: true,
     },
   },

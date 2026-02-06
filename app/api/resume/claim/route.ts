@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, ne } from "drizzle-orm";
+import { and, desc, eq, gte, isNotNull, ne } from "drizzle-orm";
 import { requireAuthWithUserValidation } from "@/lib/auth/middleware";
 import type { NewResume } from "@/lib/db/schema";
 import { resumes, siteData } from "@/lib/db/schema";
@@ -124,6 +124,25 @@ export async function POST(request: Request) {
     try {
       const buffer = await R2.getAsArrayBuffer(r2Binding, key);
       if (!buffer) {
+        // Double-claim guard: auth redirect causes wizard to mount twice,
+        // second mount tries to claim a file already moved by the first.
+        // Check if this user already has a recent resume (created in last 2 min).
+        const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+        const recentResume = await db
+          .select({ id: resumes.id, status: resumes.status })
+          .from(resumes)
+          .where(and(eq(resumes.userId, userId), gte(resumes.createdAt, twoMinAgo)))
+          .orderBy(desc(resumes.createdAt))
+          .limit(1);
+
+        if (recentResume[0]) {
+          return createSuccessResponse({
+            resume_id: recentResume[0].id,
+            status: recentResume[0].status,
+            already_claimed: true,
+          });
+        }
+
         return createErrorResponse(
           "File not found. The upload may have expired.",
           ERROR_CODES.VALIDATION_ERROR,

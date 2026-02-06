@@ -2,6 +2,7 @@ import { FolderCode, Plus, Trash2 } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { CommaArrayInput } from "@/components/ui/comma-array-input";
 import {
   FormControl,
   FormDescription,
@@ -171,16 +172,11 @@ export function ProjectsSection({ form }: ProjectsSectionProps) {
                       <FormItem>
                         <FormLabel>Technologies Used</FormLabel>
                         <FormControl>
-                          <Input
+                          <CommaArrayInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
                             placeholder="React, Node.js, PostgreSQL (comma-separated)"
-                            value={field.value?.join(", ") || ""}
-                            onChange={(e) => {
-                              const technologies = e.target.value
-                                .split(",")
-                                .map((t) => t.trim())
-                                .filter((t) => t !== "");
-                              field.onChange(technologies);
-                            }}
                           />
                         </FormControl>
                         <FormDescription>

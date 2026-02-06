@@ -2,6 +2,7 @@ import { Plus, Trash2, Wrench } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { CommaArrayInput } from "@/components/ui/comma-array-input";
 import {
   FormControl,
   FormDescription,
@@ -120,16 +121,11 @@ export function SkillsSection({ form }: SkillsSectionProps) {
                       <FormItem>
                         <FormLabel>Skills (comma-separated)</FormLabel>
                         <FormControl>
-                          <Input
+                          <CommaArrayInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
                             placeholder="JavaScript, TypeScript, Python"
-                            value={field.value?.join(", ") || ""}
-                            onChange={(e) => {
-                              const items = e.target.value
-                                .split(",")
-                                .map((s) => s.trim())
-                                .filter((s) => s.length > 0);
-                              field.onChange(items);
-                            }}
                           />
                         </FormControl>
                         <FormDescription>Separate each skill with a comma</FormDescription>

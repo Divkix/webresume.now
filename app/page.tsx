@@ -167,7 +167,7 @@ export default function Home() {
                           alt=""
                           aria-hidden="true"
                           loading="eager"
-                          className="aspect-[3/4] object-cover object-top w-full"
+                          className="aspect-3/4 object-cover object-top w-full"
                         />
                       </div>
                     ))}

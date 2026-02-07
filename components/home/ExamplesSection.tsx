@@ -60,7 +60,7 @@ export function ExamplesSection({ profiles }: { profiles: DemoProfile[] }) {
                     `}
                 style={{ animationDelay: `${(index + 4) * 100}ms` }}
               >
-                <div className="border-b-3 border-ink overflow-hidden bg-cream aspect-[4/3]">
+                <div className="border-b-3 border-ink overflow-hidden bg-cream aspect-4/3">
                   <img
                     src={THEME_METADATA[profile.id].preview}
                     alt={`${profile.name} - ${profile.badgeLabel} template`}

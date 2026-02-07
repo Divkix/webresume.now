@@ -29,6 +29,10 @@ declare namespace Cloudflare {
 		CF_AI_GATEWAY_ACCOUNT_ID?: string;
 		CF_AI_GATEWAY_ID?: string;
 		CF_AIG_AUTH_TOKEN?: string;
+		// Umami Analytics secrets
+		UMAMI_API_URL: string;
+		UMAMI_USERNAME: string;
+		UMAMI_PASSWORD: string;
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}

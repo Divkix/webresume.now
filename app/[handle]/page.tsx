@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AttributionWidget } from "@/components/AttributionWidget";
-import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
+import { OwnerViewFlag } from "@/components/analytics/UmamiTracker";
 import { CreateYoursCTA } from "@/components/CreateYoursCTA";
 import { SharePopover, type SharePopoverVariant } from "@/components/SharePopover";
+import { getAuth } from "@/lib/auth";
 import { siteConfig } from "@/lib/config/site";
 import { getResumeData, getResumeMetadata } from "@/lib/data/resume";
 import { DEFAULT_THEME, type ThemeId } from "@/lib/templates/theme-ids";
@@ -161,6 +163,20 @@ export default async function HandlePage({ params }: PageProps) {
 
   const { content, profile, theme_id, privacy_settings } = data;
 
+  // Owner detection for Umami self-view filtering
+  // If the viewer is the resume owner, OwnerViewFlag sets a window flag
+  // that suppresses the Umami page view event via data-before-send
+  let isOwner = false;
+  try {
+    const auth = await getAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (session?.user?.id === profile.id) {
+      isOwner = true;
+    }
+  } catch {
+    // Auth error or unauthenticated — not the owner
+  }
+
   // Dynamically select template based on theme_id
   const Template = await getTemplate(theme_id);
 
@@ -225,7 +241,7 @@ export default async function HandlePage({ params }: PageProps) {
           handle: profile.handle || handle,
         }}
       />
-      <AnalyticsBeacon handle={handle} />
+      {isOwner && <OwnerViewFlag />}
       {/* Floating actions for visitors */}
       <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 print:hidden">
         <CreateYoursCTA handle={handle} variant={ctaVariant} />

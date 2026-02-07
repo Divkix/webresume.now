@@ -1,44 +1,52 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { count, gte, sql } from "drizzle-orm";
+import { count, sql } from "drizzle-orm";
 import { AlertTriangle, Eye, FileText, Loader2, Users } from "lucide-react";
 import Link from "next/link";
 import { AdminSparkline } from "@/components/admin/AdminSparkline";
 import { StatCard } from "@/components/admin/StatCard";
 import { requireAdminAuth } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
-import { pageViews, resumes, siteData, user } from "@/lib/db/schema";
+import { resumes, siteData, user } from "@/lib/db/schema";
+import { getPageviews, getStats } from "@/lib/umami/client";
 
 export const dynamic = "force-dynamic";
 
-async function getStats() {
+async function getAdminStats() {
   const { env } = await getCloudflareContext({ async: true });
   const db = getDb(env.DB);
 
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [userCount, siteDataCount, resumeStats, viewsToday, recentSignups, dailyViews] =
-    await Promise.all([
-      db.select({ count: count() }).from(user),
-      db.select({ count: count() }).from(siteData),
-      db.select({ status: resumes.status, count: count() }).from(resumes).groupBy(resumes.status),
-      db.select({ count: count() }).from(pageViews).where(gte(pageViews.createdAt, todayStart)),
-      db
-        .select({ email: user.email, name: user.name, createdAt: user.createdAt })
-        .from(user)
-        .orderBy(sql`${user.createdAt} DESC`)
-        .limit(10),
-      db
-        .select({
-          date: sql<string>`DATE(${pageViews.createdAt})`.as("date"),
-          views: count(),
-        })
-        .from(pageViews)
-        .where(gte(pageViews.createdAt, sevenDaysAgo))
-        .groupBy(sql`DATE(${pageViews.createdAt})`)
-        .orderBy(sql`DATE(${pageViews.createdAt})`),
+  // D1 queries and Umami calls separated so Umami outage doesn't crash the whole page
+  const [userCount, siteDataCount, resumeStats, recentSignups] = await Promise.all([
+    db.select({ count: count() }).from(user),
+    db.select({ count: count() }).from(siteData),
+    db.select({ status: resumes.status, count: count() }).from(resumes).groupBy(resumes.status),
+    db
+      .select({ email: user.email, name: user.name, createdAt: user.createdAt })
+      .from(user)
+      .orderBy(sql`${user.createdAt} DESC`)
+      .limit(10),
+  ]);
+
+  // Umami calls with graceful fallback — analytics unavailability should not break admin
+  let umamiStats: Awaited<ReturnType<typeof getStats>> | null = null;
+  let umamiPageviews: Awaited<ReturnType<typeof getPageviews>> | null = null;
+  try {
+    [umamiStats, umamiPageviews] = await Promise.all([
+      getStats(env, { startAt: todayStart.getTime(), endAt: now.getTime() }),
+      getPageviews(env, {
+        startAt: sevenDaysAgo.getTime(),
+        endAt: now.getTime(),
+        unit: "day",
+        timezone: "UTC",
+      }),
     ]);
+  } catch (err) {
+    console.error("[admin] Umami API unavailable:", err);
+  }
 
   const statusMap = resumeStats.reduce(
     (acc, r) => {
@@ -48,12 +56,12 @@ async function getStats() {
     {} as Record<string, number>,
   );
 
-  // Fill missing dates
+  // Fill missing dates from Umami pageviews (fallback to zeros if Umami unavailable)
+  const umamiMap = new Map(umamiPageviews?.pageviews.map((p) => [p.x, p.y]) ?? []);
   const filledDaily: Array<{ date: string; views: number }> = [];
   for (let i = 6; i >= 0; i--) {
     const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const existing = dailyViews.find((d) => d.date === date);
-    filledDaily.push({ date, views: existing?.views ?? 0 });
+    filledDaily.push({ date, views: umamiMap.get(date) ?? 0 });
   }
 
   return {
@@ -61,7 +69,7 @@ async function getStats() {
     publishedResumes: siteDataCount[0]?.count ?? 0,
     processingResumes: (statusMap.processing || 0) + (statusMap.queued || 0),
     failedResumes: statusMap.failed || 0,
-    viewsToday: viewsToday[0]?.count ?? 0,
+    viewsToday: umamiStats?.pageviews.value ?? 0,
     recentSignups,
     dailyViews: filledDaily,
   };
@@ -82,7 +90,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export default async function AdminOverviewPage() {
   await requireAdminAuth();
-  const stats = await getStats();
+  const stats = await getAdminStats();
 
   return (
     <div className="space-y-6">

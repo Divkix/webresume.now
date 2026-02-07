@@ -171,7 +171,7 @@ export default function AdminAnalyticsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground/70 w-6">{i + 1}.</span>
                     <Link
-                      href={`/${profile.handle}`}
+                      href={`/@${profile.handle}`}
                       target="_blank"
                       className="text-sm text-coral hover:text-coral"
                     >

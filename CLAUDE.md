@@ -97,6 +97,9 @@ Tables in `lib/db/schema.ts`:
 - **handleChanges** — Handle change audit trail
 - **uploadRateLimits** — IP-based rate limiting
 
+### Analytics
+Analytics via self-hosted Umami (analytics.divkix.me). Tracker script loaded in `app/layout.tsx` with `data-before-send` for self-view filtering. Stats proxied via `/api/analytics/stats` (public) and `/api/admin/analytics` (admin).
+
 ### Auth Usage
 
 **Server-side:**
@@ -158,6 +161,7 @@ All receive `content` (ResumeContent) and `user` props, must respect privacy set
 - `lib/auth/client.ts` — Client hooks (useSession, signIn, signOut)
 - `lib/r2.ts` — R2 binding wrapper functions
 - `lib/ai/` — AI parsing modules (PDF extraction via unpdf, structured output via Vercel AI SDK)
+- `lib/umami/client.ts` — Umami API client (auth, stats, active visitors)
 - `lib/schemas/resume.ts` — Zod validation with XSS sanitization
 - `wrangler.jsonc` — Cloudflare Workers config (D1 binding: `DB`)
 - `drizzle.config.ts` — Drizzle config pointing to local D1
@@ -181,6 +185,13 @@ AI Provider (required for resume parsing):
 ```
 # Cloudflare AI Gateway (proxies to OpenRouter)
 CF_AI_GATEWAY_ACCOUNT_ID, CF_AI_GATEWAY_ID, CF_AIG_AUTH_TOKEN
+```
+
+Analytics (Umami — self-hosted at analytics.divkix.me):
+```
+NEXT_PUBLIC_UMAMI_WEBSITE_ID    # Public, embedded in tracker script
+UMAMI_API_URL                   # Umami instance URL (server-side stats proxy)
+UMAMI_USERNAME, UMAMI_PASSWORD  # Umami API credentials for stats
 ```
 
 Note: R2 is accessed via binding in `wrangler.jsonc` - no API credentials needed.

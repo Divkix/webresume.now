@@ -4,6 +4,8 @@ import { Briefcase, ExternalLink, GraduationCap, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RoleFilterSelect } from "@/components/explore/role-filter-select";
+import { Footer } from "@/components/Footer";
+import { SiteHeader } from "@/components/SiteHeader";
 import { siteConfig } from "@/lib/config/site";
 import { getDb } from "@/lib/db";
 import { siteData, user } from "@/lib/db/schema";
@@ -119,8 +121,9 @@ export default async function ExplorePage({
   const roleOptions = [{ value: "", label: "All Roles" }, ...ROLE_OPTIONS];
 
   return (
-    <div className="min-h-screen bg-cream">
-      <main className="max-w-7xl mx-auto px-4 py-12">
+    <div className="min-h-screen bg-cream flex flex-col">
+      <SiteHeader />
+      <main id="main-content" className="flex-1 max-w-7xl mx-auto px-4 py-12 w-full">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight mb-4">
@@ -286,6 +289,7 @@ export default async function ExplorePage({
           </Link>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

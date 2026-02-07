@@ -140,7 +140,7 @@ export function EmailVerificationBanner({
         <button
           type="button"
           onClick={handleDismiss}
-          className="text-amber hover:text-amber p-1 transition-colors"
+          className="text-amber/80 hover:text-amber p-1 transition-colors"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

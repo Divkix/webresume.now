@@ -23,7 +23,7 @@ interface ProfileSectionProps {
 
 function ProfileSection({ name, email, headline, image, handle }: ProfileSectionProps) {
   return (
-    <div className="bg-card rounded-xl shadow-sm border-2 border-ink/10 p-6 h-full flex flex-col">
+    <div className="bg-card rounded-xl shadow-sm border border-ink/10 p-6 h-full flex flex-col">
       {/* Profile header with avatar */}
       <div className="flex items-start gap-4 mb-4">
         {image ? (

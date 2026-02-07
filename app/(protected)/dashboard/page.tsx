@@ -127,8 +127,7 @@ export default async function DashboardPage() {
     return (
       <div className="min-h-screen bg-cream">
         <main className="flex items-center justify-center min-h-[80vh] px-4">
-          {/* <CHANGE> shadow-depth -> shadow-brutal, border-slate -> border-ink */}
-          <div className="bg-card rounded-xl shadow-sm border-2 border-ink/10 p-12 max-w-md w-full text-center hover:shadow-md transition-all duration-300">
+          <div className="bg-card rounded-xl shadow-sm border border-ink/10 p-12 max-w-md w-full text-center hover:shadow-md transition-all duration-300">
             <div className="relative inline-block mb-6">
               <div className="absolute inset-0 bg-linear-to-r from-coral to-coral rounded-xl blur-xl opacity-20" />
               <div className="relative bg-linear-to-r from-coral/20 to-coral/20 p-6 rounded-xl">

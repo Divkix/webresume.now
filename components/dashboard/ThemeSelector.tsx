@@ -219,7 +219,7 @@ export function ThemeSelector({
                     </span>
                   )}
                   {!isUnlocked && (
-                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] md:text-xs font-medium text-amber-600">
+                    <span className="inline-flex items-center gap-1 mt-1 text-[10px] md:text-xs font-medium text-amber">
                       <Gift className="w-3 h-3" />
                       Locked
                     </span>

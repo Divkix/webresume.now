@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { LoginButton } from "@/components/auth/LoginButton";
 import { FileDropzone } from "@/components/FileDropzone";
@@ -65,7 +66,15 @@ export default function Home() {
             <a href="/" aria-label="clickfolio.me home">
               <Logo size="md" />
             </a>
-            <LoginButton />
+            <div className="flex items-center gap-4">
+              <Link
+                href="/explore"
+                className="font-mono text-sm text-ink/70 hover:text-ink underline-offset-4 hover:underline transition-colors uppercase tracking-wide"
+              >
+                Explore
+              </Link>
+              <LoginButton />
+            </div>
           </div>
         </header>
 
@@ -278,6 +287,41 @@ export default function Home() {
 
             {/* Examples Section */}
             <ExamplesSection profiles={DEMO_PROFILES} />
+
+            {/* Explore Bridge — from demos to real portfolios */}
+            <section className="mt-12 lg:mt-16">
+              <Link
+                href="/explore"
+                className="group block bg-lavender border-3 border-ink p-6 shadow-brutal-md hover-brutal-shift"
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-center sm:text-left">
+                    <div className="font-black text-xl sm:text-2xl text-ink mb-1">
+                      Browse Real Portfolios
+                    </div>
+                    <div className="font-mono text-sm text-ink/70 uppercase tracking-wide">
+                      Discover professionals in our directory
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-ink font-mono text-sm font-bold uppercase tracking-wide shrink-0">
+                    <span>Explore</span>
+                    <svg
+                      className="w-5 h-5 transform group-hover:translate-x-1 transition-transform"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M17 8l4 4m0 0l-4 4m4-4H3"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </Link>
+            </section>
 
             {/* How it works - Horizontal steps */}
             <section className="mt-16 lg:mt-20">

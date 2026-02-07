@@ -119,6 +119,12 @@
 		//   wrangler secret put ALERT_CHANNEL       # logpush | webhook | email
 		//   wrangler secret put ALERT_WEBHOOK_URL   # Slack/Discord webhook URL
 		//
+		// ===== ANALYTICS (Umami) =====
+		//   wrangler secret put NEXT_PUBLIC_UMAMI_WEBSITE_ID
+		//   wrangler secret put UMAMI_API_URL
+		//   wrangler secret put UMAMI_USERNAME
+		//   wrangler secret put UMAMI_PASSWORD
+		//
 		// ===== AI PROVIDER (resume parsing) =====
 		// Cloudflare AI Gateway (proxies to OpenRouter)
 		//   wrangler secret put CF_AI_GATEWAY_ACCOUNT_ID

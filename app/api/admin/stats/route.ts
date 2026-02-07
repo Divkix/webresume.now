@@ -2,13 +2,15 @@
  * GET /api/admin/stats
  *
  * Returns overview statistics for admin dashboard.
+ * User/resume stats from D1, traffic stats from Umami.
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { count, gte, sql } from "drizzle-orm";
+import { count, sql } from "drizzle-orm";
 import { requireAdminAuthForApi } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
-import { pageViews, resumes, siteData, user } from "@/lib/db/schema";
+import { resumes, siteData, user } from "@/lib/db/schema";
+import { getPageviews, getStats } from "@/lib/umami/client";
 
 export async function GET() {
   const { error } = await requireAdminAuthForApi();
@@ -19,15 +21,15 @@ export async function GET() {
     const db = getDb(env.DB);
 
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [userStats, siteDataCount, resumeStats, viewsToday, recentSignups, dailyViews] =
+    const [userStats, siteDataCount, resumeStats, umamiStats, umamiPageviews, recentSignups] =
       await Promise.all([
         // Total user count
         db.select({ total: count() }).from(user),
 
-        // Users with site data (separate query, no correlated subquery)
+        // Users with site data
         db.select({ count: count() }).from(siteData),
 
         // Resume status counts
@@ -39,8 +41,16 @@ export async function GET() {
           .from(resumes)
           .groupBy(resumes.status),
 
-        // Views today
-        db.select({ count: count() }).from(pageViews).where(gte(pageViews.createdAt, todayStart)),
+        // Views today via Umami
+        getStats(env, { startAt: todayStart.getTime(), endAt: now.getTime() }),
+
+        // Daily views for sparkline (last 7 days) via Umami
+        getPageviews(env, {
+          startAt: sevenDaysAgo.getTime(),
+          endAt: now.getTime(),
+          unit: "day",
+          timezone: "UTC",
+        }),
 
         // Recent signups (last 10)
         db
@@ -51,17 +61,6 @@ export async function GET() {
           .from(user)
           .orderBy(sql`${user.createdAt} DESC`)
           .limit(10),
-
-        // Daily views for sparkline (last 7 days)
-        db
-          .select({
-            date: sql<string>`DATE(${pageViews.createdAt})`.as("date"),
-            views: count(),
-          })
-          .from(pageViews)
-          .where(gte(pageViews.createdAt, sevenDaysAgo))
-          .groupBy(sql`DATE(${pageViews.createdAt})`)
-          .orderBy(sql`DATE(${pageViews.createdAt})`),
       ]);
 
     // Process resume stats
@@ -76,14 +75,17 @@ export async function GET() {
     const processingResumes = (resumeStatusMap.processing || 0) + (resumeStatusMap.queued || 0);
     const failedResumes = resumeStatusMap.failed || 0;
 
-    // Fill missing dates for sparkline
-    const filledDailyViews = fillMissingDates(dailyViews, 7);
+    // Fill missing dates for sparkline from Umami pageviews
+    const filledDailyViews = fillMissingDates(
+      umamiPageviews.pageviews.map((p) => ({ date: p.x, views: p.y })),
+      7,
+    );
 
     return Response.json({
       totalUsers: userStats[0]?.total ?? 0,
       publishedResumes: siteDataCount[0]?.count ?? 0,
       processingResumes,
-      viewsToday: viewsToday[0]?.count ?? 0,
+      viewsToday: umamiStats.pageviews.value,
       failedResumes,
       recentSignups: recentSignups.map((u) => ({
         email: u.email,
@@ -93,7 +95,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[admin/stats] Error:", err);
-    return Response.json({ error: "Failed to fetch stats" }, { status: 500 });
+    return Response.json({ error: "Stats temporarily unavailable" }, { status: 503 });
   }
 }
 

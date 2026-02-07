@@ -1,7 +1,7 @@
 /**
  * Analytics utility functions — pure, no side effects.
  *
- * Used by the track API to process incoming beacon data.
+ * Used by the referral tracking system for visitor identification.
  * All functions are deterministic and testable in isolation.
  */
 
@@ -19,68 +19,6 @@ const BOT_PATTERNS =
 export function isBot(ua: string): boolean {
   if (!ua || ua.length < 10) return true;
   return BOT_PATTERNS.test(ua);
-}
-
-/**
- * Determine device type from user-agent.
- * Checks tablet before mobile because iPad UA contains "Mobile" on some versions.
- */
-export function getDeviceType(ua: string): "mobile" | "tablet" | "desktop" {
-  if (!ua) return "desktop";
-
-  // Tablet detection first (iPad, Android tablet, etc.)
-  if (/iPad|Android(?!.*Mobile)|Tablet|Kindle|Silk|PlayBook/i.test(ua)) {
-    return "tablet";
-  }
-
-  // Mobile detection
-  if (
-    /Mobile|iPhone|iPod|Android.*Mobile|webOS|BlackBerry|Opera Mini|IEMobile|Windows Phone/i.test(
-      ua,
-    )
-  ) {
-    return "mobile";
-  }
-
-  return "desktop";
-}
-
-/**
- * Extract hostname from referrer URL, stripping www prefix.
- * Returns null for same-origin referrers, empty/invalid referrers, or direct visits.
- *
- * @param referrer - The full referrer URL from the beacon
- * @param currentHostname - The hostname of the current site (to filter self-referrals)
- */
-export function parseReferrerHostname(
-  referrer: string | null | undefined,
-  currentHostname: string,
-): string | null {
-  if (!referrer || referrer.trim() === "") return null;
-
-  try {
-    const url = new URL(referrer);
-    let hostname = url.hostname.toLowerCase();
-
-    // Strip www. prefix
-    if (hostname.startsWith("www.")) {
-      hostname = hostname.slice(4);
-    }
-
-    // Strip www. from current hostname for comparison
-    let currentHost = currentHostname.toLowerCase();
-    if (currentHost.startsWith("www.")) {
-      currentHost = currentHost.slice(4);
-    }
-
-    // Filter same-origin
-    if (hostname === currentHost) return null;
-
-    return hostname;
-  } catch {
-    // Invalid URL
-    return null;
-  }
 }
 
 /**

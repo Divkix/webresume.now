@@ -8,7 +8,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { count, like, or, sql } from "drizzle-orm";
 import { requireAdminAuthForApi } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
-import { pageViews, resumes, siteData, user } from "@/lib/db/schema";
+import { resumes, siteData, user } from "@/lib/db/schema";
 
 const PAGE_SIZE = 25;
 
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const [resumeStatuses, viewCounts, hasSiteData] = await Promise.all([
+    const [resumeStatuses, hasSiteData] = await Promise.all([
       db
         .select({
           userId: resumes.userId,
@@ -89,20 +89,6 @@ export async function GET(request: Request) {
             sql`, `,
           )})`,
         ),
-
-      db
-        .select({
-          userId: pageViews.userId,
-          views: count(),
-        })
-        .from(pageViews)
-        .where(
-          sql`${pageViews.userId} IN (${sql.join(
-            userIds.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        )
-        .groupBy(pageViews.userId),
 
       db
         .select({ userId: siteData.userId })
@@ -129,7 +115,6 @@ export async function GET(request: Request) {
       }
     }
 
-    const viewCountMap = new Map(viewCounts.map((v) => [v.userId, v.views]));
     const siteDataSet = new Set(hasSiteData.map((s) => s.userId));
 
     // Determine user status
@@ -151,7 +136,6 @@ export async function GET(request: Request) {
         email: u.email,
         handle: u.handle,
         status,
-        views: viewCountMap.get(u.id) ?? 0,
         createdAt: u.createdAt,
         isPro: u.isPro,
       };

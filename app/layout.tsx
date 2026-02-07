@@ -57,10 +57,18 @@ export default function RootLayout({
         </a>
         {children}
         <Toaster />
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Static inline script — Umami self-view filter, checks window flag set by OwnerViewFlag
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.umamiBeforeSend=function(_,p){return window.__clickfolioOwner?void 0:p}",
+          }}
+        />
         <Script
           defer
           src="https://analytics.divkix.me/s.js"
-          data-website-id="1a0515d6-8471-4a14-8581-3fdc3929ff0c"
+          data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+          data-before-send="umamiBeforeSend"
           strategy="afterInteractive"
         />
       </body>

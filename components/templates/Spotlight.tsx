@@ -37,7 +37,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white relative">
+    <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-orange-500 selection:text-white relative">
       {/* Background Grid Pattern */}
       <div className="fixed inset-0 z-0 h-full w-full bg-white bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-size-[24px_24px]" />
 
@@ -64,7 +64,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
           ))}
           <a
             href="#contact"
-            className="hidden sm:flex ml-2 px-4 py-2 text-sm font-medium bg-zinc-900 text-white rounded-full hover:bg-zinc-700 transition-colors items-center gap-2"
+            className="hidden sm:flex ml-2 px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors items-center gap-2"
           >
             <Mail className="w-3.5 h-3.5" aria-hidden="true" />
             Hire Me
@@ -78,7 +78,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
           <div className="flex flex-col-reverse md:flex-row gap-8 items-start md:items-center justify-between">
             <div className="flex-1 space-y-6">
               <div className="space-y-2">
-                <span className="inline-block px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-600">
+                <span className="inline-block px-3 py-1 rounded-full bg-orange-50 border border-orange-200 text-xs font-medium text-orange-600">
                   Available for work
                 </span>
                 <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900">
@@ -122,7 +122,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
                       target={link.isExternal ? "_blank" : undefined}
                       rel={link.isExternal ? "noreferrer" : undefined}
                       aria-label={link.label}
-                      className="p-2 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-full transition-colors flex items-center justify-center"
+                      className="p-2 text-zinc-500 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-colors flex items-center justify-center"
                       style={isBranded ? { color: brandColor } : undefined}
                     >
                       {isBranded ? <span className="font-bold text-sm">{brandText}</span> : icon}
@@ -140,7 +140,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
                   alt={content.full_name}
                   width={192}
                   height={192}
-                  className="relative w-32 h-32 md:w-48 md:h-48 rounded-full object-cover border-4 border-white shadow-xl grayscale hover:grayscale-0 transition-[filter] duration-500"
+                  className="relative w-32 h-32 md:w-48 md:h-48 rounded-full object-cover border-4 border-white shadow-xl"
                 />
               ) : (
                 <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-zinc-100 flex items-center justify-center text-3xl font-bold text-zinc-300 border-4 border-white shadow-xl">
@@ -179,7 +179,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
               {content.experience.map((job, index) => (
                 <div key={index} className="relative pl-8 pb-12 last:pb-0 group">
                   {/* Timeline Dot */}
-                  <div className="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-zinc-200 border border-white group-hover:bg-zinc-900 group-hover:scale-125 transition-[background-color,transform] duration-300" />
+                  <div className="absolute -left-[5px] top-2 w-2.5 h-2.5 rounded-full bg-zinc-200 border border-white group-hover:bg-orange-500 group-hover:scale-125 transition-[background-color,transform] duration-300" />
 
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-2">
                     <h4 className="text-xl font-bold text-zinc-900">{job.company}</h4>
@@ -244,7 +244,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
                     )}
                   </div>
 
-                  <h4 className="text-lg font-bold text-zinc-900 mb-2 group-hover:text-coral transition-colors">
+                  <h4 className="text-lg font-bold text-zinc-900 mb-2 group-hover:text-orange-500 transition-colors">
                     {project.title}
                   </h4>
 
@@ -310,7 +310,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
                     className="flex items-center justify-between p-4 bg-white border border-zinc-100 rounded-xl hover:border-zinc-300 transition-colors group"
                   >
                     <div>
-                      <h4 className="font-semibold text-sm text-zinc-900 group-hover:text-coral transition-colors">
+                      <h4 className="font-semibold text-sm text-zinc-900 group-hover:text-orange-500 transition-colors">
                         {cert.name}
                       </h4>
                       <p className="text-xs text-zinc-500">{cert.issuer}</p>
@@ -341,7 +341,7 @@ const ModernSpotlight: React.FC<TemplateProps> = ({ content, profile }) => {
 
             <a
               href={`mailto:${content.contact.email}`}
-              className="inline-flex h-12 items-center justify-center rounded-full bg-zinc-900 px-8 text-sm font-medium text-white shadow transition-colors hover:bg-zinc-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-950"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-orange-500 px-8 text-sm font-medium text-white shadow transition-colors hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-500"
             >
               Say Hello
             </a>

@@ -154,7 +154,7 @@ export function ThemeStep({
                       />
                       {/* Lock Overlay for locked themes */}
                       {!isUnlocked && (
-                        <div className="absolute inset-0 bg-slate-900/40 flex flex-col items-center justify-center">
+                        <div className="absolute inset-0 bg-ink/40 flex flex-col items-center justify-center">
                           <Lock className="w-5 h-5 text-white mb-1" />
                           <span className="text-[10px] text-white font-semibold">
                             {requiredReferrals} referrals

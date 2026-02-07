@@ -125,7 +125,6 @@ export default async function DashboardPage() {
   // Empty State - No Resume
   if (!hasResume) {
     return (
-      // <CHANGE> bg-slate-50 -> bg-cream for neubrutalist design
       <div className="min-h-screen bg-cream">
         <main className="flex items-center justify-center min-h-[80vh] px-4">
           {/* <CHANGE> shadow-depth -> shadow-brutal, border-slate -> border-ink */}
@@ -155,7 +154,6 @@ export default async function DashboardPage() {
   }
 
   return (
-    // <CHANGE> bg-slate-50 -> bg-cream for neubrutalist design
     <div className="min-h-screen bg-cream">
       <main className="max-w-[1400px] mx-auto px-4 lg:px-6 py-8">
         {/* Email Verification Banner (client component) */}

@@ -214,7 +214,7 @@ export function HandleStep({ initialHandle = "", onContinue }: HandleStepProps) 
                         key={suggestion}
                         type="button"
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-3 py-1.5 text-sm font-medium bg-muted border-2 border-slate-900 rounded-md hover:bg-coral/10 hover:border-coral transition-colors cursor-pointer"
+                        className="px-3 py-1.5 text-sm font-medium bg-muted border-2 border-ink rounded-md hover:bg-coral/10 hover:border-coral transition-colors cursor-pointer"
                       >
                         {suggestion}
                       </button>

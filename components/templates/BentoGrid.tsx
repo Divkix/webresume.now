@@ -49,7 +49,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
         <div className="fixed inset-0 h-full w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none z-0" />
 
         <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[150px] sm:auto-rows-[180px] gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[150px] sm:auto-rows-[200px] gap-4">
             {/* 1. Profile Card (Large) - 2x2 */}
             <div
               className="col-span-1 sm:col-span-2 row-span-2 bg-white rounded-4xl p-8 shadow-lg border border-gray-200/80 flex flex-col justify-between group hover:shadow-xl hover:shadow-gray-200/50 transition-shadow duration-300 relative overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4"
@@ -111,7 +111,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
                 <h1 className="font-heading-bg text-4xl sm:text-5xl font-bold tracking-tight text-[#2D2926] mb-2">
                   {content.full_name}
                 </h1>
-                <p className="text-lg text-gray-500 font-medium tracking-tight mb-1">
+                <p className="text-lg text-gray-500 font-medium tracking-tight mb-1 line-clamp-1">
                   {content.headline}
                 </p>
                 {content.contact?.location && (
@@ -123,7 +123,7 @@ const BentoGrid: React.FC<TemplateProps> = ({ content, profile }) => {
               </div>
 
               <div className="relative z-10 mt-auto">
-                <p className="text-gray-600 leading-relaxed max-w-lg mb-6 text-sm sm:text-base">
+                <p className="text-gray-600 leading-relaxed max-w-lg mb-6 text-sm sm:text-base line-clamp-3">
                   {content.summary}
                 </p>
 

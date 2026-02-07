@@ -17,7 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { ShareBar } from "@/components/ShareBar";
 import { type ContactLinkType, getContactLinks } from "@/lib/templates/contact-links";
 import {
@@ -52,23 +52,10 @@ const NAV_SECTIONS = [
   { id: "contact", label: "Contact", icon: Mail },
 ] as const;
 
-const chipOpacities = [0.5, 0.7, 0.85, 1.0, 0.6, 0.9, 0.75, 0.95];
-const chipScales = [0.9, 1.0, 1.05, 0.95, 1.0, 0.9, 1.05, 0.95];
-
 const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
   const flatSkills = content.skills ? flattenSkills(content.skills) : [];
   const contactLinks = getContactLinks(content.contact);
 
-  // Scroll listener for parallax CSS custom property
-  useEffect(() => {
-    const handleScroll = () => {
-      document.documentElement.style.setProperty("--scroll-y", String(window.scrollY));
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Determine which nav sections are available based on content
   const availableNavSections = useMemo(
     () =>
       NAV_SECTIONS.filter((section) => {
@@ -113,29 +100,6 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
         .font-display-gm { font-family: 'Outfit', sans-serif; }
         .font-body-gm { font-family: 'IBM Plex Sans', sans-serif; }
 
-        @keyframes caustic-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        .caustic-disc {
-          animation: caustic-spin 20s linear infinite;
-        }
-        .caustic-disc-reverse {
-          animation: caustic-spin 30s linear infinite reverse;
-        }
-        .caustic-disc-slow {
-          animation: caustic-spin 40s linear infinite;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .caustic-disc,
-          .caustic-disc-reverse,
-          .caustic-disc-slow {
-            animation: none;
-          }
-        }
-
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -146,35 +110,33 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
       `}</style>
 
       <div
-        className="min-h-screen font-body-gm text-[#CBD5E1] relative overflow-x-hidden selection:bg-[#00D4FF]/30 selection:text-white"
-        style={{ backgroundColor: "#0A1628" }}
+        className="min-h-screen font-body-gm text-[#CBD5E1] relative overflow-x-hidden selection:bg-[#A78BFA]/30 selection:text-white"
+        style={{ backgroundColor: "#0F172A" }}
       >
-        {/* Caustic Background FX */}
+        {/* Static gradient mesh background */}
         <div className="fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
+          {/* Violet-tinted radial — top-left */}
           <div
-            className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] opacity-20 caustic-disc"
+            className="absolute top-[-10%] left-[-5%] w-[600px] h-[600px]"
             style={{
-              background:
-                "conic-gradient(from 0deg, transparent, #00D4FF, transparent, #7C3AED, transparent)",
-              filter: "blur(80px)",
-              borderRadius: "50%",
-            }}
-          />
-          <div
-            className="absolute bottom-[-10%] right-[-15%] w-[500px] h-[500px] opacity-15 caustic-disc-reverse"
-            style={{
-              background:
-                "conic-gradient(from 0deg, transparent, #7C3AED, transparent, #00D4FF, transparent)",
-              filter: "blur(100px)",
-              borderRadius: "50%",
-            }}
-          />
-          <div
-            className="absolute top-[40%] left-[30%] w-[400px] h-[400px] opacity-10 caustic-disc-slow"
-            style={{
-              background: "conic-gradient(from 0deg, transparent, #00D4FF, transparent)",
+              background: "radial-gradient(circle, rgba(167,139,250,0.12) 0%, transparent 70%)",
               filter: "blur(120px)",
-              borderRadius: "50%",
+            }}
+          />
+          {/* Amber-tinted radial — bottom-right */}
+          <div
+            className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px]"
+            style={{
+              background: "radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%)",
+              filter: "blur(100px)",
+            }}
+          />
+          {/* Subtle violet center wash */}
+          <div
+            className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px]"
+            style={{
+              background: "radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 60%)",
+              filter: "blur(80px)",
             }}
           />
 
@@ -188,27 +150,23 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
           />
         </div>
 
-        {/* Vertical Side Navigation — desktop */}
+        {/* Sticky horizontal pill navigation — desktop */}
         <nav
           aria-label="Section navigation"
-          className="fixed left-0 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col items-start gap-2 p-2 w-14 hover:w-48 transition-all duration-300 overflow-hidden group/nav"
+          className="sticky top-0 z-50 hidden md:flex justify-center py-4 backdrop-blur-xl"
+          style={{ backgroundColor: "rgba(15,23,42,0.8)" }}
         >
-          <div
-            className="flex flex-col gap-1 w-full rounded-2xl backdrop-blur-xl border border-white/[0.08] p-2"
-            style={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-          >
+          <div className="flex items-center gap-2">
             {availableNavSections.map((section) => {
               const Icon = section.icon;
               return (
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#CBD5E1]/60 hover:text-[#00D4FF] hover:bg-white/[0.06] transition-colors duration-200 whitespace-nowrap"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/[0.08] text-[#CBD5E1]/60 hover:text-[#A78BFA] hover:bg-[#A78BFA]/10 hover:border-[#A78BFA]/30 transition-colors duration-200"
                 >
-                  <Icon size={18} className="shrink-0" aria-hidden="true" />
-                  <span className="text-xs font-display-gm font-semibold opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300">
-                    {section.label}
-                  </span>
+                  <Icon size={14} className="shrink-0" aria-hidden="true" />
+                  <span className="text-xs font-display-gm font-semibold">{section.label}</span>
                 </a>
               );
             })}
@@ -219,7 +177,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
         <nav
           aria-label="Section navigation"
           className="fixed bottom-0 left-0 right-0 z-50 md:hidden backdrop-blur-xl border-t border-white/[0.08] pb-[env(safe-area-inset-bottom)]"
-          style={{ backgroundColor: "rgba(10,22,40,0.9)" }}
+          style={{ backgroundColor: "rgba(15,23,42,0.9)" }}
         >
           <div className="flex items-center justify-around py-2 px-1">
             {availableNavSections.slice(0, 5).map((section) => {
@@ -228,7 +186,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="flex flex-col items-center gap-0.5 px-2 py-1.5 text-[#CBD5E1]/50 hover:text-[#00D4FF] transition-colors"
+                  className="flex flex-col items-center gap-0.5 px-2 py-1.5 text-[#CBD5E1]/50 hover:text-[#A78BFA] transition-colors"
                 >
                   <Icon size={18} aria-hidden="true" />
                   <span className="text-[9px] font-display-gm">{section.label}</span>
@@ -239,16 +197,13 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
         </nav>
 
         {/* Main content area */}
-        <div className="relative z-10 ml-0 md:ml-20 max-w-5xl mx-auto px-6 py-12 md:py-20 pb-24 md:pb-20">
-          <main>
+        <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 md:py-20 pb-24 md:pb-20">
+          <main className="space-y-6">
             {/* Hero Section */}
             <section
               id="about"
-              className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-8 md:p-12 mb-2"
-              style={{
-                backgroundColor: "rgba(255,255,255,0.03)",
-                transform: "translateY(calc(var(--scroll-y, 0) * -0.03px))",
-              }}
+              className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-8 md:p-12"
+              style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
             >
               <div className="flex flex-col md:flex-row gap-8 items-start">
                 {/* Avatar */}
@@ -256,14 +211,14 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                   <img
                     src={profile.avatar_url}
                     alt={`${content.full_name}'s avatar`}
-                    className="w-20 h-20 rounded-2xl object-cover border border-white/[0.1] shrink-0"
+                    className="w-24 h-24 rounded-2xl object-cover border border-white/[0.12] shrink-0"
                   />
                 ) : (
                   <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center border border-white/[0.1] shrink-0 font-display-gm text-xl font-bold"
+                    className="w-24 h-24 rounded-2xl flex items-center justify-center border border-white/[0.12] shrink-0 font-display-gm text-2xl font-bold"
                     style={{
-                      backgroundColor: "rgba(0,212,255,0.1)",
-                      color: "#00D4FF",
+                      backgroundColor: "rgba(167,139,250,0.1)",
+                      color: "#A78BFA",
                     }}
                   >
                     {getInitials(content.full_name)}
@@ -273,24 +228,22 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                 <div className="flex-1 space-y-6">
                   {/* Status badge */}
                   <div
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#00D4FF]/20"
-                    style={{
-                      backgroundColor: "rgba(0,212,255,0.08)",
-                    }}
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#A78BFA]/20"
+                    style={{ backgroundColor: "rgba(167,139,250,0.08)" }}
                   >
                     <span className="relative flex h-2 w-2">
                       <span
                         className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                        style={{ backgroundColor: "#00D4FF" }}
+                        style={{ backgroundColor: "#A78BFA" }}
                       />
                       <span
                         className="relative inline-flex rounded-full h-2 w-2"
-                        style={{ backgroundColor: "#00D4FF" }}
+                        style={{ backgroundColor: "#A78BFA" }}
                       />
                     </span>
                     <span
                       className="text-[10px] font-display-gm font-semibold uppercase tracking-widest"
-                      style={{ color: "#00D4FF" }}
+                      style={{ color: "#A78BFA" }}
                     >
                       Available for work
                     </span>
@@ -306,7 +259,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                     {content.headline && (
                       <p
                         className="text-lg font-display-gm font-semibold"
-                        style={{ color: "#00D4FF" }}
+                        style={{ color: "#A78BFA" }}
                       >
                         {content.headline}
                       </p>
@@ -364,12 +317,12 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                             href={link.href}
                             target={link.isExternal ? "_blank" : undefined}
                             rel="noopener noreferrer"
-                            className="group flex items-center gap-2 px-4 py-2 bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] hover:border-[#00D4FF]/30 rounded-xl backdrop-blur-sm transition-colors duration-300"
+                            className="group flex items-center gap-2 px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] border border-white/[0.12] hover:border-[#A78BFA]/30 rounded-xl backdrop-blur-sm transition-colors duration-300"
                           >
                             {IconComponent && (
                               <IconComponent
                                 size={16}
-                                className="text-[#CBD5E1]/60 group-hover:text-[#00D4FF] transition-colors"
+                                className="text-[#CBD5E1]/60 group-hover:text-[#A78BFA] transition-colors"
                                 aria-hidden="true"
                               />
                             )}
@@ -394,116 +347,114 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
               </div>
             </section>
 
-            {/* Experience — horizontal scroll cards */}
+            {/* Experience — vertical timeline */}
             {content.experience && content.experience.length > 0 && (
               <section
                 id="experience"
-                className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-8 md:p-12 -mt-4"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                }}
+                className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-8 md:p-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
               >
                 <h2
                   className="text-2xl font-display-gm font-bold mb-8 flex items-center gap-3"
                   style={{ color: "#F1F5F9" }}
                 >
-                  <Briefcase className="w-5 h-5" style={{ color: "#00D4FF" }} aria-hidden="true" />
+                  <Briefcase className="w-5 h-5" style={{ color: "#A78BFA" }} aria-hidden="true" />
                   Experience
                 </h2>
 
-                <div className="flex gap-6 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide">
+                <div className="border-l-2 border-[#A78BFA]/30 space-y-6 ml-2">
                   {content.experience.map((job, index) => (
-                    <div
-                      key={index}
-                      className="snap-center shrink-0 w-[320px] md:w-[400px] rounded-2xl bg-white/[0.05] border border-white/[0.08] backdrop-blur-md p-6 hover:border-[#00D4FF]/20 transition-colors duration-300"
-                    >
-                      <div className="mb-3">
-                        <span
-                          className="text-[10px] font-display-gm font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border inline-block"
-                          style={{
-                            color: "#00D4FF",
-                            borderColor: "rgba(0,212,255,0.2)",
-                            backgroundColor: "rgba(0,212,255,0.08)",
-                          }}
-                        >
-                          {formatDateRange(job.start_date, job.end_date)}
-                        </span>
-                      </div>
-
-                      <h3
-                        className="text-lg font-display-gm font-bold mb-1"
-                        style={{ color: "#F1F5F9" }}
-                      >
-                        {job.title}
-                      </h3>
-                      <p
-                        className="text-sm font-body-gm font-medium mb-4"
+                    <div key={index} className="relative pl-6">
+                      {/* Timeline dot */}
+                      <div
+                        className="absolute -left-[7px] top-2 w-3 h-3 rounded-full border-2"
                         style={{
-                          color: "#00D4FF",
-                          opacity: 0.7,
+                          backgroundColor: "#0F172A",
+                          borderColor: "#A78BFA",
                         }}
-                      >
-                        {job.company}
-                      </p>
+                        aria-hidden="true"
+                      />
 
-                      {job.description && (
-                        <p className="text-sm font-body-gm font-light leading-relaxed text-[#CBD5E1]/70 mb-4 line-clamp-3">
-                          {job.description}
+                      <div className="rounded-2xl bg-white/[0.05] border border-white/[0.08] backdrop-blur-md p-6 hover:border-[#A78BFA]/20 transition-colors duration-300">
+                        <div className="mb-3">
+                          <span
+                            className="text-[10px] font-display-gm font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full border inline-block"
+                            style={{
+                              color: "#A78BFA",
+                              borderColor: "rgba(167,139,250,0.2)",
+                              backgroundColor: "rgba(167,139,250,0.08)",
+                            }}
+                          >
+                            {formatDateRange(job.start_date, job.end_date)}
+                          </span>
+                        </div>
+
+                        <h3
+                          className="text-lg font-display-gm font-bold mb-1"
+                          style={{ color: "#F1F5F9" }}
+                        >
+                          {job.title}
+                        </h3>
+                        <p
+                          className="text-sm font-body-gm font-medium mb-4"
+                          style={{ color: "#A78BFA", opacity: 0.7 }}
+                        >
+                          {job.company}
+                          {job.location && (
+                            <span className="text-[#CBD5E1]/40"> &middot; {job.location}</span>
+                          )}
                         </p>
-                      )}
 
-                      {job.highlights && job.highlights.length > 0 && (
-                        <ul className="space-y-1.5">
-                          {job.highlights.slice(0, 3).map((highlight, i) => (
-                            <li
-                              key={i}
-                              className="flex items-start gap-2 text-xs font-body-gm text-[#CBD5E1]/60"
-                            >
-                              <span
-                                className="mt-1.5 w-1 h-1 rounded-full shrink-0"
-                                style={{
-                                  backgroundColor: "#00D4FF",
-                                }}
-                                aria-hidden="true"
-                              />
-                              <span>{highlight}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                        {job.description && (
+                          <p className="text-sm font-body-gm font-light leading-relaxed text-[#CBD5E1]/70 mb-4">
+                            {job.description}
+                          </p>
+                        )}
+
+                        {job.highlights && job.highlights.length > 0 && (
+                          <ul className="space-y-1.5">
+                            {job.highlights.map((highlight, i) => (
+                              <li
+                                key={i}
+                                className="flex items-start gap-2 text-xs font-body-gm text-[#CBD5E1]/60"
+                              >
+                                <span
+                                  className="mt-1.5 w-1 h-1 rounded-full shrink-0"
+                                  style={{ backgroundColor: "#A78BFA" }}
+                                  aria-hidden="true"
+                                />
+                                <span>{highlight}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Skills — floating chip cloud */}
+            {/* Skills — uniform chip cloud */}
             {flatSkills.length > 0 && (
               <section
                 id="skills"
-                className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-8 md:p-12 -mt-4"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                  transform: "translateY(calc(var(--scroll-y, 0) * -0.03px))",
-                }}
+                className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-8 md:p-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
               >
                 <h2
                   className="text-2xl font-display-gm font-bold mb-8 flex items-center gap-3"
                   style={{ color: "#F1F5F9" }}
                 >
-                  <Zap className="w-5 h-5" style={{ color: "#00D4FF" }} aria-hidden="true" />
+                  <Zap className="w-5 h-5" style={{ color: "#A78BFA" }} aria-hidden="true" />
                   Skills &amp; Technologies
                 </h2>
 
                 <div className="flex flex-wrap gap-3 justify-center">
-                  {flatSkills.map((skill, index) => (
+                  {flatSkills.map((skill) => (
                     <span
                       key={skill}
-                      className="backdrop-blur-sm bg-white/[0.06] border border-white/[0.1] px-4 py-2 rounded-full text-sm font-body-gm hover:bg-[#00D4FF]/10 hover:border-[#00D4FF]/30 hover:text-white transition-all duration-300 cursor-default"
-                      style={{
-                        opacity: chipOpacities[index % chipOpacities.length],
-                        transform: `scale(${chipScales[index % chipScales.length]})`,
-                      }}
+                      className="bg-white/[0.06] border border-white/[0.10] px-4 py-2 rounded-full text-sm font-body-gm hover:bg-[#A78BFA]/10 hover:border-[#A78BFA]/30 hover:text-white transition-all duration-300 cursor-default"
                     >
                       {skill}
                     </span>
@@ -512,20 +463,18 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
               </section>
             )}
 
-            {/* Projects — 2-col grid with gradient bottom border on hover */}
+            {/* Projects — 2-col grid */}
             {content.projects && content.projects.length > 0 && (
               <section
                 id="projects"
-                className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-8 md:p-12 -mt-4"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                }}
+                className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-8 md:p-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
               >
                 <h2
                   className="text-2xl font-display-gm font-bold mb-8 flex items-center gap-3"
                   style={{ color: "#F1F5F9" }}
                 >
-                  <Layers className="w-5 h-5" style={{ color: "#00D4FF" }} aria-hidden="true" />
+                  <Layers className="w-5 h-5" style={{ color: "#A78BFA" }} aria-hidden="true" />
                   Selected Projects
                 </h2>
 
@@ -533,13 +482,13 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                   {content.projects.map((project: Project, i: number) => (
                     <div
                       key={i}
-                      className="group relative rounded-2xl bg-white/[0.05] border border-white/[0.08] backdrop-blur-md overflow-hidden hover:border-transparent transition-colors duration-300"
+                      className="group relative rounded-2xl bg-white/[0.06] border border-white/[0.08] backdrop-blur-md overflow-hidden hover:border-transparent transition-colors duration-300"
                     >
                       {/* Gradient bottom border on hover */}
                       <div
                         className="absolute bottom-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         style={{
-                          background: "linear-gradient(to right, #00D4FF, #7C3AED)",
+                          background: "linear-gradient(to right, #A78BFA, #F59E0B)",
                         }}
                         aria-hidden="true"
                       />
@@ -551,23 +500,15 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                               className="h-10 w-10 rounded-xl flex items-center justify-center font-display-gm font-bold text-sm border border-white/[0.08]"
                               style={{
                                 background:
-                                  "linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15))",
+                                  "linear-gradient(135deg, rgba(167,139,250,0.15), rgba(245,158,11,0.15))",
                               }}
                             >
-                              <span
-                                style={{
-                                  color: "#00D4FF",
-                                }}
-                              >
-                                {project.title.charAt(0)}
-                              </span>
+                              <span style={{ color: "#A78BFA" }}>{project.title.charAt(0)}</span>
                             </div>
                             <div>
                               <h3
-                                className="text-lg font-display-gm font-bold group-hover:text-[#00D4FF] transition-colors"
-                                style={{
-                                  color: "#F1F5F9",
-                                }}
+                                className="text-lg font-display-gm font-bold group-hover:text-[#A78BFA] transition-colors"
+                                style={{ color: "#F1F5F9" }}
                               >
                                 {project.title}
                               </h3>
@@ -584,7 +525,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label={`Visit ${project.title}`}
-                              className="text-[#CBD5E1]/40 hover:text-[#00D4FF] transition-colors"
+                              className="text-[#CBD5E1]/40 hover:text-[#A78BFA] transition-colors"
                             >
                               <ArrowUpRight size={18} aria-hidden="true" />
                             </a>
@@ -600,7 +541,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                             {project.technologies.slice(0, 5).map((tech) => (
                               <span
                                 key={tech}
-                                className="text-[10px] font-display-gm font-semibold uppercase tracking-wider text-[#CBD5E1]/40 group-hover:text-[#00D4FF]/60 transition-colors"
+                                className="text-[10px] font-display-gm font-semibold uppercase tracking-wider text-[#CBD5E1]/40 group-hover:text-[#A78BFA]/60 transition-colors"
                               >
                                 {tech}
                               </span>
@@ -619,11 +560,8 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
               (content.certifications && content.certifications.length > 0)) && (
               <section
                 id="education"
-                className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-8 md:p-12 -mt-4"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                  transform: "translateY(calc(var(--scroll-y, 0) * -0.03px))",
-                }}
+                className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-8 md:p-12"
+                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   {/* Education */}
@@ -635,19 +573,17 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                       >
                         <GraduationCap
                           className="w-4 h-4"
-                          style={{ color: "#00D4FF" }}
+                          style={{ color: "#A78BFA" }}
                           aria-hidden="true"
                         />
                         Education
                       </h3>
                       <div className="space-y-5">
                         {content.education.map((edu, idx) => (
-                          <div key={idx} className="relative pl-4 border-l-2 border-white/[0.1]">
+                          <div key={idx} className="relative pl-4 border-l-2 border-[#A78BFA]/30">
                             <h4
                               className="text-base font-display-gm font-semibold"
-                              style={{
-                                color: "#F1F5F9",
-                              }}
+                              style={{ color: "#F1F5F9" }}
                             >
                               {edu.institution}
                             </h4>
@@ -673,7 +609,7 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                       >
                         <Award
                           className="w-4 h-4"
-                          style={{ color: "#00D4FF" }}
+                          style={{ color: "#A78BFA" }}
                           aria-hidden="true"
                         />
                         Certifications
@@ -685,14 +621,12 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                             href={cert.url || "#"}
                             target={cert.url ? "_blank" : undefined}
                             rel="noopener noreferrer"
-                            className={`block p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#00D4FF]/20 transition-colors ${!cert.url ? "pointer-events-none" : ""}`}
+                            className={`block p-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-[#A78BFA]/20 transition-colors ${!cert.url ? "pointer-events-none" : ""}`}
                           >
                             <div className="flex justify-between items-center">
                               <span
                                 className="text-sm font-display-gm font-semibold"
-                                style={{
-                                  color: "#F1F5F9",
-                                }}
+                                style={{ color: "#F1F5F9" }}
                               >
                                 {cert.name}
                               </span>
@@ -721,10 +655,8 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
             {content.contact.email && (
               <section
                 id="contact"
-                className="rounded-3xl backdrop-blur-xl border border-white/[0.08] p-10 md:p-16 -mt-4 text-center"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.03)",
-                }}
+                className="rounded-3xl backdrop-blur-xl border border-white/[0.10] p-10 md:p-16 text-center"
+                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
               >
                 <h2
                   className="text-3xl md:text-4xl font-display-gm font-bold mb-4"
@@ -740,8 +672,8 @@ const GlassMorphic: React.FC<TemplateProps> = ({ content, profile }) => {
                   href={`mailto:${content.contact.email}`}
                   className="inline-flex items-center gap-2 px-8 py-3 font-display-gm font-semibold rounded-full hover:scale-105 motion-safe:transition-transform text-white"
                   style={{
-                    background: "linear-gradient(135deg, #00D4FF, #7C3AED)",
-                    boxShadow: "0 8px 30px rgba(0,212,255,0.25)",
+                    background: "linear-gradient(135deg, #A78BFA, #F59E0B)",
+                    boxShadow: "0 8px 30px rgba(167,139,250,0.25)",
                   }}
                 >
                   <Mail size={18} aria-hidden="true" />

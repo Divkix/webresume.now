@@ -18,11 +18,11 @@ let tokenTimestamp = 0;
 // --- Types ---
 
 export interface UmamiStats {
-  pageviews: { value: number; prev: number };
-  visitors: { value: number; prev: number };
-  visits: { value: number; prev: number };
-  bounces: { value: number; prev: number };
-  totaltime: { value: number; prev: number };
+  pageviews: { value: number | null; prev: number | null };
+  visitors: { value: number | null; prev: number | null };
+  visits: { value: number | null; prev: number | null };
+  bounces: { value: number | null; prev: number | null };
+  totaltime: { value: number | null; prev: number | null };
 }
 
 export interface UmamiPageviews {

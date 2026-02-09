@@ -58,10 +58,10 @@ export async function GET(request: Request) {
       ]);
 
     // Totals
-    const totalViews = stats.pageviews.value;
-    const totalUnique = stats.visitors.value;
-    const prevViews = stats.pageviews.prev;
-    const prevUnique = stats.visitors.prev;
+    const totalViews = stats.pageviews.value ?? 0;
+    const totalUnique = stats.visitors.value ?? 0;
+    const prevViews = stats.pageviews.prev ?? 0;
+    const prevUnique = stats.visitors.prev ?? 0;
     const avgPerDay = Math.round(totalViews / days);
     const prevAvgPerDay = Math.round(prevViews / days);
 

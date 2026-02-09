@@ -108,8 +108,8 @@ export async function GET(request: Request) {
     let totalViews = 0;
     let uniqueVisitors = 0;
     for (const s of statsResults) {
-      totalViews += s.pageviews.value;
-      uniqueVisitors += s.visitors.value;
+      totalViews += s.pageviews.value ?? 0;
+      uniqueVisitors += s.visitors.value ?? 0;
     }
 
     // Aggregate daily pageviews and sessions (uniques) by date

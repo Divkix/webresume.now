@@ -299,7 +299,7 @@ export function AnalyticsCard() {
         <div className="text-sm text-muted-foreground text-center py-8">
           Failed to load analytics. Try refreshing.
         </div>
-      ) : stats && stats.totalViews === 0 ? (
+      ) : stats && (stats.totalViews == null || stats.totalViews === 0) ? (
         <EmptyState />
       ) : stats ? (
         <>
@@ -433,7 +433,8 @@ function LoadingSkeleton() {
   );
 }
 
-function formatNumber(n: number): string {
+function formatNumber(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(n)) return "0";
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return n.toString();
 }

@@ -124,9 +124,6 @@ export default function AdminUsersPage() {
                   Status
                 </th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
-                  Views
-                </th>
-                <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Joined
                 </th>
               </tr>
@@ -187,12 +184,6 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <UserStatusBadge status={user.status} />
-                    </td>
-                    <td
-                      className="px-4 py-3 text-right text-sm text-foreground"
-                      style={{ fontVariantNumeric: "tabular-nums" }}
-                    >
-                      {user.views.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-muted-foreground">
                       {formatRelativeTime(user.createdAt)}

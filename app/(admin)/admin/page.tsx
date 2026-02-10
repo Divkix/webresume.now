@@ -69,7 +69,7 @@ async function getAdminStats() {
     publishedResumes: siteDataCount[0]?.count ?? 0,
     processingResumes: (statusMap.processing || 0) + (statusMap.queued || 0),
     failedResumes: statusMap.failed || 0,
-    viewsToday: umamiStats?.pageviews.value ?? 0,
+    viewsToday: umamiStats?.pageviews ?? 0,
     recentSignups,
     dailyViews: filledDaily,
   };

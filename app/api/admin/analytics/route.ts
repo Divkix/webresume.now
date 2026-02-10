@@ -21,26 +21,12 @@ function periodToDays(period: string): number {
   }
 }
 
-/** Known non-profile top-level routes — anything else with a single segment is a profile. */
-const KNOWN_ROUTES = new Set([
-  "explore",
-  "privacy",
-  "terms",
-  "preview",
-  "reset-password",
-  "verify-email",
-  "api",
-  "dashboard",
-  "edit",
-  "settings",
-  "waiting",
-  "wizard",
-]);
-
-/** Returns true for paths that are profile URLs (/handle format). */
+/** Returns true for paths that are profile URLs (/@handle format). */
 function isProfilePath(path: string): boolean {
+  // Profile URLs are /@handle — single segment starting with @
+  if (!path.startsWith("/@")) return false;
   const segments = path.split("/").filter(Boolean);
-  return segments.length === 1 && !KNOWN_ROUTES.has(segments[0]);
+  return segments.length === 1 && segments[0].startsWith("@") && segments[0].length > 1;
 }
 
 export async function GET(request: Request) {
@@ -65,17 +51,38 @@ export async function GET(request: Request) {
       await Promise.all([
         getStats(env, { startAt, endAt: now }),
         getPageviews(env, { startAt, endAt: now, unit: "day", timezone: "UTC" }),
-        getMetrics(env, { type: "url", startAt, endAt: now, limit: 50 }),
-        getMetrics(env, { type: "referrer", startAt, endAt: now, limit: 10 }),
-        getMetrics(env, { type: "country", startAt, endAt: now, limit: 10 }),
-        getMetrics(env, { type: "device", startAt, endAt: now }),
+        getMetrics(env, {
+          type: "path",
+          startAt,
+          endAt: now,
+          unit: "day",
+          timezone: "UTC",
+          limit: 50,
+        }),
+        getMetrics(env, {
+          type: "referrer",
+          startAt,
+          endAt: now,
+          unit: "day",
+          timezone: "UTC",
+          limit: 10,
+        }),
+        getMetrics(env, {
+          type: "country",
+          startAt,
+          endAt: now,
+          unit: "day",
+          timezone: "UTC",
+          limit: 10,
+        }),
+        getMetrics(env, { type: "device", startAt, endAt: now, unit: "day", timezone: "UTC" }),
       ]);
 
-    // Totals
-    const totalViews = stats.pageviews.value ?? 0;
-    const totalUnique = stats.visitors.value ?? 0;
-    const prevViews = stats.pageviews.prev ?? 0;
-    const prevUnique = stats.visitors.prev ?? 0;
+    // Totals (Umami v2.12+ returns flat numbers)
+    const totalViews = stats.pageviews ?? 0;
+    const totalUnique = stats.visitors ?? 0;
+    const prevViews = stats.comparison?.pageviews ?? 0;
+    const prevUnique = stats.comparison?.visitors ?? 0;
     const avgPerDay = Math.round(totalViews / days);
     const prevAvgPerDay = Math.round(prevViews / days);
 
@@ -126,7 +133,7 @@ export async function GET(request: Request) {
         },
         daily,
         topProfiles: profileMetrics.map((m) => ({
-          handle: m.x.replace(/^\//, ""),
+          handle: m.x.replace(/^\/@/, ""),
           views: m.y,
         })),
         referrers: referrerMetrics.map((r) => ({

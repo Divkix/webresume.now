@@ -73,12 +73,13 @@ export async function GET(request: Request) {
         handleSet.add(row.oldHandle);
       }
     }
-    const handlePaths = [...handleSet].map((h) => `/${h}`);
+    // Umami tracks profile URLs as /@handle
+    const handlePaths = [...handleSet].map((h) => `/@${h}`);
 
     // Fan out all Umami queries for all handle paths in parallel
     const [statsResults, pageviewsResults, referrerResults, deviceResults, countryResults] =
       await Promise.all([
-        Promise.all(handlePaths.map((p) => getStats(env, { startAt, endAt, url: p }))),
+        Promise.all(handlePaths.map((p) => getStats(env, { startAt, endAt, path: p }))),
         Promise.all(
           handlePaths.map((p) =>
             getPageviews(env, {
@@ -86,18 +87,45 @@ export async function GET(request: Request) {
               endAt,
               unit: "day",
               timezone: "UTC",
-              url: p,
+              path: p,
             }),
           ),
         ),
         Promise.all(
-          handlePaths.map((p) => getMetrics(env, { startAt, endAt, type: "referrer", url: p })),
+          handlePaths.map((p) =>
+            getMetrics(env, {
+              startAt,
+              endAt,
+              type: "referrer",
+              unit: "day",
+              timezone: "UTC",
+              path: p,
+            }),
+          ),
         ),
         Promise.all(
-          handlePaths.map((p) => getMetrics(env, { startAt, endAt, type: "device", url: p })),
+          handlePaths.map((p) =>
+            getMetrics(env, {
+              startAt,
+              endAt,
+              type: "device",
+              unit: "day",
+              timezone: "UTC",
+              path: p,
+            }),
+          ),
         ),
         Promise.all(
-          handlePaths.map((p) => getMetrics(env, { startAt, endAt, type: "country", url: p })),
+          handlePaths.map((p) =>
+            getMetrics(env, {
+              startAt,
+              endAt,
+              type: "country",
+              unit: "day",
+              timezone: "UTC",
+              path: p,
+            }),
+          ),
         ),
       ]);
 
@@ -108,8 +136,8 @@ export async function GET(request: Request) {
     let totalViews = 0;
     let uniqueVisitors = 0;
     for (const s of statsResults) {
-      totalViews += s.pageviews.value ?? 0;
-      uniqueVisitors += s.visitors.value ?? 0;
+      totalViews += s.pageviews ?? 0;
+      uniqueVisitors += s.visitors ?? 0;
     }
 
     // Aggregate daily pageviews and sessions (uniques) by date

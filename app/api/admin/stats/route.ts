@@ -85,7 +85,7 @@ export async function GET() {
       totalUsers: userStats[0]?.total ?? 0,
       publishedResumes: siteDataCount[0]?.count ?? 0,
       processingResumes,
-      viewsToday: umamiStats.pageviews.value ?? 0,
+      viewsToday: umamiStats.pageviews ?? 0,
       failedResumes,
       recentSignups: recentSignups.map((u) => ({
         email: u.email,

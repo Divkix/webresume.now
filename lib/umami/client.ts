@@ -5,6 +5,11 @@
  * for 1 hour, auto-cleared on 401 with single retry.
  *
  * Runs on Cloudflare Workers — env vars from CloudflareEnv binding.
+ *
+ * Compatible with Umami v2.12+ API format:
+ * - Stats return flat numbers + comparison object
+ * - Metrics require unit + timezone, type "url" renamed to "path"
+ * - Filters use simple query params (e.g. path=/@handle)
  */
 
 const WEBSITE_ID = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID ?? "";
@@ -17,12 +22,20 @@ let tokenTimestamp = 0;
 
 // --- Types ---
 
+/** Umami v2.12+ stats response — flat numbers with comparison object. */
 export interface UmamiStats {
-  pageviews: { value: number | null; prev: number | null };
-  visitors: { value: number | null; prev: number | null };
-  visits: { value: number | null; prev: number | null };
-  bounces: { value: number | null; prev: number | null };
-  totaltime: { value: number | null; prev: number | null };
+  pageviews: number;
+  visitors: number;
+  visits: number;
+  bounces: number;
+  totaltime: number;
+  comparison: {
+    pageviews: number;
+    visitors: number;
+    visits: number;
+    bounces: number;
+    totaltime: number;
+  };
 }
 
 export interface UmamiPageviews {
@@ -38,7 +51,8 @@ export interface UmamiMetric {
 interface StatsOptions {
   startAt: number;
   endAt: number;
-  url?: string;
+  /** Filter by URL path (e.g. "/@handle") */
+  path?: string;
 }
 
 interface PageviewsOptions {
@@ -46,14 +60,18 @@ interface PageviewsOptions {
   endAt: number;
   unit: string;
   timezone: string;
-  url?: string;
+  /** Filter by URL path (e.g. "/@handle") */
+  path?: string;
 }
 
 interface MetricsOptions {
   startAt: number;
   endAt: number;
   type: string;
-  url?: string;
+  unit: string;
+  timezone: string;
+  /** Filter by URL path (e.g. "/@handle") */
+  path?: string;
   limit?: number;
 }
 
@@ -99,11 +117,10 @@ export async function getUmamiToken(env: CloudflareEnv): Promise<string> {
 
 // --- Internal helpers ---
 
-function appendUrlFilter(params: URLSearchParams, url?: string) {
-  if (url) {
-    params.set("filters[0][column]", "url");
-    params.set("filters[0][operator]", "eq");
-    params.set("filters[0][value]", url);
+/** Append path filter as a simple query param (Umami v2.12+ format). */
+function appendPathFilter(params: URLSearchParams, path?: string) {
+  if (path) {
+    params.set("path", path);
   }
 }
 
@@ -147,7 +164,7 @@ export async function getStats(env: CloudflareEnv, opts: StatsOptions): Promise<
     startAt: opts.startAt.toString(),
     endAt: opts.endAt.toString(),
   });
-  appendUrlFilter(params, opts.url);
+  appendPathFilter(params, opts.path);
 
   return umamiGet<UmamiStats>(env, `/api/websites/${WEBSITE_ID}/stats`, params);
 }
@@ -162,7 +179,7 @@ export async function getPageviews(
     unit: opts.unit,
     timezone: opts.timezone,
   });
-  appendUrlFilter(params, opts.url);
+  appendPathFilter(params, opts.path);
 
   return umamiGet<UmamiPageviews>(env, `/api/websites/${WEBSITE_ID}/pageviews`, params);
 }
@@ -172,11 +189,13 @@ export async function getMetrics(env: CloudflareEnv, opts: MetricsOptions): Prom
     startAt: opts.startAt.toString(),
     endAt: opts.endAt.toString(),
     type: opts.type,
+    unit: opts.unit,
+    timezone: opts.timezone,
   });
   if (opts.limit) {
     params.set("limit", opts.limit.toString());
   }
-  appendUrlFilter(params, opts.url);
+  appendPathFilter(params, opts.path);
 
   return umamiGet<UmamiMetric[]>(env, `/api/websites/${WEBSITE_ID}/metrics`, params);
 }

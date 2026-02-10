@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // =============================================================================
 // Better Auth Core Tables
@@ -32,6 +32,8 @@ export const user = sqliteTable(
     roleSource: text("role_source", { enum: ["ai", "user"] }),
     // Referral tracking: stores user ID of referrer
     referredBy: text("referred_by"),
+    // When the referral was credited (set when referredBy is first written)
+    referredAt: text("referred_at"),
     // Pro flag: unlocks all themes
     isPro: integer("is_pro", { mode: "boolean" }).notNull().default(false),
     // Denormalized count of users referred by this user
@@ -235,13 +237,15 @@ export const referralClicks = sqliteTable(
     source: text("source", { enum: ["homepage", "cta", "share"] }),
     converted: integer("converted", { mode: "boolean" }).notNull().default(false),
     convertedUserId: text("converted_user_id").references(() => user.id, { onDelete: "set null" }),
+    convertedAt: text("converted_at"),
     createdAt: text("created_at").notNull(),
   },
   (table) => [
     index("referral_clicks_referrer_idx").on(table.referrerUserId),
     index("referral_clicks_visitor_idx").on(table.visitorHash),
     index("referral_clicks_referrer_created_idx").on(table.referrerUserId, table.createdAt),
-    index("referral_clicks_dedup_idx").on(table.referrerUserId, table.visitorHash),
+    // Enforce idempotent click tracking (1 click per referrer+visitorHash)
+    uniqueIndex("referral_clicks_dedup_idx").on(table.referrerUserId, table.visitorHash),
     // Composite index for queries filtering by referrer + conversion status
     index("referral_clicks_referrer_converted_idx").on(table.referrerUserId, table.converted),
   ],

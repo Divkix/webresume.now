@@ -4,12 +4,12 @@
  * Flow:
  * 1. Visitor lands on /?ref={code}
  * 2. Homepage captures and stores ref in localStorage
- * 3. Visitor signs up via OAuth
- * 4. After signup, referredBy is written to user record
+ * 3. Visitor signs up via OAuth (optional, depends on entry path)
+ * 4. During /api/resume/claim, referredBy is written to the new user record
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { referralClicks, user } from "@/lib/db/schema";
 import { generateVisitorHashWithDate } from "@/lib/utils/analytics";
@@ -97,12 +97,26 @@ export async function writeReferral(
   const db = getDb(env.DB);
 
   // Resolve referral code to user ID inline (avoids redundant getCloudflareContext + getDb)
-  const normalizedCode = referrerCode.trim().toUpperCase();
-  const referrerResult = await db
+  // Backward compatible: accept either a referralCode (uppercase) or a handle (lowercase).
+  const trimmed = referrerCode.trim();
+  const normalized = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+  const normalizedUpper = normalized.toUpperCase();
+  const normalizedLower = normalized.toLowerCase();
+
+  let referrerResult = await db
     .select({ id: user.id })
     .from(user)
-    .where(eq(user.referralCode, normalizedCode))
+    .where(eq(user.referralCode, normalizedUpper))
     .limit(1);
+
+  // Fall back to handle lookup for backward compatibility (older referral links).
+  if (referrerResult.length === 0) {
+    referrerResult = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.handle, normalizedLower))
+      .limit(1);
+  }
 
   const referrerId = referrerResult[0]?.id;
   if (!referrerId) {
@@ -114,12 +128,14 @@ export async function writeReferral(
     return { success: false, reason: "self_referral" };
   }
 
+  const now = new Date().toISOString();
+
   // Atomic conditional update: only set referredBy if currently null
   // This prevents TOCTOU race conditions where two concurrent requests
   // could both pass the "already referred" check
   const result = await db
     .update(user)
-    .set({ referredBy: referrerId })
+    .set({ referredBy: referrerId, referredAt: now })
     .where(and(eq(user.id, userId), isNull(user.referredBy)))
     .returning({ id: user.id });
 
@@ -137,11 +153,10 @@ export async function writeReferral(
     return { success: false, reason: "already_referred" };
   }
 
-  // Post-success: atomically increment referrer count + mark clicks as converted
+  // Post-success: mark referral clicks as converted (best-effort).
+  // referralCount is maintained at the DB layer via triggers.
   // All best-effort — the referral link above is the critical operation
   try {
-    let clickMarked = false;
-
     if (request) {
       const ip = getClientIP(request);
       const ua = request.headers.get("user-agent") || "";
@@ -154,27 +169,25 @@ export async function writeReferral(
         generateVisitorHashWithDate(ip, ua, yesterday),
       ]);
 
-      // Single D1 batch: increment referralCount + try both hash-based click conversions
-      // All three are independent writes executed in one HTTP roundtrip
-      const [, todayClickResult, yesterdayClickResult] = await db.batch([
-        db
-          .update(user)
-          .set({ referralCount: sql`${user.referralCount} + 1` })
-          .where(eq(user.id, referrerId)),
-        db
+      // Try to convert *today's* click.
+      // If there was no click today, we try yesterday.
+      // This avoids double-counting conversions when a visitor clicks on multiple days.
+      const todayClickResult = await db
+        .update(referralClicks)
+        .set({ converted: true, convertedUserId: userId, convertedAt: now })
+        .where(
+          and(
+            eq(referralClicks.referrerUserId, referrerId),
+            eq(referralClicks.visitorHash, todayHash),
+            eq(referralClicks.converted, false),
+          ),
+        )
+        .returning({ id: referralClicks.id });
+
+      if (todayClickResult.length === 0) {
+        await db
           .update(referralClicks)
-          .set({ converted: true, convertedUserId: userId })
-          .where(
-            and(
-              eq(referralClicks.referrerUserId, referrerId),
-              eq(referralClicks.visitorHash, todayHash),
-              eq(referralClicks.converted, false),
-            ),
-          )
-          .returning({ id: referralClicks.id }),
-        db
-          .update(referralClicks)
-          .set({ converted: true, convertedUserId: userId })
+          .set({ converted: true, convertedUserId: userId, convertedAt: now })
           .where(
             and(
               eq(referralClicks.referrerUserId, referrerId),
@@ -182,36 +195,7 @@ export async function writeReferral(
               eq(referralClicks.converted, false),
             ),
           )
-          .returning({ id: referralClicks.id }),
-      ]);
-
-      clickMarked = todayClickResult.length > 0 || yesterdayClickResult.length > 0;
-    } else {
-      // No request — just increment referral count
-      await db
-        .update(user)
-        .set({ referralCount: sql`${user.referralCount} + 1` })
-        .where(eq(user.id, referrerId));
-    }
-
-    // Fallback: if no hash match (or no request), mark most recent unconverted click
-    // This maintains backwards compatibility and handles edge cases
-    if (!clickMarked) {
-      // SQLite/Drizzle doesn't support UPDATE with LIMIT, so SELECT first then UPDATE by ID
-      const mostRecentClick = await db
-        .select({ id: referralClicks.id })
-        .from(referralClicks)
-        .where(
-          and(eq(referralClicks.referrerUserId, referrerId), eq(referralClicks.converted, false)),
-        )
-        .orderBy(desc(referralClicks.createdAt))
-        .limit(1);
-
-      if (mostRecentClick[0]) {
-        await db
-          .update(referralClicks)
-          .set({ converted: true, convertedUserId: userId })
-          .where(eq(referralClicks.id, mostRecentClick[0].id));
+          .returning({ id: referralClicks.id });
       }
     }
   } catch (error) {

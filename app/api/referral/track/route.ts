@@ -12,7 +12,7 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { and, eq, gte } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { referralClicks, user } from "@/lib/db/schema";
 import { generateVisitorHash, isBot } from "@/lib/utils/analytics";
@@ -92,34 +92,19 @@ export async function POST(request: Request) {
     const ip = getClientIP(request);
     const visitorHash = await generateVisitorHash(ip, ua);
 
-    // Dedup: same visitorHash + referrerUserId within 24 hours
-    // (we want unique visitors per referrer per day)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const dedupResult = await db
-      .select({ id: referralClicks.id })
-      .from(referralClicks)
-      .where(
-        and(
-          eq(referralClicks.visitorHash, visitorHash),
-          eq(referralClicks.referrerUserId, referrerUserId),
-          gte(referralClicks.createdAt, twentyFourHoursAgo),
-        ),
-      )
-      .limit(1);
-
-    if (dedupResult.length > 0) {
-      return EMPTY_204;
-    }
-
-    // Insert referral click
-    await db.insert(referralClicks).values({
-      id: crypto.randomUUID(),
-      referrerUserId,
-      visitorHash,
-      source: validatedSource,
-      converted: false,
-      createdAt: new Date().toISOString(),
-    });
+    // Insert referral click (idempotent).
+    // Uniqueness is enforced at the DB layer via UNIQUE(referrer_user_id, visitor_hash).
+    await db
+      .insert(referralClicks)
+      .values({
+        id: crypto.randomUUID(),
+        referrerUserId,
+        visitorHash,
+        source: validatedSource,
+        converted: false,
+        createdAt: new Date().toISOString(),
+      })
+      .onConflictDoNothing();
 
     return EMPTY_204;
   } catch (error) {

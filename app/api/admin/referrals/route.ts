@@ -5,7 +5,7 @@
  */
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { count, desc, eq, gt, sql } from "drizzle-orm";
+import { count, desc, gt, isNotNull, sql } from "drizzle-orm";
 import { requireAdminAuthForApi } from "@/lib/auth/admin";
 import { getDb } from "@/lib/db";
 import { referralClicks, user } from "@/lib/db/schema";
@@ -18,55 +18,64 @@ export async function GET() {
     const { env } = await getCloudflareContext({ async: true });
     const db = getDb(env.DB);
 
-    const [referrerCount, clickStats, sourceBreakdown, topReferrers, recentConversions] =
-      await Promise.all([
-        // Count users with at least 1 referral
-        db.select({ count: count() }).from(user).where(gt(user.referralCount, 0)),
+    const [
+      referrerCount,
+      clickStats,
+      creditedSignupsCount,
+      sourceBreakdown,
+      topReferrers,
+      recentReferrals,
+    ] = await Promise.all([
+      // Count users with at least 1 referral
+      db.select({ count: count() }).from(user).where(gt(user.referralCount, 0)),
 
-        // Click and conversion stats
-        db
-          .select({
-            totalClicks: count(),
-            uniqueClicks: sql<number>`COUNT(DISTINCT ${referralClicks.visitorHash})`,
-            conversions: sql<number>`SUM(CASE WHEN ${referralClicks.converted} = 1 THEN 1 ELSE 0 END)`,
-          })
-          .from(referralClicks),
+      // Click and attribution stats (from click tracking)
+      db
+        .select({
+          totalClicks: count(),
+          uniqueClicks: sql<number>`COUNT(DISTINCT ${referralClicks.visitorHash})`,
+          attributedConversions: sql<number>`SUM(CASE WHEN ${referralClicks.converted} = 1 THEN 1 ELSE 0 END)`,
+        })
+        .from(referralClicks),
 
-        // Source breakdown
-        db
-          .select({
-            source: referralClicks.source,
-            count: count(),
-          })
-          .from(referralClicks)
-          .groupBy(referralClicks.source)
-          .orderBy(sql`COUNT(*) DESC`),
+      // Credited signups (source of truth: user.referredBy)
+      db.select({ count: count() }).from(user).where(isNotNull(user.referredBy)),
 
-        // Top referrers by conversions
-        db
-          .select({
-            userId: user.id,
-            handle: user.handle,
-            referralCount: user.referralCount,
-          })
-          .from(user)
-          .where(gt(user.referralCount, 0))
-          .orderBy(desc(user.referralCount))
-          .limit(20),
+      // Source breakdown
+      db
+        .select({
+          source: referralClicks.source,
+          count: count(),
+        })
+        .from(referralClicks)
+        .groupBy(referralClicks.source)
+        .orderBy(sql`COUNT(*) DESC`),
 
-        // Recent conversions
-        db
-          .select({
-            id: referralClicks.id,
-            referrerUserId: referralClicks.referrerUserId,
-            convertedUserId: referralClicks.convertedUserId,
-            createdAt: referralClicks.createdAt,
-          })
-          .from(referralClicks)
-          .where(eq(referralClicks.converted, true))
-          .orderBy(sql`${referralClicks.createdAt} DESC`)
-          .limit(10),
-      ]);
+      // Top referrers by conversions
+      db
+        .select({
+          userId: user.id,
+          handle: user.handle,
+          referralCount: user.referralCount,
+        })
+        .from(user)
+        .where(gt(user.referralCount, 0))
+        .orderBy(desc(user.referralCount))
+        .limit(20),
+
+      // Recent credited referrals (not click attributions)
+      db
+        .select({
+          newUserEmail: user.email,
+          referrerUserId: user.referredBy,
+          referredAt: user.referredAt,
+          createdAt: user.createdAt,
+        })
+        .from(user)
+        .where(isNotNull(user.referredBy))
+        .orderBy(sql`COALESCE(${user.referredAt}, ${user.createdAt}) DESC`)
+        .limit(10),
+    ]);
 
     // Get referrer handles and click counts for top referrers
     const referrerIds = topReferrers.map((r) => r.userId);
@@ -89,37 +98,43 @@ export async function GET() {
 
     const clickCountMap = new Map(clickCounts.map((c) => [c.referrerUserId, c.clicks]));
 
-    // Get user details for recent conversions
-    const conversionUserIds = [
-      ...new Set([
-        ...recentConversions.map((c) => c.referrerUserId),
-        ...recentConversions.filter((c) => c.convertedUserId).map((c) => c.convertedUserId!),
-      ]),
-    ];
+    // Calculate stats
+    const totalClicks = clickStats[0]?.totalClicks ?? 0;
+    const uniqueClicks = clickStats[0]?.uniqueClicks ?? 0;
+    const attributedConversions = clickStats[0]?.attributedConversions ?? 0;
+    const creditedSignups = creditedSignupsCount[0]?.count ?? 0;
 
-    const conversionUsers =
-      conversionUserIds.length > 0
+    // Keep existing `conversions` field for the UI, but define it as credited signups
+    // (source of truth for theme unlocks + referralCount).
+    const conversions = creditedSignups;
+
+    const conversionRate =
+      uniqueClicks > 0 ? ((creditedSignups / uniqueClicks) * 100).toFixed(1) : "0";
+    const attributedConversionRate =
+      uniqueClicks > 0 ? ((attributedConversions / uniqueClicks) * 100).toFixed(1) : "0";
+
+    // Calculate source percentages
+    const totalSourceClicks = sourceBreakdown.reduce((sum, s) => sum + s.count, 0);
+
+    // Resolve referrer handles for recent referrals
+    const recentReferrerIds = [
+      ...new Set(recentReferrals.map((r) => r.referrerUserId).filter(Boolean)),
+    ] as string[];
+
+    const recentReferrers =
+      recentReferrerIds.length > 0
         ? await db
-            .select({ id: user.id, email: user.email, handle: user.handle })
+            .select({ id: user.id, handle: user.handle })
             .from(user)
             .where(
               sql`${user.id} IN (${sql.join(
-                conversionUserIds.map((id) => sql`${id}`),
+                recentReferrerIds.map((id) => sql`${id}`),
                 sql`, `,
               )})`,
             )
         : [];
 
-    const userMap = new Map(conversionUsers.map((u) => [u.id, u]));
-
-    // Calculate stats
-    const totalClicks = clickStats[0]?.totalClicks ?? 0;
-    const uniqueClicks = clickStats[0]?.uniqueClicks ?? 0;
-    const conversions = clickStats[0]?.conversions ?? 0;
-    const conversionRate = uniqueClicks > 0 ? ((conversions / uniqueClicks) * 100).toFixed(1) : "0";
-
-    // Calculate source percentages
-    const totalSourceClicks = sourceBreakdown.reduce((sum, s) => sum + s.count, 0);
+    const recentReferrerHandleMap = new Map(recentReferrers.map((u) => [u.id, u.handle]));
 
     return Response.json({
       stats: {
@@ -127,6 +142,10 @@ export async function GET() {
         totalClicks,
         conversions,
         conversionRate: Number.parseFloat(conversionRate),
+        uniqueClicks,
+        attributedConversions,
+        attributedConversionRate: Number.parseFloat(attributedConversionRate),
+        unattributedConversions: Math.max(0, creditedSignups - attributedConversions),
       },
       funnel: {
         clicks: totalClicks,
@@ -146,10 +165,10 @@ export async function GET() {
         source: s.source || "unknown",
         percent: totalSourceClicks > 0 ? Math.round((s.count / totalSourceClicks) * 100) : 0,
       })),
-      recentConversions: recentConversions.map((c) => ({
-        newUserEmail: userMap.get(c.convertedUserId!)?.email ?? "Unknown",
-        referrerHandle: userMap.get(c.referrerUserId)?.handle ?? "unknown",
-        createdAt: c.createdAt,
+      recentConversions: recentReferrals.map((r) => ({
+        newUserEmail: r.newUserEmail ?? "Unknown",
+        referrerHandle: recentReferrerHandleMap.get(r.referrerUserId ?? "") ?? "unknown",
+        createdAt: r.referredAt || r.createdAt,
       })),
     });
   } catch (err) {

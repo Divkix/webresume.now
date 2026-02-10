@@ -100,14 +100,14 @@ export default function AdminReferralsPage() {
               iconBgClass="bg-linear-to-r from-coral/20 to-coral/20"
             />
             <StatCard
-              title="Conversions"
+              title="Signups"
               value={data?.stats.conversions ?? 0}
               icon={UserPlus}
               iconColorClass="text-emerald-600"
               iconBgClass="bg-linear-to-r from-emerald-100 to-teal-100"
             />
             <StatCard
-              title="Conv. Rate"
+              title="Signup Rate"
               value={`${data?.stats.conversionRate ?? 0}%`}
               icon={TrendingUp}
               iconColorClass="text-amber-600"
@@ -160,7 +160,7 @@ export default function AdminReferralsPage() {
                   Clicks
                 </th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
-                  Conversions
+                  Signups
                 </th>
                 <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3">
                   Rate
@@ -268,7 +268,7 @@ export default function AdminReferralsPage() {
         {/* Recent Conversions */}
         <div className="bg-card rounded-xl shadow-sm border border-ink/10 p-6">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-            Recent Conversions
+            Recent Signups
           </h2>
           {loading ? (
             <div className="space-y-3">
@@ -277,7 +277,7 @@ export default function AdminReferralsPage() {
               ))}
             </div>
           ) : data?.recentConversions.length === 0 ? (
-            <p className="text-sm text-muted-foreground/70">No conversions yet</p>
+            <p className="text-sm text-muted-foreground/70">No signups yet</p>
           ) : (
             <div className="space-y-3">
               {data?.recentConversions.map((conv, i) => (

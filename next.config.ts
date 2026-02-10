@@ -19,6 +19,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: `${process.env.MAX_UPLOAD_SIZE_MB || "5"}mb` as `${number}mb`,
     },
+    // Tree-shake barrel exports — only import what's actually used
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-label",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-separator",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-switch",
+    ],
   },
 
   // Exclude packages from automatic bundling (use native require instead)
@@ -45,6 +55,11 @@ const nextConfig: NextConfig = {
       "./node_modules/@img/**/*",
     ],
   },
+
+  // Note: Module aliases for dead code elimination (zxcvbn, zod/v3, @vercel/og)
+  // are configured in wrangler.jsonc "alias" block, not here.
+  // Next.js 16 uses Turbopack for builds which ignores webpack() config.
+  turbopack: {},
 
   // Rewrites for sitemap index (Next.js generateSitemaps doesn't create sitemap index)
   async rewrites() {

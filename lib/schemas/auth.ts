@@ -1,27 +1,18 @@
 import { z } from "zod";
-import { checkPasswordStrength } from "@/lib/password/strength";
 
 /**
  * Password validation requirements
  * - Minimum 8 characters (Better Auth default)
  * - Maximum 128 characters (prevent DoS)
+ *
+ * Strength checking (zxcvbn) is enforced CLIENT-SIDE only via PasswordInput.
+ * Server-side only validates length to avoid bundling 1.73 MB of zxcvbn dictionaries
+ * into the Cloudflare Worker.
  */
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
   .max(128, "Password is too long");
-
-/**
- * Strong password schema with zxcvbn validation
- * Used for signup and password reset where strength is enforced
- */
-const strongPasswordSchema = passwordSchema.refine(
-  async (password) => {
-    const result = await checkPasswordStrength(password);
-    return result.isAcceptable;
-  },
-  { message: "Password is too weak. Please choose a stronger password." },
-);
 
 /**
  * Email validation with proper format check
@@ -89,35 +80,3 @@ export const resetPasswordSchema = z
   });
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
-/**
- * Sign up schema with strong password validation
- *
- * Same as signUpSchema but with async zxcvbn strength check.
- * Use this for form validation where strength feedback is desired.
- */
-export const signUpWithStrongPasswordSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100, "Name is too long"),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email({ message: "Invalid email address" })
-    .max(255, "Email is too long"),
-  password: strongPasswordSchema,
-});
-
-/**
- * Reset password schema with strong password validation
- *
- * Same as resetPasswordSchema but with async zxcvbn strength check.
- */
-export const resetPasswordWithStrongSchema = z
-  .object({
-    newPassword: strongPasswordSchema,
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });

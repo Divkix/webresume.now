@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
@@ -64,12 +63,11 @@ export default function RootLayout({
               "window.umamiBeforeSend=function(_,p){return window.__clickfolioOwner?void 0:p}",
           }}
         />
-        <Script
+        <script
           defer
           src="https://analytics.divkix.me/s.js"
           data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
           data-before-send="umamiBeforeSend"
-          strategy="afterInteractive"
         />
       </body>
     </html>

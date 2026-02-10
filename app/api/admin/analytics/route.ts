@@ -21,12 +21,26 @@ function periodToDays(period: string): number {
   }
 }
 
-/** Returns true for paths that are profile URLs (/@handle format). */
+/** Known non-profile top-level routes — anything else with a single segment is a profile. */
+const KNOWN_ROUTES = new Set([
+  "explore",
+  "privacy",
+  "terms",
+  "preview",
+  "reset-password",
+  "verify-email",
+  "api",
+  "dashboard",
+  "edit",
+  "settings",
+  "waiting",
+  "wizard",
+]);
+
+/** Returns true for paths that are profile URLs (/handle format). */
 function isProfilePath(path: string): boolean {
-  // Profile URLs are /@handle — single segment starting with @
-  if (!path.startsWith("/@")) return false;
   const segments = path.split("/").filter(Boolean);
-  return segments.length === 1 && segments[0].startsWith("@") && segments[0].length > 1;
+  return segments.length === 1 && !KNOWN_ROUTES.has(segments[0]);
 }
 
 export async function GET(request: Request) {
@@ -112,7 +126,7 @@ export async function GET(request: Request) {
         },
         daily,
         topProfiles: profileMetrics.map((m) => ({
-          handle: m.x.replace(/^\/@/, ""),
+          handle: m.x.replace(/^\//, ""),
           views: m.y,
         })),
         referrers: referrerMetrics.map((r) => ({

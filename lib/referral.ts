@@ -65,13 +65,13 @@ export function clearStoredReferralCode(): void {
  * First-referral-wins: only writes if user doesn't already have a referrer.
  *
  * Validates:
- * - Referrer exists (by code)
+ * - Referrer exists (by referral code or handle)
  * - User is not self-referring
  *
  * Optimizations over naive implementation:
  * - Single getCloudflareContext + getDb instance for all queries
  * - Parallel crypto hash computation (today + yesterday via Promise.all)
- * - db.batch() for independent post-success writes (count + click conversions)
+ * - Atomic conditional UPDATE to prevent double-crediting
  *
  * @param userId - The ID of the user to update
  * @param referrerCode - The referral code of the referrer

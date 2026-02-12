@@ -18,6 +18,8 @@ bun run fix              # Biome auto-fix
 bun run type-check       # TypeScript check without emit
 bun run test             # Run tests (vitest)
 bun run test:watch       # Run tests in watch mode
+bunx vitest run __tests__/referral.test.ts          # Run single test file
+bunx vitest run __tests__/referral.test.ts -t "name" # Run single test by name
 bun run analyze          # Bundle analysis (ANALYZE=true next build)
 
 # Build & Deploy
@@ -139,6 +141,22 @@ app/
         └── users/         # GET — user list + stats
 ```
 
+### URL Convention: `/@handle`
+Public portfolio URLs use the `/@handle` format (e.g., `clickfolio.me/@jane`). Old `/handle` URLs are 308-redirected to `/@handle` via `next.config.ts` redirects. The redirect regex excludes known routes (`api`, `dashboard`, `edit`, `explore`, etc.).
+
+### Custom Worker Entry (`worker.ts`)
+The app deploys as a single Cloudflare Worker. `worker.ts` wraps OpenNext's generated handler and adds:
+1. **WebSocket upgrade** — `/ws/resume-status?resume_id=X` routes to `ResumeStatusDO` Durable Object for real-time parse status
+2. **Static asset interception** — serves files from `ASSETS` binding before falling through to OpenNext
+3. **Queue consumer** — processes `resume-parse-queue` (main) and `resume-parse-dlq` (dead letter) with retry classification via `isRetryableError()`
+4. **Cron handler** — calls shared functions directly (not self-fetch) to avoid double Worker invocation billing
+
+### Bundle Size Stubs
+`wrangler.jsonc` aliases stub out dead code at esbuild level (post-Next.js build):
+- `@vercel/og` (~2MB) — doesn't work on CF Workers, Next.js bundles it anyway
+- `@zxcvbn-ts/*` (~1.7MB) — password dictionaries, only needed client-side (SSR gets a no-op)
+- `zod/v3` (~128KB) — Zod v4 ships v3 compat, only `@ai-sdk/provider-utils` imports it for dead code
+
 ### The Claim Check Pattern
 Anonymous users upload before auth:
 1. `POST /api/upload` → Upload file directly to Worker, stored in R2 via binding
@@ -207,11 +225,11 @@ if (!settings.show_address) content.contact.location = extractCityState(...);
 ## Code Standards
 
 - **Package manager**: bun only (never npm/yarn/pnpm)
-- **Formatting**: Biome — spaces (2), double quotes, semicolons, trailing commas
+- **Formatting**: Biome — spaces (2), double quotes, semicolons, trailing commas, 100 char line width
 - **Commits**: Conventional format with details
-- **Testing**: Vitest (`bun run test`)
+- **Testing**: Vitest (`bun run test`), jsdom environment, tests in `__tests__/**/*.test.{ts,tsx}`
 - **Images**: Use `<img>` tags, never Next.js `<Image />`
-- **D1 migrations**: Use Supabase CLI patterns via `bun run db:generate` then `db:migrate`
+- **D1 migrations**: `bun run db:generate` (Drizzle) then `bun run db:migrate` (wrangler d1)
 - **Git hooks**: Husky (`bun run prepare`)
 
 ## Templates

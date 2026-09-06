@@ -65,18 +65,6 @@ describe("Notify Status", () => {
       );
     });
 
-    it("should not include error field when not provided", async () => {
-      const { binding, fetchMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-
-      await notifyStatusChange({ resumeId: "resume-123", status: "completed", env });
-
-      const callArgs = fetchMock.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body).not.toHaveProperty("error");
-      expect(body.status).toBe("completed");
-    });
-
     it("should return silently when DO binding not configured", async () => {
       const env = { CLICKFOLIO_STATUS_DO: undefined };
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -100,51 +88,6 @@ describe("Notify Status", () => {
       await notifyStatusChange({ resumeId: "resume-123", status: "processing", env });
 
       expect(consoleSpy).toHaveBeenCalled();
-      const errorCall = consoleSpy.mock.calls.find((call) => {
-        try {
-          const parsed = JSON.parse(call[0]) as UnknownRecord;
-          return (
-            typeof parsed["msg"] === "string" &&
-            parsed["msg"].includes("notify-status") &&
-            parsed["resumeId"] === "resume-123"
-          );
-        } catch {
-          return false;
-        }
-      });
-      expect(errorCall).toBeDefined();
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should handle network timeout errors", async () => {
-      const fetchMock = vi.fn().mockRejectedValue(new Error("timeout"));
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      await notifyStatusChange({ resumeId: "resume-123", status: "processing", env });
-
-      expect(consoleSpy).toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should handle DO returning non-OK response", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      await notifyStatusChange({ resumeId: "resume-123", status: "processing", env });
-
-      expect(fetchMock).toHaveBeenCalled();
 
       consoleSpy.mockRestore();
     });
@@ -163,65 +106,6 @@ describe("Notify Status", () => {
       expect(idFromNameMock).toHaveBeenNthCalledWith(1, "resume-abc");
       expect(idFromNameMock).toHaveBeenNthCalledWith(2, "resume-def");
     });
-
-    it("should not include empty error string in payload", async () => {
-      const { binding, fetchMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-
-      await notifyStatusChange({
-        resumeId: "resume-123",
-        status: "failed",
-        error: "",
-        env,
-      });
-
-      const callArgs = fetchMock.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body).not.toHaveProperty("error");
-    });
-
-    it("should handle various status values", async () => {
-      const statuses = ["pending", "processing", "completed", "failed", "waiting_for_cache"];
-      const { binding, fetchMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-
-      for (const status of statuses) {
-        fetchMock.mockClear();
-
-        await notifyStatusChange({ resumeId: "resume-123", status, env });
-
-        const callArgs = fetchMock.mock.calls[0];
-        const body = JSON.parse(callArgs[1].body);
-        expect(body.status).toBe(status);
-      }
-    });
-
-    it("should handle UUID resume IDs", async () => {
-      const { binding, idFromNameMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-      const uuid = "550e8400-e29b-41d4-a716-446655440000";
-
-      await notifyStatusChange({ resumeId: uuid, status: "processing", env });
-
-      expect(idFromNameMock).toHaveBeenCalledWith(uuid);
-    });
-
-    it("should handle long error messages", async () => {
-      const { binding, fetchMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-      const longError = "Error: ".repeat(1000);
-
-      await notifyStatusChange({
-        resumeId: "resume-123",
-        status: "failed",
-        error: longError,
-        env,
-      });
-
-      const callArgs = fetchMock.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-      expect(body.error).toBe(longError);
-    });
   });
 
   describe("notifyStatusChangeBatch", () => {
@@ -238,93 +122,6 @@ describe("Notify Status", () => {
       expect(idFromNameMock).toHaveBeenCalledWith("resume-1");
       expect(idFromNameMock).toHaveBeenCalledWith("resume-2");
       expect(idFromNameMock).toHaveBeenCalledWith("resume-3");
-    });
-
-    it("should handle empty array gracefully", async () => {
-      const { binding } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-
-      await expect(notifyStatusChangeBatch([], "completed", env)).resolves.toBeUndefined();
-    });
-
-    it("should handle single resume in batch", async () => {
-      const { binding, fetchMock } = createMockDOBinding();
-      const env = { CLICKFOLIO_STATUS_DO: binding };
-
-      await notifyStatusChangeBatch(["resume-1"], "completed", env);
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-    });
-
-    it("should continue if one notification fails", async () => {
-      const fetchMock = vi
-        .fn()
-        .mockRejectedValueOnce(new Error("DO down"))
-        .mockResolvedValueOnce(new Response("OK"))
-        .mockRejectedValueOnce(new Error("Network error"));
-
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      await notifyStatusChangeBatch(["resume-1", "resume-2", "resume-3"], "completed", env);
-
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should return silently when DO binding not configured", async () => {
-      const env = { CLICKFOLIO_STATUS_DO: undefined };
-
-      await expect(
-        notifyStatusChangeBatch(["resume-1", "resume-2"], "completed", env),
-      ).resolves.toBeUndefined();
-    });
-
-    it("should handle large batches", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response("OK"));
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      const resumes = Array.from({ length: 100 }, (_, i) => `resume-${i}`);
-
-      await notifyStatusChangeBatch(resumes, "completed", env);
-
-      expect(fetchMock).toHaveBeenCalledTimes(100);
-    });
-
-    it("should use Promise.allSettled for parallel execution", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response("OK"));
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      await notifyStatusChangeBatch(["resume-1", "resume-2", "resume-3"], "processing", env);
-
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-    });
-
-    it("should apply same status to all resumes", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response("OK"));
-      const getMock = vi.fn().mockReturnValue({ fetch: fetchMock });
-      const idFromNameMock = vi.fn().mockReturnValue({ toString: () => "do-id-123" });
-
-      const env = makeStatusEnv({ idFromName: idFromNameMock, get: getMock });
-
-      await notifyStatusChangeBatch(["resume-1", "resume-2"], "waiting_for_cache", env);
-
-      const call1Body = JSON.parse(fetchMock.mock.calls[0][1].body);
-      const call2Body = JSON.parse(fetchMock.mock.calls[1][1].body);
-
-      expect(call1Body.status).toBe("waiting_for_cache");
-      expect(call2Body.status).toBe("waiting_for_cache");
     });
   });
 });

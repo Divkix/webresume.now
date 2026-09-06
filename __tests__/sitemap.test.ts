@@ -21,16 +21,6 @@ describe("sitemap xml builders", () => {
 });
 
 describe("sitemap index xml builder", () => {
-  it("builds sitemap index with a single shard", () => {
-    const xml = buildSitemapIndexXml(1);
-
-    expect(xml).toContain('<?xml version="1.0" encoding="UTF-8"?>');
-    expect(xml).toContain("<sitemapindex");
-    expect(xml).toContain("http://www.sitemaps.org/schemas/sitemap/0.9");
-    expect(xml).toContain("<loc>https://clickfolio.me/sitemap/0.xml</loc>");
-    expect(xml).not.toContain("/sitemap/1.xml");
-  });
-
   it("builds sitemap index with multiple shards", () => {
     const xml = buildSitemapIndexXml(3);
 

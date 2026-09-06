@@ -11,7 +11,6 @@ export default defineConfig({
       "__tests__/security/**/*.test.{ts,tsx}",
       "__tests__/idor-ownership.test.ts",
       "__tests__/sanitization.test.ts",
-      "__tests__/claim-security-cookie.test.ts",
     ],
     retry: 0,
     pool: "forks",

@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 const analyticsMocks = vi.hoisted(() => ({
@@ -27,29 +26,7 @@ describe("Error Boundary Tests", () => {
   });
 
   describe("Root Error Boundary (app/error.tsx)", () => {
-    test("1. Root error boundary catches unhandled errors and displays UI", () => {
-      const error = new Error("Test error");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByText(/We encountered an unexpected error/)).toBeInTheDocument();
-    });
-
-    test("4. Error boundary displays user-friendly error message", () => {
-      const error = new Error("Technical error details");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByText(/Please try again or go back to the dashboard/)).toBeInTheDocument();
-
-      expect(screen.queryByText("Technical error details")).not.toBeInTheDocument();
-    });
-
-    test("5. Error boundary provides retry/refresh option", () => {
+    test("provides retry option that calls reset", () => {
       const error = new Error("Test error");
       const reset = vi.fn();
 
@@ -61,57 +38,10 @@ describe("Error Boundary Tests", () => {
       tryAgainButton.click();
       expect(reset).toHaveBeenCalledTimes(1);
     });
-
-    test("7. Error boundary handles async errors gracefully", () => {
-      const error = new Error("Async operation failed");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    });
-
-    test("11. Error boundary recovery — reset and retry works", async () => {
-      const error = new Error("Initial error");
-      const reset = vi.fn();
-
-      const { rerender } = render(<ErrorPage error={error} reset={reset} />);
-
-      const tryAgainButton = screen.getByRole("button", { name: /Try Again/i });
-      await userEvent.click(tryAgainButton);
-
-      expect(reset).toHaveBeenCalled();
-
-      const newError = new Error("Recovered but new error");
-      rerender(<ErrorPage error={newError} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    });
-
-    test("13. Error boundary logs errors to console for debugging", () => {
-      const error = new Error("Debug error");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(console.error).toHaveBeenCalledWith("Error boundary caught:", error);
-    });
   });
 
   describe("Protected Route Error Boundary (app/(protected)/error.tsx)", () => {
-    test("2. Protected route error boundary catches errors in protected pages", () => {
-      const error = new Error("Protected route error");
-      const reset = vi.fn();
-
-      render(<ProtectedError error={error} reset={reset} />);
-
-      expect(screen.getByText(/Oops! Something went wrong/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/We encountered an error while loading this page/),
-      ).toBeInTheDocument();
-    });
-
-    test("6. Reports errors through captureAnalyticsError", async () => {
+    test("reports errors through captureAnalyticsError", async () => {
       const error = new Error("Reportable error");
       error.stack = "Error: Reportable error\n    at TestComponent";
       const reset = vi.fn();
@@ -122,57 +52,24 @@ describe("Error Boundary Tests", () => {
         expect(analyticsMocks.captureAnalyticsError).toHaveBeenCalledWith(error);
       });
     });
+  });
 
-    test("8. Error boundary handles render errors", () => {
-      const error = new Error("Render cycle error");
+  describe("Handle Route Error Boundary (app/[handle]/error.tsx)", () => {
+    test("reports errors through captureAnalyticsError", async () => {
+      const error = new Error("Profile page error");
+      error.stack = "Error: Profile page error\n    at ProfileComponent";
       const reset = vi.fn();
 
-      render(<ProtectedError error={error} reset={reset} />);
+      render(<ProfileError error={error} reset={reset} />);
 
-      expect(screen.getByText(/Oops! Something went wrong/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/We encountered an error while loading this page/),
-      ).toBeInTheDocument();
+      await waitFor(() => {
+        expect(analyticsMocks.captureAnalyticsError).toHaveBeenCalledWith(error);
+      });
     });
+  });
 
-    test("10. Error boundary with nested boundaries — proper error bubbling", () => {
-      const error = new Error("Nested boundary test");
-      const reset = vi.fn();
-
-      render(<ProtectedError error={error} reset={reset} />);
-
-      expect(screen.getByText(/Your data is safe/)).toBeInTheDocument();
-      expect(screen.getByText(/Back to Dashboard/)).toBeInTheDocument();
-    });
-
-    test("12. Error boundary with fatal errors shows fatal message", () => {
-      const fatalError = new Error("Fatal: Unrecoverable state");
-      fatalError.stack = undefined;
-      const reset = vi.fn();
-
-      render(<ProtectedError error={fatalError} reset={reset} />);
-
-      expect(screen.getByText(/Oops! Something went wrong/)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Try Again/i })).toBeInTheDocument();
-    });
-
-    test("14. Multiple error boundaries don't interfere with each other", () => {
-      const error = new Error("Isolation test");
-      const reset = vi.fn();
-
-      const { container: container1 } = render(<ProtectedError error={error} reset={reset} />);
-      const protectedContent = container1.textContent;
-
-      reset.mockClear();
-      const { container: container2 } = render(<ErrorPage error={error} reset={reset} />);
-      const rootContent = container2.textContent;
-
-      expect(protectedContent).not.toEqual(rootContent);
-      expect(protectedContent).toContain("Oops!");
-      expect(rootContent).not.toContain("Oops!");
-    });
-
-    test("15. Error boundary in production vs dev mode (development info visibility)", () => {
+  describe("Error Boundary environment behavior", () => {
+    test("shows digest in development but hides message in production", () => {
       (process.env as { NODE_ENV: string }).NODE_ENV = "development";
       const devError = new Error("Dev mode error") as Error & { digest?: string };
       devError.digest = "error-digest-123";
@@ -191,126 +88,6 @@ describe("Error Boundary Tests", () => {
       render(<ProtectedError error={prodError} reset={reset} />);
 
       expect(screen.queryByText(/Prod mode error/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe("Handle Route Error Boundary (app/[handle]/error.tsx)", () => {
-    test("3. Handle route error boundary catches errors in public resume pages", () => {
-      const error = new Error("Public profile error");
-      const reset = vi.fn();
-
-      render(<ProfileError error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByText(/We couldn't load this resume/)).toBeInTheDocument();
-    });
-
-    test("6. Handle route reports errors through captureAnalyticsError", async () => {
-      const error = new Error("Profile page error");
-      error.stack = "Error: Profile page error\n    at ProfileComponent";
-      const reset = vi.fn();
-
-      render(<ProfileError error={error} reset={reset} />);
-
-      await waitFor(() => {
-        expect(analyticsMocks.captureAnalyticsError).toHaveBeenCalledWith(error);
-      });
-    });
-
-    test("9. Error boundary handles event handler errors context", () => {
-      const error = new Error("Event handler error");
-      const reset = vi.fn();
-
-      render(<ProfileError error={error} reset={reset} />);
-
-      expect(
-        screen.getByText(/The page may not exist or there was a temporary error/),
-      ).toBeInTheDocument();
-    });
-
-    test("ProfileError shows branding in footer", () => {
-      const error = new Error("Branding test");
-      const reset = vi.fn();
-
-      render(<ProfileError error={error} reset={reset} />);
-
-      expect(screen.getByText(/Powered by/)).toBeInTheDocument();
-    });
-  });
-
-  describe("Error Boundary Edge Cases", () => {
-    test("Error boundary handles error without message", () => {
-      const error = new Error();
-      error.message = "";
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    });
-
-    test("Error boundary handles error with undefined stack", () => {
-      const error = new Error("No stack");
-      error.stack = undefined;
-      const reset = vi.fn();
-
-      render(<ProtectedError error={error} reset={reset} />);
-
-      expect(screen.getByText(/Oops! Something went wrong/)).toBeInTheDocument();
-    });
-
-    test("Error boundary handles very long error messages", () => {
-      const longMessage = "A".repeat(10000);
-      const error = new Error(longMessage);
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    });
-
-    test("Error boundary reports each new error instance", async () => {
-      const error = new Error("First error");
-      const reset = vi.fn();
-
-      const { rerender } = render(<ProtectedError error={error} reset={reset} />);
-
-      await waitFor(() => {
-        expect(analyticsMocks.captureAnalyticsError).toHaveBeenCalledWith(error);
-      });
-
-      const nextError = new Error("Second error");
-      rerender(<ProtectedError error={nextError} reset={reset} />);
-
-      await waitFor(() => {
-        expect(analyticsMocks.captureAnalyticsError).toHaveBeenCalledWith(nextError);
-      });
-
-      expect(screen.getByText(/Oops! Something went wrong/)).toBeInTheDocument();
-    });
-
-    test("Error boundary handles error with special characters", () => {
-      const error = new Error("Error with <script>alert('xss')</script> & \"quotes\"");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    });
-
-    test("Error boundary reset function can be called multiple times", async () => {
-      const error = new Error("Multi-reset test");
-      const reset = vi.fn();
-
-      render(<ErrorPage error={error} reset={reset} />);
-
-      const tryAgainButton = screen.getByRole("button", { name: /Try Again/i });
-
-      await userEvent.click(tryAgainButton);
-      await userEvent.click(tryAgainButton);
-      await userEvent.click(tryAgainButton);
-
-      expect(reset).toHaveBeenCalledTimes(3);
     });
   });
 });

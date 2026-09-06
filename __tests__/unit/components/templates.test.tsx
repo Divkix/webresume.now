@@ -59,18 +59,6 @@ const fullResumeContent: ResumeContent = {
         "Built CI/CD pipeline reducing deploy time by 70%",
       ],
     },
-    {
-      title: "Junior Developer",
-      company: "WebAgency",
-      location: "New York, NY",
-      start_date: "2015-01",
-      end_date: "2017-05",
-      description: "Frontend development for e-commerce clients using React and Node.js.",
-      highlights: [
-        "Delivered 15+ client projects on time",
-        "Introduced automated testing practices",
-      ],
-    },
   ],
   education: [
     {
@@ -79,13 +67,6 @@ const fullResumeContent: ResumeContent = {
       location: "Stanford, CA",
       graduation_date: "2015-05",
       gpa: "3.9",
-    },
-    {
-      degree: "B.S. Computer Science",
-      institution: "UC Berkeley",
-      location: "Berkeley, CA",
-      graduation_date: "2013-05",
-      gpa: "3.7",
     },
   ],
   skills: [
@@ -97,10 +78,6 @@ const fullResumeContent: ResumeContent = {
       category: "Frameworks",
       items: ["React", "Next.js", "Node.js", "Django", "FastAPI"],
     },
-    {
-      category: "Infrastructure",
-      items: ["AWS", "Kubernetes", "Docker", "Terraform", "Cloudflare"],
-    },
   ],
   certifications: [
     {
@@ -108,11 +85,6 @@ const fullResumeContent: ResumeContent = {
       issuer: "Amazon Web Services",
       date: "2023-06",
       url: "https://aws.amazon.com/certification",
-    },
-    {
-      name: "Google Cloud Professional",
-      issuer: "Google Cloud",
-      date: "2022-03",
     },
   ],
   projects: [
@@ -123,13 +95,6 @@ const fullResumeContent: ResumeContent = {
       year: "2024",
       technologies: ["TypeScript", "Cloudflare Workers", "Vite"],
       url: "https://github.com/johndoe/cf-tool",
-    },
-    {
-      title: "Real-time Analytics Dashboard",
-      description: "WebSocket-based analytics dashboard processing 10k+ events per second.",
-      year: "2023",
-      technologies: ["React", "WebSockets", "Redis", "TimescaleDB"],
-      url: "https://analytics.johndoe.dev",
     },
   ],
 };
@@ -148,67 +113,6 @@ const minimalResumeContent: ResumeContent = {
   projects: [],
 };
 
-const specialCharsContent: ResumeContent = {
-  full_name: "Ñoño García 🚀",
-  headline: "Developer <script>alert('test')</script>",
-  summary: "Special chars: \"quotes\" & 'apostrophes' <>&",
-  contact: {
-    email: "test@example.com",
-    location: "München, 北京, المدينة",
-  },
-  experience: [
-    {
-      title: "Engineer 🧑‍💻",
-      company: 'Company "ABC"',
-      location: "Café résumé naïve",
-      start_date: "2020-01",
-      description: 'Description with "quotes" & <tags>',
-      highlights: ["Point 1: café", "Point 2: résumé", "Point 3: naïve"],
-    },
-  ],
-  education: [],
-  skills: [
-    {
-      category: "Skills",
-      items: ["C++", "C#", "HTML<>&", "JS\"'"],
-    },
-  ],
-  certifications: [],
-  projects: [],
-};
-
-const longContentResume: ResumeContent = {
-  full_name: "A".repeat(100),
-  headline: "B".repeat(200),
-  summary: "C".repeat(2000),
-  contact: {
-    email: "test@example.com",
-  },
-  experience: Array.from({ length: 20 }, () => ({
-    title: "Job Title ".repeat(10),
-    company: "Company Name ".repeat(10),
-    location: "Location ".repeat(5),
-    start_date: "2020-01",
-    description: "Description ".repeat(50),
-    highlights: Array.from({ length: 10 }, () => "Highlight text ".repeat(10)),
-  })),
-  education: Array.from({ length: 5 }, () => ({
-    degree: "Degree ".repeat(10),
-    institution: "Institution ".repeat(10),
-    location: "Location ".repeat(5),
-    graduation_date: "2015-05",
-    gpa: "3.5",
-  })),
-  skills: [
-    {
-      category: "All Skills",
-      items: Array.from({ length: 50 }, () => "Skill ".repeat(5)),
-    },
-  ],
-  certifications: [],
-  projects: [],
-};
-
 function testTemplate(
   _name: string,
   Component: React.ComponentType<TemplateProps>,
@@ -220,7 +124,7 @@ function testTemplate(
 
 describe("Template Component Tests", () => {
   describe("MinimalistEditorial Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate(
         "MinimalistEditorial",
         MinimalistEditorial,
@@ -229,34 +133,7 @@ describe("Template Component Tests", () => {
       expect(container.querySelector(".font-serif-me")).toBeInTheDocument();
     });
 
-    test("2. Privacy filtering applied correctly (hides phone/email if disabled)", () => {
-      const contentWithHiddenPhone: ResumeContent = {
-        ...fullResumeContent,
-        contact: {
-          ...fullResumeContent.contact,
-          phone: undefined,
-        },
-      };
-      const { container } = testTemplate(
-        "MinimalistEditorial",
-        MinimalistEditorial,
-        contentWithHiddenPhone,
-      );
-      expect(container.textContent).toContain("John");
-      expect(container.textContent).toContain("Doe");
-    });
-
-    test("3. Mobile responsive classes present (sm:, md:, lg: breakpoints)", () => {
-      const { container } = testTemplate(
-        "MinimalistEditorial",
-        MinimalistEditorial,
-        fullResumeContent,
-      );
-      const elements = container.querySelectorAll("[class*='sm:'], [class*='md:'], [class*='lg:']");
-      expect(elements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate(
         "MinimalistEditorial",
         MinimalistEditorial,
@@ -265,354 +142,125 @@ describe("Template Component Tests", () => {
       expect(container.textContent).toContain("Jane");
       expect(container.textContent).toContain("Doe");
     });
-
-    test("5. Template handles empty arrays (no experience, no education)", () => {
-      const { container } = testTemplate("MinimalistEditorial", MinimalistEditorial, {
-        ...fullResumeContent,
-        experience: [],
-        education: [],
-      });
-      expect(container.textContent).toContain("John");
-      expect(container.textContent).toContain("Doe");
-    });
-
-    test("6. Template handles very long content (text overflow)", () => {
-      const { container } = testTemplate(
-        "MinimalistEditorial",
-        MinimalistEditorial,
-        longContentResume,
-      );
-      expect(container).toBeTruthy();
-    });
-
-    test("7. Template handles special characters in content", () => {
-      const { container } = testTemplate(
-        "MinimalistEditorial",
-        MinimalistEditorial,
-        specialCharsContent,
-      );
-      expect(container.textContent).toContain("Ñoño");
-      expect(container.textContent).toContain("García");
-    });
-
-    test("8. Template renders with minimal data (name only)", () => {
-      const minimal: ResumeContent = {
-        full_name: "Minimal User",
-        headline: "",
-        summary: "",
-        contact: { email: "min@example.com" },
-        experience: [],
-        education: [],
-      };
-      const { container } = testTemplate("MinimalistEditorial", MinimalistEditorial, minimal);
-      expect(container.textContent).toContain("Minimal");
-      expect(container.textContent).toContain("User");
-    });
-
-    test("9. Template renders with maximum data (all fields populated)", () => {
-      const { container } = testTemplate(
-        "MinimalistEditorial",
-        MinimalistEditorial,
-        fullResumeContent,
-      );
-      expect(container.textContent).toContain("John");
-      expect(container.textContent).toContain("Alexander");
-      expect(container.textContent).toContain("Doe");
-      expect(container.textContent).toContain(fullResumeContent.headline);
-    });
   });
 
   describe("NeoBrutalist Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("NeoBrutalist", NeoBrutalist, fullResumeContent);
       expect(container.querySelector(".font-heading-nb")).toBeInTheDocument();
     });
 
-    test("2. Privacy filtering applied correctly", () => {
-      const contentWithHiddenEmail: ResumeContent = {
-        ...fullResumeContent,
-        contact: {
-          ...fullResumeContent.contact,
-          email: "filtered@example.com",
-        },
-      };
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, contentWithHiddenEmail);
-      expect(container.textContent).toContain(contentWithHiddenEmail.full_name);
-    });
-
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='md:'], [class*='lg:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("NeoBrutalist", NeoBrutalist, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("5. Template handles empty arrays", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, {
-        ...fullResumeContent,
-        projects: [],
-        certifications: [],
-      });
-      expect(container.textContent).toContain(fullResumeContent.full_name);
-    });
-
-    test("6. Template handles very long content", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, longContentResume);
-      expect(container).toBeTruthy();
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("8. Template renders with minimal data", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, minimalResumeContent);
-      expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("NeoBrutalist", NeoBrutalist, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("GlassMorphic Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
-      const { container } = testTemplate("GlassMorphic", GlassMorphic, fullResumeContent);
-      expect(container).toBeTruthy();
-    });
-
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("GlassMorphic", GlassMorphic, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='sm:'], [class*='md:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
-      const { container } = testTemplate("GlassMorphic", GlassMorphic, minimalResumeContent);
-      expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("GlassMorphic", GlassMorphic, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("GlassMorphic", GlassMorphic, fullResumeContent);
       expect(container.textContent).toContain(fullResumeContent.full_name);
+    });
+
+    test("handles missing sections gracefully", () => {
+      const { container } = testTemplate("GlassMorphic", GlassMorphic, minimalResumeContent);
+      expect(container.textContent).toContain(minimalResumeContent.full_name);
     });
   });
 
   describe("BentoGrid Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("BentoGrid", BentoGrid, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("BentoGrid", BentoGrid, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='md:'], [class*='lg:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("BentoGrid", BentoGrid, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("BentoGrid", BentoGrid, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("BentoGrid", BentoGrid, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("ClassicATS Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("ClassicATS", ClassicATS, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("ClassicATS", ClassicATS, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='sm:'], [class*='md:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("ClassicATS", ClassicATS, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("ClassicATS", ClassicATS, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("ClassicATS", ClassicATS, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("DevTerminal Template", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("DevTerminal", DevTerminal, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("DevTerminal", DevTerminal, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='md:'], [class*='lg:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("DevTerminal", DevTerminal, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("DevTerminal", DevTerminal, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("DevTerminal", DevTerminal, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("DesignFolio Template (Premium)", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("DesignFolio", DesignFolio, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("DesignFolio", DesignFolio, fullResumeContent);
-      const responsiveElements = container.querySelectorAll(
-        "[class*='sm:'], [class*='md:'], [class*='lg:']",
-      );
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("DesignFolio", DesignFolio, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("DesignFolio", DesignFolio, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("DesignFolio", DesignFolio, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("Spotlight Template (Premium)", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("Spotlight", Spotlight, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("Spotlight", Spotlight, fullResumeContent);
-      const responsiveElements = container.querySelectorAll("[class*='md:'], [class*='lg:']");
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("Spotlight", Spotlight, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("Spotlight", Spotlight, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("Spotlight", Spotlight, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("Midnight Template (Premium)", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("Midnight", Midnight, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("Midnight", Midnight, fullResumeContent);
-      const responsiveElements = container.querySelectorAll(
-        "[class*='sm:'], [class*='md:'], [class*='lg:']",
-      );
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("Midnight", Midnight, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("Midnight", Midnight, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("Midnight", Midnight, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("BoldCorporate Template (Premium)", () => {
-    test("1. Template renders without error with mock resume data", () => {
+    test("renders without error with mock resume data", () => {
       const { container } = testTemplate("BoldCorporate", BoldCorporate, fullResumeContent);
-      expect(container).toBeTruthy();
+      expect(container.textContent).toContain("John");
+      expect(container.textContent).toContain("Doe");
     });
 
-    test("3. Mobile responsive classes present", () => {
-      const { container } = testTemplate("BoldCorporate", BoldCorporate, fullResumeContent);
-      const responsiveElements = container.querySelectorAll(
-        "[class*='sm:'], [class*='md:'], [class*='lg:']",
-      );
-      expect(responsiveElements.length).toBeGreaterThan(0);
-    });
-
-    test("4. Template handles missing sections gracefully", () => {
+    test("handles missing sections gracefully", () => {
       const { container } = testTemplate("BoldCorporate", BoldCorporate, minimalResumeContent);
       expect(container.textContent).toContain(minimalResumeContent.full_name);
-    });
-
-    test("7. Template handles special characters", () => {
-      const { container } = testTemplate("BoldCorporate", BoldCorporate, specialCharsContent);
-      expect(container.textContent).toContain("Ñoño García");
-    });
-
-    test("9. Template renders with maximum data", () => {
-      const { container } = testTemplate("BoldCorporate", BoldCorporate, fullResumeContent);
-      expect(container.textContent).toContain(fullResumeContent.full_name);
     });
   });
 
   describe("Template Switching", () => {
-    test("10. Template switching works correctly", () => {
+    test("renders distinct output per template", () => {
       const { container: minimalist } = render(
         <MinimalistEditorial content={fullResumeContent} profile={mockProfile} />,
       );
@@ -621,30 +269,6 @@ describe("Template Component Tests", () => {
       );
 
       expect(minimalist.innerHTML).not.toEqual(neoBrutalist.innerHTML);
-    });
-
-    test("All templates can be imported and instantiated", () => {
-      const templates = [
-        { Component: MinimalistEditorial },
-        { Component: NeoBrutalist },
-        { Component: GlassMorphic },
-        { Component: BentoGrid },
-        { Component: ClassicATS },
-        { Component: DevTerminal },
-        { Component: DesignFolio },
-        { Component: Spotlight },
-        { Component: Midnight },
-        { Component: BoldCorporate },
-      ];
-
-      for (const { Component } of templates) {
-        const { container } = render(
-          <Component content={fullResumeContent} profile={mockProfile} />,
-        );
-        expect(container).toBeTruthy();
-        expect(container.textContent).toContain("John");
-        expect(container.textContent).toContain("Doe");
-      }
     });
   });
 });

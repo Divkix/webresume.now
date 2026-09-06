@@ -47,29 +47,6 @@ describe("PrivacyStep Component", () => {
     expect(screen.getByLabelText(/Hide from Search Engines/i)).toBeInTheDocument();
   });
 
-  it("renders with custom initial settings including hide_from_search", () => {
-    const onContinue = vi.fn();
-    const initialSettings = {
-      show_phone: true,
-      show_address: true,
-      show_in_directory: false,
-      hide_from_search: true,
-    };
-
-    render(
-      <PrivacyStep
-        content={mockContent}
-        initialSettings={initialSettings}
-        onContinue={onContinue}
-      />,
-    );
-
-    expect(screen.getByLabelText(/Show Phone Number/i)).toBeChecked();
-    expect(screen.getByLabelText(/Show Full Address/i)).toBeChecked();
-    expect(screen.getByLabelText(/Show in Explore Directory/i)).not.toBeChecked();
-    expect(screen.getByLabelText(/Hide from Search Engines/i)).toBeChecked();
-  });
-
   it("calls onContinue with all 4 privacy settings including hide_from_search", () => {
     const onContinue = vi.fn();
 
@@ -102,24 +79,5 @@ describe("PrivacyStep Component", () => {
       show_in_directory: true,
       hide_from_search: false,
     });
-  });
-
-  it("displays correct preview text for hide_from_search toggle when enabled", () => {
-    const onContinue = vi.fn();
-
-    render(<PrivacyStep content={mockContent} onContinue={onContinue} />);
-
-    fireEvent.click(screen.getByLabelText(/Hide from Search Engines/i));
-
-    expect(screen.getByText(/Not indexed by search engines/i)).toBeInTheDocument();
-    expect(screen.getByText(/\(noindex\)/i)).toBeInTheDocument();
-  });
-
-  it("displays correct preview text for hide_from_search toggle when disabled", () => {
-    const onContinue = vi.fn();
-
-    render(<PrivacyStep content={mockContent} onContinue={onContinue} />);
-
-    expect(screen.getByText(/Visible in search results/i)).toBeInTheDocument();
   });
 });

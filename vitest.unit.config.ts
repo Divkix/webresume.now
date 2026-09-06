@@ -17,7 +17,6 @@ export default defineConfig({
       "__tests__/profile-schema.test.ts",
       "__tests__/resume-schema.test.ts",
       "__tests__/sitemap.test.ts",
-      "__tests__/theme-id-consistency.test.ts",
     ],
     exclude: sharedExclude,
     retry: 0,

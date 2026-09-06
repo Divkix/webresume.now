@@ -460,3 +460,74 @@ describe("POST /api/resume/claim", () => {
     expect(mockDbTransaction).toHaveBeenCalled();
   });
 });
+
+describe("POST /api/resume/claim - cookie security", () => {
+  const VALID_TEMP_KEY = "temp/uuid-123/resume.pdf";
+
+  it("returns 403 when pending_upload cookie is missing", async () => {
+    authedAs("user-1");
+
+    const { POST } = await import("@/app/api/resume/claim/route");
+    const response = await POST(makeClaimRequest({ key: VALID_TEMP_KEY }));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Unauthorized upload attempt");
+  });
+
+  it("returns 403 when pending_upload cookie has invalid signature", async () => {
+    authedAs("user-1");
+
+    const invalidCookie = `${VALID_TEMP_KEY}|${Date.now() + 30 * 60 * 1000}|invalid-signature`;
+
+    const { POST } = await import("@/app/api/resume/claim/route");
+    const response = await POST(makeClaimRequest({ key: VALID_TEMP_KEY }, invalidCookie));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Unauthorized upload attempt");
+  });
+
+  it("returns 403 when pending_upload cookie has expired", async () => {
+    authedAs("user-1");
+
+    const expiredCookie = await createSignedCookieValue(
+      VALID_TEMP_KEY,
+      TEST_SECRET,
+      Date.now() - 1000,
+    );
+
+    const { POST } = await import("@/app/api/resume/claim/route");
+    const response = await POST(makeClaimRequest({ key: VALID_TEMP_KEY }, expiredCookie));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Unauthorized upload attempt");
+  });
+
+  it("returns 403 when pending_upload cookie key does not match body key", async () => {
+    authedAs("user-1");
+
+    const mismatchedCookie = await createSignedCookieValue("temp/uuid-456/other.pdf", TEST_SECRET);
+
+    const { POST } = await import("@/app/api/resume/claim/route");
+    const response = await POST(makeClaimRequest({ key: VALID_TEMP_KEY }, mismatchedCookie));
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Unauthorized upload attempt");
+  });
+
+  it("returns 403 when pending_upload cookie is malformed", async () => {
+    authedAs("user-1");
+
+    const { POST } = await import("@/app/api/resume/claim/route");
+    const response = await POST(
+      makeClaimRequest({ key: VALID_TEMP_KEY }, "not-a-valid-cookie-format"),
+    );
+
+    expect(response.status).toBe(403);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("Unauthorized upload attempt");
+  });
+});

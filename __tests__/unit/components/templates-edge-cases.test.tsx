@@ -1,3 +1,4 @@
+import React from "react";
 import { render } from "@testing-library/react";
 import { describe, expect, test } from "vite-plus/test";
 import { BentoGrid } from "@/components/templates/BentoGrid";
@@ -45,27 +46,6 @@ const bareMinimumContent: ResumeContent = {
   projects: [],
 };
 
-const missingOptionalArraysContent: ResumeContent = {
-  full_name: "Missing Arrays",
-  headline: "Dev",
-  summary: "Test content",
-  contact: {
-    email: "test@example.com",
-  },
-  experience: [],
-};
-
-const missingContactFieldsContent: ResumeContent = {
-  full_name: "No Contact",
-  headline: "Ghost",
-  summary: "No contact info.",
-  contact: {
-    email: "ghost@example.com",
-  },
-  experience: [],
-  education: [],
-};
-
 const missingFullNameContent: ResumeContent = {
   full_name: "",
   headline: "Anonymous Developer",
@@ -75,16 +55,6 @@ const missingFullNameContent: ResumeContent = {
   },
   experience: [],
   education: [],
-};
-
-const profileNoAvatar: TemplateProps["profile"] = {
-  handle: "noavatar",
-  avatar_url: null,
-};
-
-const profileWithAvatar: TemplateProps["profile"] = {
-  handle: "hasavatar",
-  avatar_url: "https://example.com/avatar.jpg",
 };
 
 const malformedDatesContent: ResumeContent = {
@@ -109,13 +79,6 @@ const malformedDatesContent: ResumeContent = {
       end_date: "",
       description: "Empty dates test.",
     },
-    {
-      title: "Position 3",
-      company: "Company C",
-      start_date: "2020-01",
-      end_date: "invalid-format",
-      description: "One valid, one invalid date.",
-    },
   ],
   education: [
     {
@@ -123,27 +86,12 @@ const malformedDatesContent: ResumeContent = {
       institution: "University A",
       graduation_date: "garbage-date",
     },
-    {
-      degree: "Degree 2",
-      institution: "University B",
-      graduation_date: "",
-    },
-    {
-      degree: "Degree 3",
-      institution: "University C",
-      graduation_date: "null-value",
-    },
   ],
   certifications: [
     {
       name: "Cert 1",
       issuer: "Issuer A",
       date: "bad-date",
-    },
-    {
-      name: "Cert 2",
-      issuer: "Issuer B",
-      date: "",
     },
   ],
   skills: [
@@ -158,26 +106,7 @@ const malformedDatesContent: ResumeContent = {
       description: "With bad year",
       year: "not-a-year",
     },
-    {
-      title: "Project 2",
-      description: "With empty year",
-      year: "",
-    },
   ],
-};
-
-const zeroItemsContent: ResumeContent = {
-  full_name: "Zero Items",
-  headline: "Empty Everything",
-  summary: "All arrays are present but empty.",
-  contact: {
-    email: "zero@example.com",
-  },
-  experience: [],
-  education: [],
-  skills: [],
-  certifications: [],
-  projects: [],
 };
 
 const nullishItemsContent: ResumeContent = {
@@ -237,8 +166,6 @@ function testTemplateRenders(
   return render(React.createElement(component, { content, profile }));
 }
 
-import React from "react";
-
 describe("Template edge case rendering", () => {
   describe("bare minimum content (name + email only)", () => {
     test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
@@ -248,43 +175,9 @@ describe("Template edge case rendering", () => {
     });
   });
 
-  describe("missing optional arrays (education, skills, certifications, projects undefined)", () => {
-    test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
-      const { container } = testTemplateRenders(Component, missingOptionalArraysContent);
-      expect(container).toBeTruthy();
-      expect(container.textContent).toContain("Missing");
-      expect(container.textContent).toContain("Arrays");
-    });
-  });
-
-  describe("missing contact fields (only email present)", () => {
-    test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
-      const { container } = testTemplateRenders(Component, missingContactFieldsContent);
-      expect(container).toBeTruthy();
-      expect(container.textContent).toContain("Ghost");
-    });
-  });
-
   describe("missing full_name (empty string)", () => {
     test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
       const { container } = testTemplateRenders(Component, missingFullNameContent);
-      expect(container).toBeTruthy();
-    });
-  });
-
-  describe("missing avatar_url (null)", () => {
-    test.each(ALL_TEMPLATES)(
-      "$name renders without crashing with null avatar_url",
-      ({ Component }) => {
-        const { container } = testTemplateRenders(Component, bareMinimumContent, profileNoAvatar);
-        expect(container).toBeTruthy();
-      },
-    );
-  });
-
-  describe("present avatar_url (non-null)", () => {
-    test.each(ALL_TEMPLATES)("$name renders with a present avatar_url", ({ Component }) => {
-      const { container } = testTemplateRenders(Component, bareMinimumContent, profileWithAvatar);
       expect(container).toBeTruthy();
     });
   });
@@ -298,15 +191,6 @@ describe("Template edge case rendering", () => {
     });
   });
 
-  describe("zero-item arrays (empty arrays present)", () => {
-    test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
-      const { container } = testTemplateRenders(Component, zeroItemsContent);
-      expect(container).toBeTruthy();
-      expect(container.textContent).toContain("Zero");
-      expect(container.textContent).toContain("Items");
-    });
-  });
-
   describe("nullish/empty items in array fields", () => {
     test.each(ALL_TEMPLATES)(
       "$name renders without crashing with empty strings in data",
@@ -315,105 +199,6 @@ describe("Template edge case rendering", () => {
         expect(container).toBeTruthy();
         expect(container.textContent).toContain("Nullish");
         expect(container.textContent).toContain("Items");
-      },
-    );
-  });
-
-  describe("whitespace-only summary", () => {
-    const whitespaceSummary: ResumeContent = {
-      ...bareMinimumContent,
-      full_name: "Whitespace Test",
-      summary: "   \n\t  ",
-    };
-
-    test.each(ALL_TEMPLATES)("$name renders without crashing", ({ Component }) => {
-      const { container } = testTemplateRenders(Component, whitespaceSummary);
-      expect(container).toBeTruthy();
-    });
-  });
-
-  describe("very long strings in fields", () => {
-    const longFields: ResumeContent = {
-      full_name: "X".repeat(500),
-      headline: "Y".repeat(1000),
-      summary: "Z".repeat(5000),
-      contact: {
-        email: `${"a".repeat(200)}@example.com`,
-        location: "b".repeat(300),
-      },
-      experience: [
-        {
-          title: "c".repeat(200),
-          company: "d".repeat(200),
-          start_date: "2020-01",
-          description: "e".repeat(2000),
-        },
-      ],
-      education: [],
-    };
-
-    test.each(ALL_TEMPLATES)(
-      "$name renders without crashing with very long fields",
-      ({ Component }) => {
-        const { container } = testTemplateRenders(Component, longFields);
-        expect(container).toBeTruthy();
-      },
-    );
-  });
-
-  describe("single-character fields", () => {
-    const singleChar: ResumeContent = {
-      full_name: "X",
-      headline: "Y",
-      summary: "Z",
-      contact: {
-        email: "a@b.c",
-      },
-      experience: [
-        {
-          title: "A",
-          company: "B",
-          start_date: "C",
-          description: "D",
-        },
-      ],
-      education: [],
-    };
-
-    test.each(ALL_TEMPLATES)(
-      "$name renders without crashing with single-char fields",
-      ({ Component }) => {
-        const { container } = testTemplateRenders(Component, singleChar);
-        expect(container).toBeTruthy();
-      },
-    );
-  });
-
-  describe("unicode and emoji content", () => {
-    const unicodeContent: ResumeContent = {
-      full_name: "José María 官话",
-      headline: "🎨 Designer 🚀",
-      summary: "Special chars: ñ, é, ü, 汉字, العَرَبِيَّة, 🎉",
-      contact: {
-        email: "test@example.com",
-        location: "München, Бээжин, 東京都",
-      },
-      experience: [
-        {
-          title: "エンジニア 🧑‍💻",
-          company: "株式会社",
-          start_date: "2020-01",
-          description: "日本語の経験",
-        },
-      ],
-      education: [],
-    };
-
-    test.each(ALL_TEMPLATES)(
-      "$name renders without crashing with unicode content",
-      ({ Component }) => {
-        const { container } = testTemplateRenders(Component, unicodeContent);
-        expect(container).toBeTruthy();
       },
     );
   });

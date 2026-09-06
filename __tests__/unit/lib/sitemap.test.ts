@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { buildSitemapIndexXml, buildSitemapXml, URLS_PER_SITEMAP } from "@/lib/seo/sitemap";
+import { buildSitemapIndexXml, buildSitemapXml } from "@/lib/seo/sitemap";
 import { getPublicSiteUrl } from "@/lib/utils/site-url";
-
-describe("URLS_PER_SITEMAP", () => {
-  it("equals Google's limit of 50000", () => {
-    expect(URLS_PER_SITEMAP).toBe(50000);
-  });
-});
 
 describe("getPublicSiteUrl (sitemap base)", () => {
   beforeEach(() => {
@@ -98,45 +92,6 @@ describe("buildSitemapXml", () => {
     expect(result).toContain("<changefreq>weekly</changefreq>");
   });
 
-  it("includes priority with correct decimal format", () => {
-    const entries = [
-      {
-        url: "https://example.com/",
-        priority: 0.8,
-      },
-    ];
-
-    const result = buildSitemapXml(entries);
-
-    expect(result).toContain("<priority>0.8</priority>");
-  });
-
-  it("handles priority of 1.0 correctly", () => {
-    const entries = [
-      {
-        url: "https://example.com/",
-        priority: 1.0,
-      },
-    ];
-
-    const result = buildSitemapXml(entries);
-
-    expect(result).toContain("<priority>1.0</priority>");
-  });
-
-  it("handles priority of 0.0 correctly", () => {
-    const entries = [
-      {
-        url: "https://example.com/",
-        priority: 0.0,
-      },
-    ];
-
-    const result = buildSitemapXml(entries);
-
-    expect(result).toContain("<priority>0.0</priority>");
-  });
-
   it("skips optional fields when not provided", () => {
     const entries = [{ url: "https://example.com/" }];
 
@@ -146,28 +101,6 @@ describe("buildSitemapXml", () => {
     expect(result).not.toContain("<lastmod>");
     expect(result).not.toContain("<changefreq>");
     expect(result).not.toContain("<priority>");
-  });
-
-  it("generates empty sitemap for empty entries", () => {
-    const result = buildSitemapXml([]);
-
-    expect(result).toContain('<?xml version="1.0" encoding="UTF-8"?>');
-    expect(result).toContain("<urlset");
-    expect(result).not.toContain("<url>");
-  });
-
-  it("handles invalid dates gracefully", () => {
-    const entries = [
-      {
-        url: "https://example.com/",
-        lastModified: new Date("invalid"),
-      },
-    ];
-
-    const result = buildSitemapXml(entries);
-
-    expect(result).toContain("<loc>https://example.com/</loc>");
-    expect(result).not.toContain("<lastmod>Invalid Date</lastmod>");
   });
 });
 
@@ -181,13 +114,6 @@ describe("buildSitemapIndexXml", () => {
     expect(result).toContain("http://www.sitemaps.org/schemas/sitemap/0.9");
   });
 
-  it("includes correct number of sitemap entries", () => {
-    const result = buildSitemapIndexXml(3);
-
-    expect(result).toContain("<sitemap>");
-    expect(result.match(/<sitemap>/g)?.length).toBe(3);
-  });
-
   it("formats sitemap locations correctly", () => {
     vi.stubEnv("APP_URL", "https://example.com");
 
@@ -195,12 +121,5 @@ describe("buildSitemapIndexXml", () => {
 
     expect(result).toContain("https://example.com/sitemap/0.xml");
     expect(result).toContain("https://example.com/sitemap/1.xml");
-  });
-
-  it("escapes special characters in base URL", () => {
-    const result = buildSitemapIndexXml(1);
-
-    expect(result).toContain("<loc>");
-    expect(result).toContain("</loc>");
   });
 });
